@@ -48,11 +48,15 @@ pub struct IncomingBlockRetrievalRequest {
 /// Will be returned by the NetworkTask upon startup.
 pub struct NetworkReceivers {
     /// Provide a LIFO buffer for each (Author, MessageType) key
-    pub consensus_messages: diem_channel::Receiver<
+    pub ordering_messages: diem_channel::Receiver<
         (AccountAddress, Discriminant<ConsensusMsg>),
         (AccountAddress, ConsensusMsg),
     >,
     pub block_retrieval: diem_channel::Receiver<AccountAddress, IncomingBlockRetrievalRequest>,
+    pub buffer_manager_messages: diem_channel::Receiver<
+        (AccountAddress, Discriminant<ConsensusMsg>),
+        (AccountAddress, ConsensusMsg),
+    >,
 }
 
 /// Implements the actual networking support for all consensus messaging.
@@ -197,7 +201,11 @@ impl NetworkSender {
 }
 
 pub struct NetworkTask {
-    consensus_messages_tx: diem_channel::Sender<
+    ordering_messages_tx: diem_channel::Sender<
+        (AccountAddress, Discriminant<ConsensusMsg>),
+        (AccountAddress, ConsensusMsg),
+    >,
+    buffer_manager_messages_tx: diem_channel::Sender<
         (AccountAddress, Discriminant<ConsensusMsg>),
         (AccountAddress, ConsensusMsg),
     >,
@@ -211,7 +219,9 @@ impl NetworkTask {
         network_events: ConsensusNetworkEvents,
         self_receiver: channel::Receiver<Event<ConsensusMsg>>,
     ) -> (NetworkTask, NetworkReceivers) {
-        let (consensus_messages_tx, consensus_messages) =
+        let (ordering_messages_tx, ordering_messages) =
+            diem_channel::new(QueueStyle::LIFO, 1, Some(&counters::CONSENSUS_CHANNEL_MSGS));
+        let (buffer_manager_messages_tx, buffer_manager_messages) =
             diem_channel::new(QueueStyle::LIFO, 1, Some(&counters::CONSENSUS_CHANNEL_MSGS));
         let (block_retrieval_tx, block_retrieval) = diem_channel::new(
             QueueStyle::LIFO,
@@ -221,13 +231,15 @@ impl NetworkTask {
         let all_events = Box::new(select(network_events, self_receiver));
         (
             NetworkTask {
-                consensus_messages_tx,
+                ordering_messages_tx,
+                buffer_manager_messages_tx,
                 block_retrieval_tx,
                 all_events,
             },
             NetworkReceivers {
-                consensus_messages,
+                ordering_messages,
                 block_retrieval,
+                buffer_manager_messages,
             },
         )
     }
@@ -235,14 +247,30 @@ impl NetworkTask {
     pub async fn start(mut self) {
         while let Some(message) = self.all_events.next().await {
             match message {
-                Event::Message(peer_id, msg) => {
+                Event::Message(peer_id, msg)
+                    if matches!(
+                        msg,
+                        ConsensusMsg::CommitVoteMsg(_) | ConsensusMsg::CommitDecisionMsg(_)
+                    ) =>
+                {
                     if let Err(e) = self
-                        .consensus_messages_tx
+                        .buffer_manager_messages_tx
                         .push((peer_id, discriminant(&msg)), (peer_id, msg))
                     {
                         warn!(
                             remote_peer = peer_id,
-                            error = ?e, "Error pushing consensus msg",
+                            error = ?e, "Error pushing buffer manager msg",
+                        );
+                    }
+                }
+                Event::Message(peer_id, msg) => {
+                    if let Err(e) = self
+                        .ordering_messages_tx
+                        .push((peer_id, discriminant(&msg)), (peer_id, msg))
+                    {
+                        warn!(
+                            remote_peer = peer_id,
+                            error = ?e, "Error pushing ordering msg",
                         );
                     }
                 }

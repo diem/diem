@@ -622,7 +622,7 @@ mod tests {
                 .wait_for_messages(3, NetworkPlayground::take_all)
                 .await;
             for r in receivers.iter_mut().take(5).skip(2) {
-                let (_, msg) = r.consensus_messages.next().await.unwrap();
+                let (_, msg) = r.ordering_messages.next().await.unwrap();
                 match msg {
                     ConsensusMsg::VoteMsg(v) => assert_eq!(*v, vote_msg),
                     _ => panic!("unexpected messages"),
@@ -635,7 +635,7 @@ mod tests {
                 .wait_for_messages(4, NetworkPlayground::take_all)
                 .await;
             for r in receivers.iter_mut().take(num_nodes - 1) {
-                let (_, msg) = r.consensus_messages.next().await.unwrap();
+                let (_, msg) = r.ordering_messages.next().await.unwrap();
                 match msg {
                     ConsensusMsg::ProposalMsg(p) => assert_eq!(*p, proposal),
                     _ => panic!("unexpected messages"),
@@ -799,7 +799,7 @@ mod tests {
             drop(self_sender);
 
             assert!(network_receivers.block_retrieval.next().await.is_none());
-            assert!(network_receivers.consensus_messages.next().await.is_none());
+            assert!(network_receivers.ordering_messages.next().await.is_none());
         };
         let f_network_task = network_task.start();
 

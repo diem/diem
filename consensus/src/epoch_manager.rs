@@ -687,9 +687,13 @@ impl EpochManager {
             let result = monitor!(
                 "main_loop",
                 select! {
-                    msg = network_receivers.consensus_messages.select_next_some() => {
+                    msg = network_receivers.ordering_messages.select_next_some() => {
                         let (peer, msg) = (msg.0, msg.1);
-                        monitor!("process_message", self.process_message(peer, msg).await.with_context(|| format!("from peer: {}", peer)))
+                        monitor!("process_ordering_message", self.process_message(peer, msg).await.with_context(|| format!("from peer: {}", peer)))
+                    }
+                    msg = network_receivers.buffer_manager_messages.select_next_some() => {
+                        let (peer, msg) = (msg.0, msg.1);
+                        monitor!("process_buffer_manager_message", self.process_message(peer, msg).await.with_context(|| format!("from peer: {}", peer)))
                     }
                     block_retrieval = network_receivers.block_retrieval.select_next_some() => {
                         monitor!("process_block_retrieval", self.process_block_retrieval(block_retrieval).await)
