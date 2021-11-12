@@ -344,17 +344,7 @@ impl<'t, 'd> TxnEmitter<'t, 'd> {
     pub async fn get_money_source(&mut self, coins_total: u64) -> Result<&mut LocalAccount> {
         let client = self.client.clone();
         println!("Creating and minting faucet account");
-        let mut faucet_account = &mut self.designated_dealer_account;
-        let mint_txn = gen_transfer_txn_request(
-            faucet_account,
-            &faucet_account.address(),
-            coins_total,
-            &self.txn_factory,
-            0,
-        );
-        execute_and_wait_transactions(&client, &mut faucet_account, vec![mint_txn])
-            .await
-            .map_err(|e| format_err!("Failed to mint into faucet account: {}", e))?;
+        let faucet_account = &mut self.designated_dealer_account;
         let balance = retrieve_account_balance(&client, faucet_account.address()).await?;
         for b in balance {
             if b.currency.eq(XUS_NAME) {
