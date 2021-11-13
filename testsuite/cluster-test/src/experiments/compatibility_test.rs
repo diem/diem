@@ -62,6 +62,7 @@ pub async fn update_batch_instance(
         .iter()
         .map(|instance| {
             let mut newer_config = instance.instance_config().clone();
+            info!("newer config: {:?}", newer_config);
             newer_config.replace_tag(updated_tag.clone()).unwrap();
             cluster_swarm.spawn_new_instance(newer_config)
         })

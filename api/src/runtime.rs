@@ -3,7 +3,6 @@
 
 use crate::{context::Context, index};
 
-use anyhow::bail;
 use diem_config::config::{ApiConfig, JsonRpcConfig, NodeConfig};
 use diem_mempool::MempoolClientSender;
 use diem_types::{chain_id::ChainId, protocol_spec::DpnProto};
@@ -36,14 +35,18 @@ pub fn bootstrap(
     let api_config = config.api.clone();
     let api = WebServer::from(api_config.clone());
     let jsonrpc = WebServer::from(json_rpc_config.clone());
-    if api.port() == jsonrpc.port() && api != jsonrpc {
-        bail!("API and JSON-RPC should have same configuration when they are configured to use same port. api: {:?}, jsonrpc: {:?}", api, jsonrpc);
-    }
+
     runtime.spawn(async move {
         let context = Context::new(chain_id, db, mp_sender, role, json_rpc_config, api_config);
         let routes = index::routes(context);
-        if api.port() == jsonrpc.port() {
-            api.serve(routes).await;
+        if api.address == jsonrpc.address {
+            // Prefer api configuration if possible, although it's likely api and jsonrpc configuration
+            // should be same when the addresses (ip+port) are same.
+            if api.tls_cert_path.is_some() || jsonrpc.tls_cert_path.is_none() {
+                api.serve(routes).await;
+            } else {
+                jsonrpc.serve(routes).await;
+            }
         } else {
             join!(api.serve(routes.clone()), jsonrpc.serve(routes));
         }
@@ -60,27 +63,27 @@ struct WebServer {
 
 impl From<ApiConfig> for WebServer {
     fn from(cfg: ApiConfig) -> Self {
-        Self {
-            address: cfg.address,
-            tls_cert_path: cfg.tls_cert_path,
-            tls_key_path: cfg.tls_key_path,
-        }
+        Self::new(cfg.address, cfg.tls_cert_path, cfg.tls_key_path)
     }
 }
 
 impl From<JsonRpcConfig> for WebServer {
     fn from(cfg: JsonRpcConfig) -> Self {
-        Self {
-            address: cfg.address,
-            tls_cert_path: cfg.tls_cert_path,
-            tls_key_path: cfg.tls_key_path,
-        }
+        Self::new(cfg.address, cfg.tls_cert_path, cfg.tls_key_path)
     }
 }
 
 impl WebServer {
-    pub fn port(&self) -> u16 {
-        self.address.port()
+    pub fn new(
+        address: SocketAddr,
+        tls_cert_path: Option<String>,
+        tls_key_path: Option<String>,
+    ) -> Self {
+        Self {
+            address,
+            tls_cert_path,
+            tls_key_path,
+        }
     }
 
     pub async fn serve<F>(&self, routes: F)
@@ -114,25 +117,6 @@ mod tests {
         runtime::bootstrap,
         tests::{new_test_context, TestContext},
     };
-
-    #[test]
-    fn test_bootstrap_failed_if_jsonprc_and_api_configured_same_port_and_different_host() {
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        let context = runtime.block_on(new_test_context_async());
-        let mut cfg = NodeConfig::default();
-        cfg.randomize_ports();
-        // same port but different host
-        cfg.api.address = format!("10.10.10.10:{}", cfg.json_rpc.address.port())
-            .parse()
-            .unwrap();
-        let ret = bootstrap(
-            &cfg,
-            ChainId::test(),
-            context.db.clone(),
-            context.mempool.ac_client.clone(),
-        );
-        assert!(ret.is_err());
-    }
 
     #[test]
     fn test_bootstrap_jsonprc_and_api_configured_same_port() {

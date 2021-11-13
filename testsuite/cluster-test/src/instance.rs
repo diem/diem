@@ -244,9 +244,17 @@ impl Instance {
     }
 
     pub async fn wait_json_rpc(&self, deadline: Instant) -> Result<()> {
-        while self.try_json_rpc().await.is_err() {
+        loop {
+            let ret = self.try_json_rpc().await;
+            if ret.is_ok() {
+                break;
+            }
             if Instant::now() > deadline {
-                return Err(format_err!("wait_json_rpc for {} timed out", self));
+                return Err(format_err!(
+                    "wait_json_rpc for {} timed out, last error: {:?}",
+                    self,
+                    ret.err().unwrap()
+                ));
             }
             time::sleep(Duration::from_secs(3)).await;
         }
