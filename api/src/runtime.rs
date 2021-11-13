@@ -39,10 +39,12 @@ pub fn bootstrap(
     runtime.spawn(async move {
         let context = Context::new(chain_id, db, mp_sender, role, json_rpc_config, api_config);
         let routes = index::routes(context);
-        if api.address == jsonrpc.address {
-            // Prefer api configuration if possible, although it's likely api and jsonrpc configuration
-            // should be same when the addresses (ip+port) are same.
-            if api.tls_cert_path.is_some() || jsonrpc.tls_cert_path.is_none() {
+        if api.address.port() == jsonrpc.address.port() {
+            // when we rollout api, it's likely there is no api configuration for diem
+            // node, we will load default api configurations (127.0.0.1:8080).
+            // if ip is unspecified(0.0.0.0), we assume it is properly configured and
+            // prefer the api web server configuration over jsonrpc configuration.
+            if api.address.ip() == jsonrpc.address.ip() || api.address.ip().is_unspecified() {
                 api.serve(routes).await;
             } else {
                 jsonrpc.serve(routes).await;
@@ -119,30 +121,45 @@ mod tests {
     };
 
     #[test]
-    fn test_bootstrap_jsonprc_and_api_configured_same_port() {
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        let context = runtime.block_on(new_test_context_async());
+    fn test_bootstrap_jsonprc_and_api_configured_same_address() {
         let mut cfg = NodeConfig::default();
         cfg.randomize_ports();
-        // same port and host
+        // same port and ip
         cfg.api.address = cfg.json_rpc.address;
-        let ret = bootstrap(
-            &cfg,
-            ChainId::test(),
-            context.db.clone(),
-            context.mempool.ac_client.clone(),
-        );
-        assert!(ret.is_ok());
-        assert_web_server(cfg.api.address.port());
+        bootstrap_with_config(cfg);
     }
 
     #[test]
     fn test_bootstrap_jsonprc_and_api_configured_at_different_port() {
+        let mut cfg = NodeConfig::default();
+        cfg.randomize_ports();
+        bootstrap_with_config(cfg);
+    }
+
+    #[test]
+    fn test_bootstrap_same_port_and_jsonprc_with_unspecified_ip() {
+        let mut cfg = NodeConfig::default();
+        cfg.randomize_ports();
+        cfg.json_rpc.address = format!("0.0.0.0:{}", cfg.api.address.port())
+            .parse()
+            .unwrap();
+        bootstrap_with_config(cfg);
+    }
+
+    #[test]
+    fn test_bootstrap_same_port_and_api_with_unspecified_ip() {
+        let mut cfg = NodeConfig::default();
+        cfg.randomize_ports();
+        cfg.api.address = format!("0.0.0.0:{}", cfg.json_rpc.address.port())
+            .parse()
+            .unwrap();
+
+        bootstrap_with_config(cfg);
+    }
+
+    pub fn bootstrap_with_config(cfg: NodeConfig) {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let context = runtime.block_on(new_test_context_async());
-        let mut cfg = NodeConfig::default();
-        // different ports should be generated
-        cfg.randomize_ports();
         let ret = bootstrap(
             &cfg,
             ChainId::test(),

@@ -49,16 +49,11 @@ pub fn openapi_spec() -> impl Filter<Extract = impl Reply, Error = Rejection> + 
         .and(warp::get())
         .map(|| OPEN_API_SPEC)
         .with(metrics("openapi_yaml"));
-    let renderer = warp::path!("redoc.standalone.js").and(warp::get()).map(|| {
-        warp::http::Response::builder()
-            .header("Content-Type", "text/javascript")
-            .body(include_str!("../doc/redoc.standalone.js"))
-    });
     let html = warp::path!("spec.html")
         .and(warp::get())
         .map(|| reply::html(OPEN_API_HTML))
         .with(metrics("spec_html"));
-    spec.or(renderer).or(html)
+    spec.or(html)
 }
 
 // GET /
