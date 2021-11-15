@@ -143,14 +143,39 @@ pub fn encode_enable_parallel_execution_with_config() -> WriteSetPayload {
     ))
     .expect("Failed to serialize analyze result");
 
-    let mut script = template_path();
-    script.push("update_parallel_execution_config.move");
+    // let mut script = template_path();
+    // script.push("update_parallel_execution_config.move");
+    // WriteSetPayload::Script {
+    //     script: Script::new(
+    //         compile_script(script.to_str().unwrap().to_owned()),
+    //         vec![],
+    //         vec![TransactionArgument::U8Vector(payload)],
+    //     ),
+    //     execute_as: diem_root_address(),
+    // }
+
+    let script_body = {
+        let code = r#"
+import 0x1.ParallelExecutionConfig;
+
+main(dr_account: signer, account: signer, payload: vector<u8>) {
+  ParallelExecutionConfig.enable_parallel_execution_with_config(&dr_account, move(payload));
+
+  return;
+}
+"#;
+
+        let compiler = compiler::Compiler {
+            deps: diem_framework_releases::current_modules().iter().collect(),
+        };
+        compiler.into_script_blob(code).expect("Failed to compile")
+    };
     WriteSetPayload::Script {
-        script: Script::new(
-            compile_script(script.to_str().unwrap().to_owned()),
-            vec![],
-            vec![TransactionArgument::U8Vector(payload)],
-        ),
-        execute_as: diem_root_address(),
-    }
+            script: Script::new(
+                script_body,
+                vec![],
+                vec![TransactionArgument::U8Vector(payload)],
+            ),
+            execute_as: diem_root_address(),
+        }
 }

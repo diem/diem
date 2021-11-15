@@ -41,3 +41,5 @@ move-core-types = { path = "../../language/move-core/types" }
 move-vm-runtime = { path = "../../language/move-vm/runtime" }
 move-vm-test-utils = { path = "../../language/move-vm/test-utils" }
 read-write-set = { path = "../../language/tools/read-write-set" }
+
+compiler = { path = "../../language/compiler/"}
