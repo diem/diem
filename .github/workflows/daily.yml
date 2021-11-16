@@ -4,8 +4,8 @@ on:
   schedule:
     - cron: "14 14 * * *"
   # Uncomment below to test.
-  # push:
-  #   branches: [gha-test-*, canary, auto]
+  push:
+    branches: [gha-test-*, canary, auto]
 
 jobs:
   audit:
@@ -164,7 +164,11 @@ jobs:
           cd /opt/git/diem/
           set -o pipefail
           MVP_TEST_INCONSISTENCY=1 cargo test -p move-prover --release 2>&1 | tee -a $MESSAGE_PAYLOAD_FILE
+          ls
+          echo hi
           MVP_TEST_FEATURE=cvc4 cargo test -p move-prover --release 2>&1 | tee -a $MESSAGE_PAYLOAD_FILE
+          ls
+          echo hello
       - uses: ./.github/actions/slack-file
         with:
           webhook: ${{ secrets.WEBHOOK_MOVE_PROVER }}
