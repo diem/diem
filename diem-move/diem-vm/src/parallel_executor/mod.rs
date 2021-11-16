@@ -13,6 +13,7 @@ use crate::{
         read_write_set_analyzer::ReadWriteSetAnalysisWrapper, vm_wrapper::DiemVMWrapper,
     },
 };
+use diem_logger::prelude::*;
 use diem_parallel_executor::{
     errors::Error,
     executor::ParallelTransactionExecutor,
@@ -98,6 +99,7 @@ impl ParallelDiemVM {
                 None,
             )),
             Err(err @ Error::InferencerError) | Err(err @ Error::UnestimatedWrite) => {
+                warn!("Parallel Execution Rollback {:?} for txns: {:?}", err, transactions);
                 let output = DiemVM::execute_block_and_keep_vm_status(transactions, state_view)?;
                 Ok((
                     output
