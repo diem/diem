@@ -21,6 +21,8 @@ use move_core_types::{
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+pub mod request_utils;
+
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Demo for trove hackathon")]
 pub struct DemoCli {
@@ -51,13 +53,10 @@ async fn main() -> Result<()> {
     let json_rpc_url = args.jsonrpc_endpoint;
     println!("Connecting to {}...", json_rpc_url);
 
-    let client = BlockingClient::new(json_rpc_url);
+    let client = BlockingClient::new(json_rpc_url.clone());
 
-    let seq_num = client
-        .get_account(address)?
-        .into_inner()
-        .unwrap()
-        .sequence_number;
+    let seq_num =
+        request_utils::get_account_seq_num(json_rpc_url.as_str(), args.account_address).await?;
     let mut account = LocalAccount::new(address, account_key, seq_num);
 
     match args.cmd {
