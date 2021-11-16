@@ -14,7 +14,8 @@ use async_trait::async_trait;
 use diem_infallible::duration_since_epoch;
 use diem_logger::{info, warn};
 use diem_sdk::transaction_builder::TransactionFactory;
-use forge::{EmitJobRequest, TxnEmitter, TxnStats};
+use diem_types::{chain_id::ChainId, transaction::TransactionPayload};
+use forge::{execute_and_wait_transactions, EmitJobRequest, TxnEmitter, TxnStats};
 use futures::{future::try_join_all, FutureExt};
 use rand::{
     prelude::StdRng,
@@ -34,9 +35,9 @@ use tokio::task::JoinHandle;
 #[derive(StructOpt, Debug)]
 pub struct PerformanceBenchmarkParams {
     #[structopt(
-        long,
-        default_value = "0",
-        help = "Percent of nodes which should be down"
+    long,
+    default_value = "0",
+    help = "Percent of nodes which should be down"
     )]
     pub percent_nodes_down: usize,
     #[structopt(
@@ -48,8 +49,8 @@ pub struct PerformanceBenchmarkParams {
     #[structopt(long, help = "Set fixed tps during perf experiment")]
     pub tps: Option<u64>,
     #[structopt(
-        long,
-        help = "Whether benchmark should pick one node to run DB backup."
+    long,
+    help = "Whether benchmark should pick one node to run DB backup."
     )]
     pub backup: bool,
     #[structopt(long, default_value = "0", help = "Set gas price in tx")]
@@ -58,6 +59,11 @@ pub struct PerformanceBenchmarkParams {
     pub periodic_stats: Option<u64>,
     #[structopt(long, default_value = "0", help = "Set percentage of invalid tx")]
     pub invalid_tx: u64,
+    #[structopt(
+    long,
+    help = "Test the throughput of the system with parallel transaction execution enabled"
+    )]
+    pub enable_parallel_execution: bool,
 }
 
 pub struct PerformanceBenchmark {
@@ -71,6 +77,7 @@ pub struct PerformanceBenchmark {
     gas_price: u64,
     periodic_stats: Option<u64>,
     invalid_tx: u64,
+    enable_parallel_execution: bool,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -85,6 +92,7 @@ impl PerformanceBenchmarkParams {
             gas_price: 0,
             periodic_stats: None,
             invalid_tx: 0,
+            enable_parallel_execution: false,
         }
     }
 
@@ -97,6 +105,7 @@ impl PerformanceBenchmarkParams {
             gas_price: 0,
             periodic_stats: None,
             invalid_tx: 0,
+            enable_parallel_execution: false,
         }
     }
 
@@ -109,6 +118,7 @@ impl PerformanceBenchmarkParams {
             gas_price,
             periodic_stats: None,
             invalid_tx: 0,
+            enable_parallel_execution: false,
         }
     }
 
@@ -121,11 +131,17 @@ impl PerformanceBenchmarkParams {
             gas_price: 0,
             periodic_stats: None,
             invalid_tx,
+            enable_parallel_execution: false,
         }
     }
 
     pub fn enable_db_backup(mut self) -> Self {
         self.backup = true;
+        self
+    }
+
+    pub fn enable_parallel_execution(mut self) -> Self {
+        self.enable_parallel_execution = true;
         self
     }
 }
@@ -158,6 +174,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             gas_price: self.gas_price,
             periodic_stats: self.periodic_stats,
             invalid_tx: self.invalid_tx,
+            enable_parallel_execution: self.enable_parallel_execution,
         }
     }
 }
@@ -181,7 +198,6 @@ impl Experiment for PerformanceBenchmark {
         );
         let futures: Vec<_> = self.down_validators.iter().map(Instance::stop).collect();
         try_join_all(futures).await?;
-
         let backup = self.maybe_start_backup()?;
         let buffer = Duration::from_secs(60);
         let window = self.duration + buffer * 2;
@@ -190,6 +206,28 @@ impl Experiment for PerformanceBenchmark {
         } else {
             self.up_fullnodes.clone()
         };
+
+        // if self.enable_parallel_execution {
+        // Enable parallel execution
+            let mut diem_root_account = &mut context.root_account;
+            let txn = diem_root_account.sign_with_transaction_builder(
+                TransactionFactory::new(ChainId::test()).payload(TransactionPayload::WriteSet(
+                    diem_writeset_generator::encode_enable_parallel_execution_with_config(),
+                )),
+            );
+
+            let node = instances
+                .first()
+                .ok_or_else(|| anyhow!("Node is not available"))?;
+
+            execute_and_wait_transactions(
+                &node.json_rpc_client(),
+                &mut diem_root_account,
+                vec![txn],
+            )
+                .await?;
+        // }
+
         let emit_job_request = match self.tps {
             Some(tps) => {
                 EmitJobRequest::new(instances.into_iter().map(|i| i.json_rpc_client()).collect())
