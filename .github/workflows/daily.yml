@@ -4,8 +4,8 @@ on:
   schedule:
     - cron: "14 14 * * *"
   # Uncomment below to test.
-  # push:
-  #   branches: [gha-test-*, canary, auto]
+  push:
+    branches: [gha-test-*, canary, auto]
 
 jobs:
   audit:

@@ -25,7 +25,7 @@ KUBECTL_VERSION=1.18.6
 TERRAFORM_VERSION=0.12.26
 HELM_VERSION=3.2.4
 VAULT_VERSION=1.5.0
-Z3_VERSION=4.8.9
+Z3_VERSION=4.8.12
 CVC4_VERSION=aac53f51
 CVC5_VERSION=0.0.3
 DOTNET_VERSION=5.0
@@ -480,9 +480,9 @@ function install_z3 {
      return
   fi
   if [[ "$(uname)" == "Linux" ]]; then
-    Z3_PKG="z3-$Z3_VERSION-x64-ubuntu-16.04"
+    Z3_PKG="z3-$Z3_VERSION-x64-glibc-2.31"
   elif [[ "$(uname)" == "Darwin" ]]; then
-    Z3_PKG="z3-$Z3_VERSION-x64-osx-10.14.6"
+    Z3_PKG="z3-$Z3_VERSION-x64-osx-10.15.7"
   else
     echo "Z3 support not configured for this platform (uname=$(uname))"
     return
