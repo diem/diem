@@ -721,6 +721,9 @@ impl VMExecutor for DiemVM {
             ))
         });
 
+        let now = std::time::Instant::now();
+        let len = transactions.len();
+
         // Execute transactions in parallel if on chain config is set and loaded.
         if let Some(read_write_set_analysis) =
             ParallelExecutionConfig::fetch_config(&RemoteStorage::new(state_view))
@@ -736,9 +739,22 @@ impl VMExecutor for DiemVM {
                 transactions,
                 state_view,
             )?;
+
+            info!(
+                AdapterLogSchema::new(state_view.id(), 0),
+                "Time to execute transactions in parallel: {:?}, block size: {:?}",
+                now.elapsed(),
+                len
+            );
             Ok(result)
         } else {
             let output = Self::execute_block_and_keep_vm_status(transactions, state_view)?;
+            info!(
+                AdapterLogSchema::new(state_view.id(), 0),
+                "Time to execute transactions: {:?}, block size: {:?}",
+                now.elapsed(),
+                len
+            );
             Ok(output
                 .into_iter()
                 .map(|(_vm_status, txn_output)| txn_output)
