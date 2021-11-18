@@ -19,8 +19,20 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
+    time::{Instant, Duration},
 };
 use diem_logger::prelude::*;
+
+#[derive(Debug)]
+pub struct ExecutionStats {
+    num_threads: usize,
+    num_txns: usize,
+    max_dependency: usize,
+    infer_time: Duration,
+    startup_time: Duration,
+    execution_time: Duration,
+    cleanup_time: Duration,
+}
 
 pub struct MVHashMapView<'a, K, V> {
     map: &'a MVHashMap<K, V>,
@@ -87,6 +99,15 @@ where
         let chunks_size = max(1, num_txns / self.num_cpus);
 
         let log = num_txns > 1000;
+        let mut stats = ExecutionStats {
+            num_txns,
+            max_dependency: 0,
+            num_threads: 0,
+            infer_time: Duration::ZERO,
+            startup_time: Duration::ZERO,
+            execution_time: Duration::ZERO,
+            cleanup_time: Duration::ZERO,
+        };
         let mut now = std::time::Instant::now();
 
         // Get the read and write dependency for each transaction.
@@ -105,7 +126,7 @@ where
         };
 
         if log {
-            info!("Time to infer: {:?}", now.elapsed());
+            stats.infer_time = now.elapsed();
             now = std::time::Instant::now();
         }
 
@@ -141,7 +162,8 @@ where
         let scheduler = Arc::new(Scheduler::new(num_txns));
 
         if log {
-            info!("Time to start up: {:?}", now.elapsed());
+            stats.startup_time = now.elapsed();
+            stats.max_dependency = max_dependency_level;
             now = std::time::Instant::now();
         }
 
@@ -150,6 +172,7 @@ where
             let compute_cpus = min(1 + (num_txns / 50), self.num_cpus - 1); // Ensure we have at least 50 tx per thread.
             let compute_cpus = min(num_txns / max_dependency_level, compute_cpus); // Ensure we do not higher rate of conflict than concurrency.
 
+            stats.num_threads = compute_cpus;
             info!("Num txns: {:?}, max_dependency: {:?}, CPUs: {:?}, threads: {:?}", num_txns, max_dependency_level, self.num_cpus, compute_cpus);
             for _ in 0..(compute_cpus) {
                 s.spawn(|_| {
@@ -237,7 +260,7 @@ where
         });
 
         if log {
-            info!("Time to compute: {:?}", now.elapsed());
+            stats.execution_time = now.elapsed();
             now = std::time::Instant::now();
         }
 
@@ -256,7 +279,8 @@ where
         let results = outcomes.get_all_results(valid_results_length);
 
         if log {
-            info!("Time to cleanup: {:?}", now.elapsed());
+            stats.cleanup_time = now.elapsed();
+            info!("Parallel Execution Status Report: {:?}", stats);
             now = std::time::Instant::now();
         }
 
