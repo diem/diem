@@ -336,6 +336,7 @@ pub struct FunctionView<'a> {
 impl<'a> FunctionView<'a> {
     // Creates a `FunctionView` for a module function.
     pub fn function(
+        control_flow_info: Vec<crate::control_flow_graph::LoopBounds>,
         module: &'a CompiledModule,
         index: FunctionDefinitionIndex,
         code: &'a CodeUnit,
@@ -348,12 +349,15 @@ impl<'a> FunctionView<'a> {
             return_: module.signature_at(function_handle.return_),
             locals: module.signature_at(code.locals),
             type_parameters: &function_handle.type_parameters,
-            cfg: VMControlFlowGraph::new(&code.code),
+            cfg: VMControlFlowGraph::new(control_flow_info, &code.code),
         }
     }
 
     // Creates a `FunctionView` for a script.
-    pub fn script(script: &'a CompiledScript) -> Self {
+    pub fn script(
+        control_flow_info: Vec<crate::control_flow_graph::LoopBounds>,
+        script: &'a CompiledScript,
+    ) -> Self {
         let code = &script.code;
         let parameters = script.signature_at(script.parameters);
         let locals = script.signature_at(code.locals);
@@ -365,7 +369,7 @@ impl<'a> FunctionView<'a> {
             return_: EMPTY_SIGNATURE,
             locals,
             type_parameters,
-            cfg: VMControlFlowGraph::new(&code.code),
+            cfg: VMControlFlowGraph::new(control_flow_info, &code.code),
         }
     }
 

@@ -7,6 +7,7 @@
 //! - All "breaks" (forward, loop-exiting jumps) go to the "end" of the loop
 //! - All "continues" (back jumps in a loop) are only to the current loop
 use move_binary_format::{
+    control_flow_graph::LoopBounds,
     errors::{PartialVMError, PartialVMResult},
     file_format::{Bytecode, CodeOffset, CodeUnit, FunctionDefinitionIndex},
 };
@@ -16,7 +17,7 @@ use std::{collections::HashSet, convert::TryInto};
 pub fn verify(
     current_function_opt: Option<FunctionDefinitionIndex>,
     code: &CodeUnit,
-) -> PartialVMResult<()> {
+) -> PartialVMResult<Vec<LoopBounds>> {
     let current_function = current_function_opt.unwrap_or(FunctionDefinitionIndex(0));
     // check fall through
     // Check to make sure that the bytecode vector ends with a branching instruction.
@@ -35,7 +36,18 @@ pub fn verify(
         code: &code.code,
     };
     let labels = instruction_labels(context);
-    check_jumps(context, labels)
+    check_jumps(context, &labels)?;
+    let loop_bounds = context
+        .labeled_code(&labels)
+        .filter_map(|(offset, _, label)| match label {
+            Label::Loop { last_continue } => Some(LoopBounds {
+                loop_start: offset,
+                last_continue: *last_continue,
+            }),
+            Label::Code => None,
+        })
+        .collect();
+    Ok(loop_bounds)
 }
 
 #[derive(Clone, Copy)]
@@ -94,7 +106,7 @@ fn instruction_labels(context: &ControlFlowVerifier) -> Vec<Label> {
 //   - All forward jumps do not enter into the middle of a loop
 //   - All "breaks" go to the "end" of the loop
 //   - All back jumps are only to the current loop
-fn check_jumps(context: &ControlFlowVerifier, labels: Vec<Label>) -> PartialVMResult<()> {
+fn check_jumps(context: &ControlFlowVerifier, labels: &[Label]) -> PartialVMResult<()> {
     // All back jumps are only to the current loop
     check_continues(context, &labels)?;
     // All "breaks" go to the "end" of the loop

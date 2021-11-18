@@ -46,7 +46,8 @@ impl<'a> CodeUnitVerifier<'a> {
 
     fn verify_script_impl(script: &'a CompiledScript) -> PartialVMResult<()> {
         // create `FunctionView` and `BinaryIndexedView`
-        let function_view = FunctionView::script(script);
+        let control_flow_info = control_flow::verify(None, &script.code)?;
+        let function_view = FunctionView::script(control_flow_info, script);
         let resolver = BinaryIndexedView::Script(script);
         //verify
         let code_unit_verifier = CodeUnitVerifier {
@@ -67,15 +68,18 @@ impl<'a> CodeUnitVerifier<'a> {
             Some(code) => code,
             None => return Ok(()),
         };
-        // create `FunctionView` and `BinaryIndexedView`
-        let function_handle = module.function_handle_at(function_definition.function);
-        let function_view = FunctionView::function(module, index, code, function_handle);
+        // build mapping of name => function def
         let resolver = BinaryIndexedView::Module(module);
         let mut name_def_map = HashMap::new();
         for (idx, func_def) in module.function_defs().iter().enumerate() {
             let fh = module.function_handle_at(func_def.function);
             name_def_map.insert(fh.name, FunctionDefinitionIndex(idx as u16));
         }
+        // create `FunctionView` and `BinaryIndexedView`
+        let control_flow_info = control_flow::verify(Some(index), code)?;
+        let function_handle = module.function_handle_at(function_definition.function);
+        let function_view =
+            FunctionView::function(control_flow_info, module, index, code, function_handle);
         // verify
         let code_unit_verifier = CodeUnitVerifier {
             resolver,
@@ -87,7 +91,6 @@ impl<'a> CodeUnitVerifier<'a> {
     }
 
     fn verify_common(&self) -> PartialVMResult<()> {
-        control_flow::verify(self.function_view.index(), self.function_view.code())?;
         StackUsageVerifier::verify(&self.resolver, &self.function_view)?;
         type_safety::verify(&self.resolver, &self.function_view)?;
         locals_safety::verify(&self.resolver, &self.function_view)?;

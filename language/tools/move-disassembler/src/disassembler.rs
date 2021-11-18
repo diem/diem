@@ -17,6 +17,7 @@ use move_bytecode_source_map::{
     mapping::SourceMapping,
     source_map::{FunctionSourceMap, SourceName},
 };
+use move_bytecode_verifier::control_flow;
 use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule, NamedCompiledScript};
 use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
@@ -831,7 +832,8 @@ impl<'a> Disassembler<'a> {
             .collect();
 
         if self.options.print_basic_blocks {
-            let cfg = VMControlFlowGraph::new(&code.code);
+            let loop_bounds = control_flow::verify(None, code).unwrap();
+            let cfg = VMControlFlowGraph::new(loop_bounds, &code.code);
             for (block_number, block_id) in cfg.blocks().iter().enumerate() {
                 instrs.insert(
                     *block_id as usize + block_number,

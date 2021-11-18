@@ -9,9 +9,10 @@ use crate::coverage_map::{
 use move_binary_format::{
     access::ModuleAccess,
     control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph},
-    file_format::{Bytecode, CodeOffset},
+    file_format::{Bytecode, CodeOffset, FunctionDefinitionIndex, TableIndex},
     CompiledModule,
 };
+use move_bytecode_verifier::control_flow;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use petgraph::{algo::tarjan_scc, Graph};
 use serde::{Deserialize, Serialize};
@@ -187,12 +188,18 @@ pub fn summarize_path_cov(module: &CompiledModule, trace_map: &TraceMap) -> Modu
     let func_info: BTreeMap<_, _> = module
         .function_defs()
         .iter()
-        .filter_map(|function_def| {
+        .enumerate()
+        .filter_map(|(idx, function_def)| {
             match &function_def.code {
                 None => None,
                 Some(code_unit) => {
                     // build control-flow graph
-                    let fn_cfg = VMControlFlowGraph::new(code_unit.code.as_slice());
+                    let loop_bounds = control_flow::verify(
+                        Some(FunctionDefinitionIndex(idx as TableIndex)),
+                        &code_unit,
+                    )
+                    .unwrap();
+                    let fn_cfg = VMControlFlowGraph::new(loop_bounds, &code_unit.code);
 
                     // get function entry and return points
                     let fn_entry = fn_cfg.block_start(fn_cfg.entry_block_id());

@@ -147,7 +147,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
             .borrowed_by
             .0
             .entry(child_id)
-            .or_insert_with(BTreeSet::new)
+            .or_insert_with(BorrowEdgeSet::new)
             .insert(edge);
         let child = self.0.get_mut(&child_id).unwrap();
         child.borrows_from.insert(parent_id);
@@ -308,7 +308,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
                             .or_insert_with(BorrowEdges::new)
                             .0
                             .entry(*child_id)
-                            .or_insert_with(BTreeSet::new)
+                            .or_insert_with(BorrowEdgeSet::new)
                             .insert(other_edge.clone());
                     }
                 }
@@ -387,13 +387,24 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
         let child_to_parent_consistency =
             |cur_child, parent| self.0[parent].borrowed_by.0.contains_key(cur_child);
         self.0.iter().all(|(id, r)| {
-            r.borrowed_by
+            let borrowed_by_is_bounded = r
+                .borrowed_by
+                .0
+                .values()
+                .all(|edges| edges.len() <= MAX_EDGE_SET_SIZE);
+            let borrowed_by_is_consistent = r
+                .borrowed_by
                 .0
                 .keys()
-                .all(|c| parent_to_child_consistency(id, c))
-                && r.borrows_from
-                    .iter()
-                    .all(|p| child_to_parent_consistency(id, p))
+                .all(|c| parent_to_child_consistency(id, c));
+            let borrows_from_is_consistent = r
+                .borrows_from
+                .iter()
+                .all(|p| child_to_parent_consistency(id, p));
+            borrowed_by_is_bounded
+                && borrowed_by_is_bounded
+                && borrowed_by_is_consistent
+                && borrows_from_is_consistent
         })
     }
 

@@ -23,7 +23,7 @@ fn verify_module(module: &CompiledModule) -> PartialVMResult<()> {
                 .code
                 .as_ref()
                 .expect("unexpected native function"),
-        )?
+        )?;
     }
     Ok(())
 }

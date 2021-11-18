@@ -79,7 +79,7 @@ pub(crate) trait AbstractInterpreter: TransferFunctions {
     ) -> InvariantMap<Self::State, Self::AnalysisError> {
         let mut inv_map: InvariantMap<Self::State, Self::AnalysisError> = InvariantMap::new();
         let entry_block_id = function_view.cfg().entry_block_id();
-        let mut work_list = vec![entry_block_id];
+        let mut next_block = Some(entry_block_id);
         inv_map.insert(
             entry_block_id,
             BlockInvariant {
@@ -88,16 +88,40 @@ pub(crate) trait AbstractInterpreter: TransferFunctions {
             },
         );
 
-        while let Some(block_id) = work_list.pop() {
+        macro_rules! set_next_block {
+            ($block_id:ident) => {
+                let loop_last_continue_blocks = function_view.cfg().loop_last_continue_blocks();
+                // if the current block has the last continue of a loop,
+                // check that any of its associated starts need to be reprocessed
+                match loop_last_continue_blocks.get(&$block_id) {
+                    Some(loop_id)
+                        if matches!(&inv_map[loop_id].post, BlockPostcondition::Unprocessed) =>
+                    {
+                        next_block = Some(*loop_id);
+                    }
+                    _ => {
+                        next_block = function_view.cfg().next_block($block_id);
+                    }
+                }
+            };
+        }
+
+        while let Some(block_id) = next_block {
             let block_invariant = match inv_map.get_mut(&block_id) {
                 Some(invariant) => invariant,
-                None => unreachable!("Missing invariant for block {}", block_id),
+                None => {
+                    // This can only happen when all predecessors have errors,
+                    // so skip the block and move on to the next one
+                    set_next_block!(block_id);
+                    continue;
+                }
             };
 
             let pre_state = &block_invariant.pre;
             let post_state = match self.execute_block(block_id, pre_state, function_view) {
                 Err(e) => {
                     block_invariant.post = BlockPostcondition::Error(e);
+                    set_next_block!(block_id);
                     continue;
                 }
                 Ok(s) => {
@@ -117,18 +141,17 @@ pub(crate) trait AbstractInterpreter: TransferFunctions {
                         match join_result {
                             JoinResult::Unchanged => {
                                 // Pre is the same after join. Reanalyzing this block would produce
-                                // the same post. Don't schedule it.
-                                continue;
+                                // the same post
                             }
                             JoinResult::Changed => {
-                                // The pre changed. Schedule the next block.
-                                work_list.push(*next_block_id);
+                                // Pre has changed, the post condition is now unknown for the block
+                                next_block_invariant.post = BlockPostcondition::Unprocessed
                             }
                         }
                     }
                     None => {
                         // Haven't visited the next block yet. Use the post of the current block as
-                        // its pre and schedule it.
+                        // its pre
                         inv_map.insert(
                             *next_block_id,
                             BlockInvariant {
@@ -136,10 +159,10 @@ pub(crate) trait AbstractInterpreter: TransferFunctions {
                                 post: BlockPostcondition::Success,
                             },
                         );
-                        work_list.push(*next_block_id);
                     }
                 }
             }
+            set_next_block!(block_id);
         }
         inv_map
     }
