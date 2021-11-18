@@ -86,6 +86,9 @@ where
         let num_txns = signature_verified_block.len();
         let chunks_size = max(1, num_txns / self.num_cpus);
 
+        let log = num_txns > 1000;
+        let mut now = std::time::Instant::now();
+
         // Get the read and write dependency for each transaction.
         let infer_result: Vec<_> = {
             match signature_verified_block
@@ -100,6 +103,13 @@ where
                 Err(_) => return Err(Error::InferencerError),
             }
         };
+
+        if log {
+            info!("Time to infer: {:?}", now.elapsed());
+            now = std::time::Instant::now();
+        }
+
+
 
         // Use write analysis result to construct placeholders.
         let path_version_tuples: Vec<(T::Key, usize)> = infer_result
@@ -129,6 +139,11 @@ where
         let outcomes = OutcomeArray::new(num_txns);
 
         let scheduler = Arc::new(Scheduler::new(num_txns));
+
+        if log {
+            info!("Time to start up: {:?}", now.elapsed());
+            now = std::time::Instant::now();
+        }
 
         scope(|s| {
             // How many threads to use?
@@ -221,6 +236,12 @@ where
             }
         });
 
+        if log {
+            info!("Time to compute: {:?}", now.elapsed());
+            now = std::time::Instant::now();
+        }
+
+
         // Splits the head of the vec of results that are valid
         let valid_results_length = scheduler.num_txn_to_execute();
 
@@ -232,6 +253,13 @@ where
             drop(versioned_data_cache);
         });
 
-        outcomes.get_all_results(valid_results_length)
+        let results = outcomes.get_all_results(valid_results_length);
+
+        if log {
+            info!("Time to cleanup: {:?}", now.elapsed());
+            now = std::time::Instant::now();
+        }
+
+        results
     }
 }
