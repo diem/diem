@@ -2424,6 +2424,7 @@ dependencies = [
  "anyhow",
  "criterion",
  "crossbeam-queue",
+ "diem-logger",
  "diem-workspace-hack",
  "mvhashmap",
  "num_cpus",

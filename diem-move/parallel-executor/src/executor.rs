@@ -20,6 +20,7 @@ use std::{
         Arc,
     },
 };
+use diem_logger::prelude::*;
 
 pub struct MVHashMapView<'a, K, V> {
     map: &'a MVHashMap<K, V>,
@@ -134,6 +135,7 @@ where
             let compute_cpus = min(1 + (num_txns / 50), self.num_cpus - 1); // Ensure we have at least 50 tx per thread.
             let compute_cpus = min(num_txns / max_dependency_level, compute_cpus); // Ensure we do not higher rate of conflict than concurrency.
 
+            info!("Num txns: {:?}, max_dependency: {:?}, CPUs: {:?}, threads: {:?}", num_txns, max_dependency_level, self.num_cpus, compute_cpus);
             for _ in 0..(compute_cpus) {
                 s.spawn(|_| {
                     let scheduler = Arc::clone(&scheduler);
