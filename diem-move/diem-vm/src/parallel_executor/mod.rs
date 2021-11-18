@@ -85,6 +85,12 @@ impl ParallelDiemVM {
             .map(|txn| preprocess_transaction::<DiemVM>(txn.clone()))
             .collect();
 
+        rayon::scope(|scope| {
+            scope.spawn(|_| {
+                crate::adapter_common::preload_cache(&signature_verified_block, state_view);
+            });
+        });
+
         match ParallelTransactionExecutor::<
             PreprocessedTransaction,
             DiemVMWrapper<S>,

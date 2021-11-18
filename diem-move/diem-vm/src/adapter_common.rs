@@ -157,7 +157,7 @@ pub(crate) fn validate_signature_checked_transaction<S: MoveResolver, A: VMAdapt
     }
 }
 
-fn preload_cache(signature_verified_block: &[PreprocessedTransaction], data_view: &impl StateView) {
+pub(crate) fn preload_cache(signature_verified_block: &[PreprocessedTransaction], data_view: &impl StateView) {
     // generate a collection of addresses
     let mut addresses_to_preload = HashSet::new();
     for txn in signature_verified_block {
