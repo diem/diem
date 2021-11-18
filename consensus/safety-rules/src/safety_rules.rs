@@ -376,14 +376,21 @@ impl SafetyRules {
     ) -> Result<Vote, Error> {
         // Exit early if we cannot sign
         self.signer()?;
+        info!("FORGE TEST: Signer OK");
 
         let vote_data = self.verify_proposal(maybe_signed_vote_proposal)?;
+        info!("FORGE TEST: vote data {}", &vote_data);
+
         let mut safety_data = self.persistent_storage.safety_data()?;
+        info!("FORGE TEST: safety data {}", &safety_data);
 
         let proposed_block = maybe_signed_vote_proposal.vote_proposal.block();
+        info!("FORGE TEST: proposed block {}", &proposed_block);
+
         // if already voted on this round, send back the previous vote
         // note: this needs to happen after verifying the epoch as we just check the round here
         if let Some(vote) = safety_data.last_vote.clone() {
+            println!("FORGE TEST: vote {}", &vote);
             if vote.vote_data().proposed().round() == proposed_block.round() {
                 return Ok(vote);
             }
@@ -391,16 +398,22 @@ impl SafetyRules {
 
         // Two voting rules
         self.verify_and_update_preferred_round(proposed_block.quorum_cert(), &mut safety_data)?;
+        info!("FORGE TEST: done verify_and_update_preferred_round");
         self.verify_and_update_last_vote_round(
             proposed_block.block_data().round(),
             &mut safety_data,
         )?;
+        info!("FORGE TEST: done verify_and_update_last_vote_round");
 
         // Construct and sign vote
         let author = self.signer()?.author();
+        info!("FORGE TEST: author {}", &author);
         let ledger_info = self.construct_ledger_info(proposed_block, vote_data.hash())?;
+        info!("FORGE TEST: ledger_info {}", &ledger_info);
         let signature = self.sign(&ledger_info)?;
+        info!("FORGE TEST: signature {}", &signature);
         let vote = Vote::new_with_signature(vote_data, author, ledger_info, signature);
+        info!("FORGE TEST: vote {}", &vote);
 
         safety_data.last_vote = Some(vote.clone());
         self.persistent_storage.set_safety_data(safety_data)?;
