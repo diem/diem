@@ -11,7 +11,7 @@ use crate::{
 };
 use consensus_notifications::ConsensusNotificationListener;
 use data_streaming_service::streaming_client::StreamingServiceClient;
-use diem_config::config::NodeConfig;
+use diem_config::config::{BootstrappingMode, NodeConfig, StateSyncDriverConfig, SyncingMode};
 use diem_infallible::RwLock;
 use diem_types::waypoint::Waypoint;
 use event_notifications::EventSubscriptionService;
@@ -49,8 +49,16 @@ impl DriverFactory {
         let mempool_notification_handler =
             MempoolNotificationHandler::new(mempool_notification_sender);
 
+        // TODO(joshlind): plug the driver config into the node config once this is supported
+        let driver_config = StateSyncDriverConfig {
+            bootstrapping_mode: BootstrappingMode::ExecuteTransactionsFromGenesis,
+            syncing_mode: SyncingMode::ExecuteTransactions,
+            progress_check_interval_ms: 100,
+        };
+
         // Create the driver configuration
-        let driver_configuration = DriverConfiguration::new(node_config.base.role, waypoint);
+        let driver_configuration =
+            DriverConfiguration::new(driver_config, node_config.base.role, waypoint);
 
         // Create a storage synchronizer
         let storage_synchronizer =

@@ -13,7 +13,7 @@ use consensus_notifications::{
     ConsensusCommitNotification, ConsensusNotification, ConsensusSyncNotification,
 };
 use data_streaming_service::streaming_client::StreamingServiceClient;
-use diem_config::config::RoleType;
+use diem_config::config::{RoleType, StateSyncDriverConfig};
 use diem_types::{transaction::Transaction, waypoint::Waypoint};
 use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use futures::StreamExt;
@@ -27,6 +27,9 @@ const PROGRESS_CHECK_INTERVAL_MS: u64 = 100;
 
 /// The configuration of the state sync driver
 pub struct DriverConfiguration {
+    // The config file of the driver
+    pub config: StateSyncDriverConfig,
+
     // The role of the node
     pub role: RoleType,
 
@@ -35,8 +38,12 @@ pub struct DriverConfiguration {
 }
 
 impl DriverConfiguration {
-    pub fn new(role: RoleType, waypoint: Waypoint) -> Self {
-        Self { role, waypoint }
+    pub fn new(config: StateSyncDriverConfig, role: RoleType, waypoint: Waypoint) -> Self {
+        Self {
+            config,
+            role,
+            waypoint,
+        }
     }
 }
 
@@ -87,8 +94,10 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
 
     /// Starts the state sync driver
     pub async fn start_driver(mut self) {
-        let mut progress_check_interval =
-            IntervalStream::new(interval(Duration::from_millis(PROGRESS_CHECK_INTERVAL_MS))).fuse();
+        let mut progress_check_interval = IntervalStream::new(interval(Duration::from_millis(
+            self.driver_configuration.config.progress_check_interval_ms,
+        )))
+        .fuse();
 
         loop {
             ::futures::select! {

@@ -30,6 +30,7 @@ pub struct StateSyncConfig {
     // TODO(joshlind): plug these in when required.
     // Everything above belongs to state sync v1 and will be removed in the future.
     // pub data_streaming_service: DataStreamingServiceConfig,
+    // pub state_sync_driver: StateSyncDriverConfig,
     // pub storage_service: StorageServiceConfig,
 }
 
@@ -45,6 +46,44 @@ impl Default for StateSyncConfig {
             multicast_timeout_ms: 30_000,
             sync_request_timeout_ms: 60_000,
             tick_interval_ms: 100,
+        }
+    }
+}
+
+/// The bootstrapping mode determines how the node will bootstrap to the latest
+/// blockchain state, e.g., directly download the latest account states.
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub enum BootstrappingMode {
+    ApplyTransactionOutputsFromGenesis, // Applies transaction outputs (starting at genesis)
+    DownloadLatestAccountStates,        // Downloads the account states (at the latest version)
+    ExecuteTransactionsFromGenesis,     // Executes transactions (starting at genesis)
+}
+
+/// The syncing mode determines how the node will stay up-to-date once it has
+/// bootstrapped and the blockchain continues to grow, e.g., continuously
+/// executing all transactions.
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub enum SyncingMode {
+    ExecuteTransactions,     // Executes transactions to stay up-to-date
+    ApplyTransactionOutputs, // Applies transaction outputs to stay up-to-date
+}
+
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct StateSyncDriverConfig {
+    pub bootstrapping_mode: BootstrappingMode, // The mode by which to bootstrap
+    pub syncing_mode: SyncingMode,             // The mode by which to sync after bootstrapping
+    pub progress_check_interval_ms: u64, // The interval (ms) at which to check state sync progress
+}
+
+/// The default state sync driver config will be the one that gets (and keeps)
+/// the node up-to-date as quickly and cheaply as possible.
+impl Default for StateSyncDriverConfig {
+    fn default() -> Self {
+        Self {
+            bootstrapping_mode: BootstrappingMode::DownloadLatestAccountStates,
+            syncing_mode: SyncingMode::ApplyTransactionOutputs,
+            progress_check_interval_ms: 100,
         }
     }
 }
