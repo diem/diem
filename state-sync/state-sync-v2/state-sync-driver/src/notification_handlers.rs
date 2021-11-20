@@ -159,7 +159,7 @@ impl ConsensusNotificationHandler {
         &mut self,
         latest_storage_summary: &StorageStateSummary,
     ) -> Result<(), Error> {
-        if let Some(sync_request) = self.sync_request.as_ref() {
+        if let Some(sync_request) = self.sync_request.as_mut() {
             // Fetch the latest committed version and the target sync version
             let sync_target_version = sync_request
                 .consensus_sync_notification
@@ -181,7 +181,6 @@ impl ConsensusNotificationHandler {
 
             // Check if we've hit the target
             if latest_committed_version == sync_target_version {
-                // Remove the sync request
                 if let Some(sync_request) = self.sync_request.take() {
                     self.respond_to_sync_notification(
                         sync_request.consensus_sync_notification,
@@ -189,23 +188,15 @@ impl ConsensusNotificationHandler {
                     )
                     .await;
                 }
+                return Ok(());
             }
-        }
 
-        Ok(())
-    }
-
-    /// Checks to see that the node is making syncing progress and is not
-    /// blocking consensus indefinitely.
-    pub async fn check_sync_request_timeout(&mut self) -> Result<(), Error> {
-        if let Some(sync_request) = self.sync_request.as_ref() {
+            // Check if the sync deadline has been exceeded (timed out)
             let timeout_for_sync_request = Duration::from_millis(CONSENSUS_SYNC_REQUEST_TIMEOUT_MS);
             let sync_deadlined = sync_request
                 .sync_request_received
                 .checked_add(timeout_for_sync_request)
                 .ok_or_else(|| Error::IntegerOverflow("The sync deadline has overflown!".into()))?;
-
-            // Check if the sync deadline has been exceeded
             if SystemTime::now().duration_since(sync_deadlined).is_ok() {
                 // TODO(joshlind): log this!
 

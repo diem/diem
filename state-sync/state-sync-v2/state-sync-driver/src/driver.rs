@@ -13,10 +13,12 @@ use consensus_notifications::{
 };
 use data_streaming_service::streaming_client::StreamingServiceClient;
 use diem_config::config::{BootstrappingMode, RoleType, StateSyncDriverConfig};
+use diem_infallible::Mutex;
 use diem_types::{transaction::Transaction, waypoint::Waypoint};
 use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use futures::StreamExt;
 use mempool_notifications::MempoolNotificationSender;
+use std::sync::Arc;
 use tokio::time::{interval, Duration};
 use tokio_stream::wrappers::IntervalStream;
 
@@ -46,7 +48,7 @@ impl DriverConfiguration {
 /// The state sync driver that drives synchronization progress
 pub struct StateSyncDriver<M, S> {
     // The component that manages the initial bootrapping of the node
-    bootstrapper: Bootstrapper,
+    bootstrapper: Bootstrapper<S>,
 
     // The handler for notifications from consensus
     consensus_notification_handler: ConsensusNotificationHandler,
@@ -64,7 +66,7 @@ pub struct StateSyncDriver<M, S> {
     mempool_notification_handler: MempoolNotificationHandler<M>,
 
     // The storage synchronizer used to update local storage
-    storage_synchronizer: S,
+    storage_synchronizer: Arc<Mutex<S>>,
 
     // The client through which to stream data from the Diem network
     streaming_service_client: StreamingServiceClient,
@@ -80,9 +82,11 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
         storage_synchronizer: S,
         streaming_service_client: StreamingServiceClient,
     ) -> Self {
+        let storage_synchronizer = Arc::new(Mutex::new(storage_synchronizer));
         let bootstrapper = Bootstrapper::new(
             driver_configuration.clone(),
             streaming_service_client.clone(),
+            storage_synchronizer.clone(),
         );
 
         Self {
@@ -164,7 +168,7 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
             .await;
 
         // Notify mempool of the new commit
-        let latest_storage_summary = self.storage_synchronizer.get_storage_summary()?;
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
         let blockchain_timestamp_usecs = latest_storage_summary
             .latest_ledger_info
             .ledger_info()
@@ -174,12 +178,6 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
                 committed_transactions,
                 blockchain_timestamp_usecs,
             )
-            .await;
-
-        // Check if we're now bootstrapped or if we've hit the sync target
-        self.bootstrapper
-            .check_if_bootstrapped(&latest_storage_summary)?;
-        self.check_sync_request_progress(&latest_storage_summary)
             .await;
 
         // Publish the reconfiguration notifications
@@ -221,7 +219,7 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
         }
 
         // Initialize a new sync request
-        let latest_storage_summary = self.storage_synchronizer.get_storage_summary()?;
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
         if let Err(error) = self
             .consensus_notification_handler
             .initialize_sync_request(sync_notification, latest_storage_summary)
@@ -243,29 +241,15 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
         // Extract the bootstrap notifier channel
         let DriverNotification::NotifyOnceBootstrapped(notifier_channel) = notification;
 
-        // Set the bootstrap notifier channel
-        self.bootstrapper
-            .add_bootstrap_notifier_channel(notifier_channel);
-
-        // Check if we're already bootstrapped
-        let latest_storage_summary = self.storage_synchronizer.get_storage_summary()?;
-        if let Err(_error) = self
-            .bootstrapper
-            .check_if_bootstrapped(&latest_storage_summary)
-        {
-            // TODO(joshlind): log the error!
-        }
-
-        Ok(())
+        // Subscribe the bootstrap notifier channel
+        self.bootstrapper.notify_when_bootstrapped(notifier_channel)
     }
 
     /// Checks if the node has successfully reached the sync target
-    async fn check_sync_request_progress(
-        &mut self,
-        latest_storage_summary: &StorageStateSummary,
-    ) -> Result<(), Error> {
+    async fn check_sync_request_progress(&mut self) -> Result<(), Error> {
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
         self.consensus_notification_handler
-            .check_sync_request_progress(latest_storage_summary)
+            .check_sync_request_progress(&latest_storage_summary)
             .await
     }
 
@@ -278,15 +262,20 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
 
     /// Periodically checks that state sync is making progress
     async fn check_progress(&mut self) -> Result<(), Error> {
+        // If consensus is executing, there's nothing to do.
         if self.check_if_consensus_executing() {
-            return Ok(()); // No need to check progress or issue any requests
+            return Ok(());
         }
 
-        // Check if the sync request has timed out (i.e., if we aren't committing fast enough)
-        self.consensus_notification_handler
-            .check_sync_request_timeout()
-            .await?;
+        // Check the progress of any sync requests
+        if self.consensus_notification_handler.active_sync_request() {
+            // TODO(joshlind): handle the case where we're driving towards a sync request
 
+            // Check if we've hit the sync request target or timed out
+            self.check_sync_request_progress().await?;
+        }
+
+        // Check progress depending on if we're bootstrapping or continuously syncing
         if self.bootstrapper.is_bootstrapped() {
             let mode = self.driver_configuration.config.syncing_mode;
             unimplemented!("Syncing mode {:?} is not yet supported!", mode);

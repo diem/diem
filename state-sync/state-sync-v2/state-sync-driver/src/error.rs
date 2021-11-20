@@ -8,6 +8,8 @@ use thiserror::Error;
 
 #[derive(Clone, Debug, Deserialize, Error, PartialEq, Serialize)]
 pub enum Error {
+    #[error("State sync has already finished bootstrapping! Error: {0}")]
+    AlreadyBootstrapped(String),
     #[error("State sync has not yet finished bootstrapping! Error: {0}")]
     BootstrapNotComplete(String),
     #[error("Failed to send callback: {0}")]
@@ -32,14 +34,20 @@ pub enum Error {
     UnexpectedError(String),
 }
 
-impl From<SendError> for Error {
-    fn from(error: SendError) -> Self {
+impl From<Canceled> for Error {
+    fn from(canceled: Canceled) -> Self {
+        Error::SenderDroppedError(canceled.to_string())
+    }
+}
+
+impl From<data_streaming_service::error::Error> for Error {
+    fn from(error: data_streaming_service::error::Error) -> Self {
         Error::UnexpectedError(error.to_string())
     }
 }
 
-impl From<Canceled> for Error {
-    fn from(canceled: Canceled) -> Self {
-        Error::SenderDroppedError(canceled.to_string())
+impl From<SendError> for Error {
+    fn from(error: SendError) -> Self {
+        Error::UnexpectedError(error.to_string())
     }
 }
