@@ -25,7 +25,7 @@ pub struct StorageStateSummary {
 /// (e.g., transactions and outputs).
 pub trait StorageSynchronizerInterface {
     /// Returns the latest storage summary
-    fn get_storage_summary(&self) -> Result<StorageStateSummary, Error>;
+    fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error>;
 
     /// Executes and commit a batch of transactions
     fn execute_and_commit_transactions(
@@ -40,6 +40,10 @@ pub trait StorageSynchronizerInterface {
 pub struct StorageSynchronizer {
     chunk_executor: Box<dyn ChunkExecutor>,
     storage: Arc<RwLock<DbReaderWriter>>,
+
+    // We cache the latest storage summary to prevent unnecessary reads to the
+    // database. This should be updated after each database write.
+    cached_storage_summary: Option<StorageStateSummary>,
 }
 
 impl StorageSynchronizer {
@@ -50,12 +54,11 @@ impl StorageSynchronizer {
         Self {
             chunk_executor,
             storage,
+            cached_storage_summary: None,
         }
     }
-}
 
-impl StorageSynchronizerInterface for StorageSynchronizer {
-    fn get_storage_summary(&self) -> Result<StorageStateSummary, Error> {
+    fn refresh_cached_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
         // Fetch the startup info from storage
         let startup_info = self
             .storage
@@ -96,13 +99,26 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
         let (latest_synced_version, _) = latest_transaction_info
             .ok_or_else(|| Error::StorageError("Latest transaction info is missing!".into()))?;
 
-        // Return the state summary
-        Ok(StorageStateSummary {
+        // Create the storage summary and save it in the cache
+        let storage_state_summary = StorageStateSummary {
             latest_epoch_state,
             latest_executed_trees,
             latest_ledger_info,
             latest_synced_version,
-        })
+        };
+        self.cached_storage_summary = Some(storage_state_summary.clone());
+
+        Ok(storage_state_summary)
+    }
+}
+
+impl StorageSynchronizerInterface for StorageSynchronizer {
+    fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
+        if let Some(cached_storage_summary) = &self.cached_storage_summary {
+            Ok(cached_storage_summary.clone())
+        } else {
+            self.refresh_cached_storage_summary()
+        }
     }
 
     fn execute_and_commit_transactions(
