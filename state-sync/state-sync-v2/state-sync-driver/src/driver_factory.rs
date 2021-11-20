@@ -3,10 +3,8 @@
 
 use crate::{
     driver::{DriverConfiguration, StateSyncDriver},
-    driver_client::{DriverClient, DriverNotification},
-    notification_handlers::{
-        BootstrapNotificationHandler, ConsensusNotificationHandler, MempoolNotificationHandler,
-    },
+    driver_client::{ClientNotificationListener, DriverClient, DriverNotification},
+    notification_handlers::{ConsensusNotificationHandler, MempoolNotificationHandler},
     storage_synchronizer::StorageSynchronizer,
 };
 use consensus_notifications::ConsensusNotificationListener;
@@ -25,7 +23,7 @@ use tokio::runtime::{Builder, Runtime};
 /// Creates a new state sync driver and client
 pub struct DriverFactory {
     driver_runtime: Option<Runtime>,
-    notification_sender: mpsc::UnboundedSender<DriverNotification>,
+    client_notification_sender: mpsc::UnboundedSender<DriverNotification>,
 }
 
 impl DriverFactory {
@@ -42,9 +40,9 @@ impl DriverFactory {
         streaming_service_client: StreamingServiceClient,
     ) -> Self {
         // Create the notification handlers
-        let (notification_sender, notification_receiver) = mpsc::unbounded();
-        let bootstrap_notification_handler =
-            BootstrapNotificationHandler::new(notification_receiver);
+        let (client_notification_sender, client_notification_receiver) = mpsc::unbounded();
+        let client_notification_listener =
+            ClientNotificationListener::new(client_notification_receiver);
         let consensus_notification_handler = ConsensusNotificationHandler::new(consensus_listener);
         let mempool_notification_handler =
             MempoolNotificationHandler::new(mempool_notification_sender);
@@ -66,7 +64,7 @@ impl DriverFactory {
 
         // Create the driver
         let state_sync_driver = StateSyncDriver::new(
-            bootstrap_notification_handler,
+            client_notification_listener,
             consensus_notification_handler,
             driver_configuration,
             event_subscription_service,
@@ -93,12 +91,12 @@ impl DriverFactory {
 
         Self {
             driver_runtime,
-            notification_sender,
+            client_notification_sender,
         }
     }
 
     /// Returns a new client that can be used to communicate with the driver
     pub fn create_driver_client(&self) -> DriverClient {
-        DriverClient::new(self.notification_sender.clone())
+        DriverClient::new(self.client_notification_sender.clone())
     }
 }

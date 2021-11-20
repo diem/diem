@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 #![allow(unused)]
 
+mod bootstrapper;
 mod driver;
 mod driver_client;
 mod driver_factory;
