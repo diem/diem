@@ -444,14 +444,17 @@ impl StorageReaderInterface for StorageReader {
 
         // Fetch the epoch ending ledger info range
         let latest_ledger_info = latest_ledger_info_with_sigs.ledger_info();
-        let latest_epoch = latest_ledger_info.epoch();
-        let epoch_ending_ledger_infos = if latest_epoch == 0 {
-            None // We haven't seen an epoch change yet
-        } else {
-            let highest_ending_epoch = latest_epoch.checked_sub(1).ok_or_else(|| {
-                Error::UnexpectedErrorEncountered("Highest ending epoch overflowed!".into())
-            })?;
+        let epoch_ending_ledger_infos = if latest_ledger_info.ends_epoch() {
+            let highest_ending_epoch = latest_ledger_info.epoch();
             Some(CompleteDataRange::from_genesis(highest_ending_epoch))
+        } else if latest_ledger_info.epoch() > 0 {
+            let highest_ending_epoch =
+                latest_ledger_info.epoch().checked_sub(1).ok_or_else(|| {
+                    Error::UnexpectedErrorEncountered("Highest ending epoch overflowed!".into())
+                })?;
+            Some(CompleteDataRange::from_genesis(highest_ending_epoch))
+        } else {
+            None // We haven't seen an epoch change yet
         };
 
         // Fetch the transaction and transaction output ranges

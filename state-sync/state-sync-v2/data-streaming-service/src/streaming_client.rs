@@ -69,22 +69,6 @@ pub trait DataStreamingClient {
         max_proof_version: Version,
     ) -> Result<DataStreamListener, Error>;
 
-    /// Terminates the stream that sent the notification with the given
-    /// `notification_id` and provides feedback for the termination reason.
-    ///
-    /// Note:
-    /// 1. This is required because: (i) clients must terminate completed
-    /// streams (after receiving an end of stream notification); and (ii) data
-    /// payloads may be invalid, e.g., due to malformed data returned by a
-    /// misbehaving peer. This notifies the streaming service to terminate the
-    /// stream and take any action based on the provided feedback.
-    /// 2. Clients that wish to continue fetching data need to open a new stream.
-    async fn terminate_stream_with_feedback(
-        &self,
-        notification_id: NotificationId,
-        notification_feedback: NotificationFeedback,
-    ) -> Result<(), Error>;
-
     /// Continuously streams transactions with proofs as the blockchain grows.
     /// The stream starts at `start_version` and `start_epoch` (inclusive).
     /// Transaction proof versions are tied to ledger infos within the same
@@ -106,6 +90,22 @@ pub trait DataStreamingClient {
         start_version: Version,
         start_epoch: Epoch,
     ) -> Result<DataStreamListener, Error>;
+
+    /// Terminates the stream that sent the notification with the given
+    /// `notification_id` and provides feedback for the termination reason.
+    ///
+    /// Note:
+    /// 1. This is required because: (i) clients must terminate completed
+    /// streams (after receiving an end of stream notification); and (ii) data
+    /// payloads may be invalid, e.g., due to malformed data returned by a
+    /// misbehaving peer. This notifies the streaming service to terminate the
+    /// stream and take any action based on the provided feedback.
+    /// 2. Clients that wish to continue fetching data need to open a new stream.
+    async fn terminate_stream_with_feedback(
+        &self,
+        notification_id: NotificationId,
+        notification_feedback: NotificationFeedback,
+    ) -> Result<(), Error>;
 }
 
 /// Messages used by the data streaming client for communication with the
@@ -311,20 +311,6 @@ impl DataStreamingClient for StreamingServiceClient {
         self.send_request_and_await_response(client_request).await
     }
 
-    async fn terminate_stream_with_feedback(
-        &self,
-        notification_id: u64,
-        notification_feedback: NotificationFeedback,
-    ) -> Result<(), Error> {
-        let client_request = StreamRequest::TerminateStream(TerminateStreamRequest {
-            notification_id,
-            notification_feedback,
-        });
-        // We can ignore the receiver as no data will be sent.
-        let _ = self.send_stream_request(client_request).await?;
-        Ok(())
-    }
-
     async fn continuously_stream_transactions(
         &self,
         start_version: u64,
@@ -352,6 +338,20 @@ impl DataStreamingClient for StreamingServiceClient {
             },
         );
         self.send_request_and_await_response(client_request).await
+    }
+
+    async fn terminate_stream_with_feedback(
+        &self,
+        notification_id: u64,
+        notification_feedback: NotificationFeedback,
+    ) -> Result<(), Error> {
+        let client_request = StreamRequest::TerminateStream(TerminateStreamRequest {
+            notification_id,
+            notification_feedback,
+        });
+        // We can ignore the receiver as no data will be sent.
+        let _ = self.send_stream_request(client_request).await?;
+        Ok(())
     }
 }
 

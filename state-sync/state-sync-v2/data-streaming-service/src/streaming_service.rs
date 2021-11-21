@@ -87,8 +87,8 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
 
     /// Handles new stream request messages from clients
     fn handle_stream_request_message(&mut self, request_message: StreamRequestMessage) {
+        // Process any feedback request
         if let StreamRequest::TerminateStream(request) = request_message.stream_request {
-            // Process the feedback request
             if let Err(error) = self.process_terminate_stream_request(&request) {
                 error!(LogSchema::new(LogEntry::HandleTerminateRequest)
                     .event(LogEvent::Error)
