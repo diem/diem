@@ -259,7 +259,7 @@ fn setup_storage_service_servers(
 }
 
 fn setup_diemnet_data_client(
-    _runtime_handle: &Handle,
+    runtime_handle: &Handle,
     config: StorageServiceConfig,
     network_handles: HashMap<NetworkId, storage_service_client::StorageServiceNetworkSender>,
     peer_metadata_storage: Arc<PeerMetadataStorage>,
@@ -269,10 +269,9 @@ fn setup_diemnet_data_client(
         StorageServiceMultiSender::new(network_handles),
         peer_metadata_storage,
     );
-    let (diemnet_data_client, _data_summary_poller) =
+    let (diemnet_data_client, data_summary_poller) =
         DiemNetDataClient::new(config, TimeService::real(), network_client);
-    // TODO(philiphayes): uncomment this when we're ready to start doing e2e tests
-    // runtime_handle.spawn(data_summary_poller);
+    runtime_handle.spawn(data_summary_poller.start());
     diemnet_data_client
 }
 
@@ -490,14 +489,15 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // TODO set up on-chain discovery network based on UpstreamConfig.fallback_network
     // and pass network handles to mempool/state sync
 
+    // Start the storage service (server-side)
     let storage_service_rt = setup_storage_service_servers(
         StorageServiceConfig::default(),
         storage_service_server_network_handles,
         &db_rw,
     );
 
-    let _diemnet_data_client = setup_diemnet_data_client(
-        // TODO(philiphayes): probably use state-sync-v2 handle here?
+    // Start the diemnet data client
+    let diemnet_data_client = setup_diemnet_data_client(
         storage_service_rt.handle(),
         StorageServiceConfig::default(),
         storage_service_client_network_handles,
@@ -517,11 +517,12 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         state_sync_network_handles,
         mempool_notifier,
         consensus_listener,
-        Arc::clone(&db_rw.reader),
+        db_rw.clone(),
         chunk_executor,
         node_config,
         genesis_waypoint,
         event_subscription_service,
+        diemnet_data_client,
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
 

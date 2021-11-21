@@ -11,7 +11,7 @@ mod logging;
 mod metrics;
 mod stream_engine;
 pub mod streaming_client;
-mod streaming_service;
+pub mod streaming_service;
 
 #[cfg(test)]
 mod tests;

@@ -27,11 +27,11 @@ pub struct StateSyncConfig {
     pub sync_request_timeout_ms: u64,
     // interval used for checking state synchronization progress
     pub tick_interval_ms: u64,
-    // TODO(joshlind): plug these in when required.
+
     // Everything above belongs to state sync v1 and will be removed in the future.
-    // pub data_streaming_service: DataStreamingServiceConfig,
-    // pub state_sync_driver: StateSyncDriverConfig,
-    // pub storage_service: StorageServiceConfig,
+    pub data_streaming_service: DataStreamingServiceConfig,
+    pub state_sync_driver: StateSyncDriverConfig,
+    pub storage_service: StorageServiceConfig,
 }
 
 impl Default for StateSyncConfig {
@@ -46,6 +46,9 @@ impl Default for StateSyncConfig {
             multicast_timeout_ms: 30_000,
             sync_request_timeout_ms: 60_000,
             tick_interval_ms: 100,
+            data_streaming_service: DataStreamingServiceConfig::default(),
+            state_sync_driver: StateSyncDriverConfig::default(),
+            storage_service: StorageServiceConfig::default(),
         }
     }
 }
@@ -71,6 +74,7 @@ pub enum SyncingMode {
 #[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct StateSyncDriverConfig {
+    pub activate_state_sync_v2: bool,          // Enables state sync v2
     pub bootstrapping_mode: BootstrappingMode, // The mode by which to bootstrap
     pub syncing_mode: SyncingMode,             // The mode by which to sync after bootstrapping
     pub progress_check_interval_ms: u64, // The interval (ms) at which to check state sync progress
@@ -81,6 +85,7 @@ pub struct StateSyncDriverConfig {
 impl Default for StateSyncDriverConfig {
     fn default() -> Self {
         Self {
+            activate_state_sync_v2: false, // TODO(joshlind): update me, when v2 works
             bootstrapping_mode: BootstrappingMode::DownloadLatestAccountStates,
             syncing_mode: SyncingMode::ApplyTransactionOutputs,
             progress_check_interval_ms: 100,

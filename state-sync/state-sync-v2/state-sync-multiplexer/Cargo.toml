@@ -11,15 +11,19 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3.12"
+tokio = { version = "1.8.1", features = ["full"] }
 
 consensus-notifications = { path = "../../../state-sync/inter-component/consensus-notifications" }
+data-streaming-service = { path = "../data-streaming-service" }
 diem-config = { path = "../../../config" }
+diem-data-client = { path = "../../diem-data-client" }
 diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 event-notifications = { path = "../../../state-sync/inter-component/event-notifications" }
 executor-types = { path = "../../../execution/executor-types" }
 mempool-notifications = { path = "../../../state-sync/inter-component/mempool-notifications" }
 network = { path = "../../../network" }
+state-sync-driver = { path = "../../../state-sync/state-sync-v2/state-sync-driver" }
 state-sync-v1 = { path = "../../../state-sync/state-sync-v1" }
 storage-interface = { path = "../../../storage/storage-interface" }
 
@@ -28,8 +32,10 @@ diem-crypto = { path = "../../../crates/diem-crypto" }
 diem-genesis-tool = {path = "../../../config/management/genesis", features = ["testing"] }
 diem-infallible = { path = "../../../common/infallible" }
 diem-temppath = { path = "../../../common/temppath" }
+diem-time-service = { path = "../../../common/time-service" }
 diem-vm = { path = "../../../diem-move/diem-vm" }
 diemdb = { path = "../../../storage/diemdb" }
 executor = { path = "../../../execution/executor" }
 executor-test-helpers = { path = "../../../execution/executor-test-helpers" }
 mempool-notifications = { path = "../../../state-sync/inter-component/mempool-notifications" }
+storage-service-client = { path = "../../storage-service/client" }
