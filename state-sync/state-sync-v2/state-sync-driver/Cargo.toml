@@ -20,6 +20,7 @@ consensus-notifications = { path = "../../inter-component/consensus-notification
 data-streaming-service = { path = "../data-streaming-service" }
 diem-config = { path = "../../../config" }
 diem-infallible = { path = "../../../common/infallible" }
+diem-logger = { path = "../../../common/logger" }
 diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 event-notifications = { path = "../../inter-component/event-notifications" }

@@ -14,6 +14,7 @@ use consensus_notifications::{
 use data_streaming_service::streaming_client::StreamingServiceClient;
 use diem_config::config::{BootstrappingMode, RoleType, StateSyncDriverConfig};
 use diem_infallible::Mutex;
+use diem_logger::*;
 use diem_types::{transaction::Transaction, waypoint::Waypoint};
 use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use futures::StreamExt;
@@ -261,10 +262,13 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
     }
 
     /// Periodically checks that state sync is making progress
-    async fn check_progress(&mut self) -> Result<(), Error> {
+    async fn check_progress(&mut self) {
+        debug!("Checking progress of the state sync driver!");
+
         // If consensus is executing, there's nothing to do.
         if self.check_if_consensus_executing() {
-            return Ok(());
+            debug!("Consensus is executing. There's nothing to do.");
+            return;
         }
 
         // Check the progress of any sync requests
@@ -272,17 +276,23 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
             // TODO(joshlind): handle the case where we're driving towards a sync request
 
             // Check if we've hit the sync request target or timed out
-            self.check_sync_request_progress().await?;
+            if let Err(error) = self.check_sync_request_progress().await {
+                error!(
+                    "Error found when checking the sync request progress: {:?}",
+                    error
+                );
+            }
         }
 
         // Check progress depending on if we're bootstrapping or continuously syncing
         if self.bootstrapper.is_bootstrapped() {
             let mode = self.driver_configuration.config.syncing_mode;
             unimplemented!("Syncing mode {:?} is not yet supported!", mode);
-        } else {
-            self.bootstrapper.check_progress();
+        } else if let Err(error) = self.bootstrapper.check_progress().await {
+            error!(
+                "Error found when checking the bootstrapper progress: {:?}",
+                error
+            );
         };
-
-        Ok(())
     }
 }

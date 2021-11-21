@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use diem_config::{config::StorageServiceConfig, network_id::PeerNetworkId};
 use diem_id_generator::{IdGenerator, U64IdGenerator};
 use diem_infallible::RwLock;
-use diem_logger::trace;
+use diem_logger::*;
 use diem_time_service::{TimeService, TimeServiceTrait};
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
@@ -44,7 +44,7 @@ mod tests;
 
 // TODO(philiphayes): configuration / pass as argument?
 const DEFAULT_TIMEOUT: Duration = Duration::from_millis(10_000);
-pub const DATA_SUMMARY_POLL_INTERVAL: Duration = Duration::from_millis(100);
+pub const DATA_SUMMARY_POLL_INTERVAL: Duration = Duration::from_millis(1_000);
 
 /// A [`DiemDataClient`] that fulfills requests from remote peers' Storage Service
 /// over DiemNet.
@@ -386,7 +386,7 @@ impl DataSummaryPoller {
     }
 
     pub async fn start(self) {
-        trace!("DataSummaryPoller: start");
+        trace!("Starting the data summary poller!");
 
         let ticker = self.time_service.interval(self.poll_interval);
         futures::pin_mut!(ticker);
@@ -397,20 +397,20 @@ impl DataSummaryPoller {
             // wait for next round to poll
             ticker.next().await;
 
-            trace!("DataSummaryPoller: polling next peer");
-
             // just sample a random peer for now. do something smarter here in
             // the future.
-            let maybe_peer = self
+            let peer = match self
                 .data_client
-                .choose_peer(&StorageServiceRequest::GetStorageServerSummary);
-
-            trace!("DataSummaryPoller: maybe polling peer: {:?}", maybe_peer);
-
-            let peer = match maybe_peer {
+                .choose_peer(&StorageServiceRequest::GetStorageServerSummary)
+            {
                 Ok(peer) => peer,
-                Err(_) => continue,
+                Err(error) => {
+                    debug!("Unable to poll the next peer! Error: {:?}", error);
+                    continue;
+                }
             };
+
+            debug!("Polling peer ({:?}) to update the data summary!", peer);
 
             let result: Result<StorageServerSummary> = self
                 .data_client
@@ -421,14 +421,23 @@ impl DataSummaryPoller {
                 .await
                 .map(Response::into_payload);
 
-            trace!("DataSummaryPoller: maybe received response: {:?}", result);
-
-            let summary = match result {
-                Ok(summary) => summary,
-                Err(_err) => continue,
+            let storage_summary = match result {
+                Ok(storage_summary) => storage_summary,
+                Err(error) => {
+                    debug!(
+                        "Error encountered when polling peer ({:?})! Error: {:?}",
+                        peer, error
+                    );
+                    continue;
+                }
             };
 
-            self.data_client.update_summary(peer, summary);
+            debug!(
+                "Received response from peer ({:?}) when polled: {:?}",
+                peer, storage_summary
+            );
+
+            self.data_client.update_summary(peer, storage_summary);
             self.data_client.update_global_summary_cache();
         }
     }

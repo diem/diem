@@ -342,3 +342,109 @@ fn test_state_sync_multichunk_epoch() {
         .wait_for_all_nodes_to_catchup(Instant::now() + Duration::from_secs(60))
         .unwrap();
 }
+
+#[test]
+fn test_state_sync_v2_e2e() {
+    // - Start a swarm of 4 nodes (3 nodes forming a QC).
+    // - Kill one node and continue submitting transactions to the others.
+    // - Restart the node
+    // - Wait for all the nodes to catch up
+    // - Verify that the restarted node has synced up with the submitted transactions.
+
+    let mut swarm = new_local_swarm(4);
+    for validator in swarm.validators_mut() {
+        let mut config = validator.config().clone();
+        config.state_sync.state_sync_driver.activate_state_sync_v2 = true;
+        config.save(validator.config_path()).unwrap();
+        validator.restart().unwrap();
+    }
+    swarm.launch().unwrap(); // Make sure all nodes are healthy and live
+    let validator_peer_ids = swarm.validators().map(|v| v.peer_id()).collect::<Vec<_>>();
+
+    let client_1 = swarm
+        .validator(validator_peer_ids[1])
+        .unwrap()
+        .json_rpc_client();
+    let transaction_factory = swarm.chain_info().transaction_factory();
+
+    let mut account_0 = create_and_fund_account(&mut swarm, 100);
+    let account_1 = create_and_fund_account(&mut swarm, 10);
+    transfer_coins(
+        &client_1,
+        &transaction_factory,
+        &mut account_0,
+        &account_1,
+        10,
+    );
+    assert_balance(&client_1, &account_0, 90);
+    assert_balance(&client_1, &account_1, 20);
+
+    // Stop a node
+    let node_to_restart = validator_peer_ids[0];
+    swarm.validator_mut(node_to_restart).unwrap().stop();
+
+    // Do a transfer and ensure it still executes
+    transfer_coins(
+        &client_1,
+        &transaction_factory,
+        &mut account_0,
+        &account_1,
+        1,
+    );
+    assert_balance(&client_1, &account_0, 89);
+    assert_balance(&client_1, &account_1, 21);
+
+    // Restart killed node and wait for all nodes to catchup
+    swarm
+        .validator_mut(node_to_restart)
+        .unwrap()
+        .start()
+        .unwrap();
+    swarm
+        .validator_mut(node_to_restart)
+        .unwrap()
+        .wait_until_healthy(Instant::now() + Duration::from_secs(10))
+        .unwrap();
+    swarm
+        .wait_for_all_nodes_to_catchup(Instant::now() + Duration::from_secs(60))
+        .unwrap();
+
+    // Connect to the newly recovered node and verify its state
+    let client_0 = swarm.validator(node_to_restart).unwrap().json_rpc_client();
+    assert_balance(&client_0, &account_0, 89);
+    assert_balance(&client_0, &account_1, 21);
+
+    // Test multiple chunk sync
+    swarm.validator_mut(node_to_restart).unwrap().stop();
+
+    for _ in 0..10 {
+        transfer_coins(
+            &client_1,
+            &transaction_factory,
+            &mut account_0,
+            &account_1,
+            1,
+        );
+    }
+
+    assert_balance(&client_1, &account_0, 79);
+    assert_balance(&client_1, &account_1, 31);
+
+    // Restart killed node and wait for all nodes to catchup
+    swarm
+        .validator_mut(node_to_restart)
+        .unwrap()
+        .start()
+        .unwrap();
+    swarm
+        .validator_mut(node_to_restart)
+        .unwrap()
+        .wait_until_healthy(Instant::now() + Duration::from_secs(10))
+        .unwrap();
+    swarm
+        .wait_for_all_nodes_to_catchup(Instant::now() + Duration::from_secs(60))
+        .unwrap();
+
+    assert_balance(&client_0, &account_0, 79);
+    assert_balance(&client_0, &account_1, 31);
+}

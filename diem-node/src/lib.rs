@@ -3,10 +3,17 @@
 
 use backup_service::start_backup_service;
 use consensus::consensus_provider::start_consensus;
+use data_streaming_service::{
+    streaming_client::{new_streaming_service_client_listener_pair, StreamingServiceClient},
+    streaming_service::DataStreamingService,
+};
 use debug_interface::node_debug_service::NodeDebugService;
 use diem_api::runtime::bootstrap as bootstrap_api;
 use diem_config::{
-    config::{NetworkConfig, NodeConfig, PersistableConfig, StorageServiceConfig},
+    config::{
+        DataStreamingServiceConfig, NetworkConfig, NodeConfig, PersistableConfig,
+        StorageServiceConfig,
+    },
     network_id::NetworkId,
     utils::get_genesis_txn,
 };
@@ -53,7 +60,7 @@ use storage_service_client::{StorageServiceClient, StorageServiceMultiSender};
 use storage_service_server::{
     network::StorageServiceNetworkEvents, StorageReader, StorageServiceServer,
 };
-use tokio::runtime::{Builder, Handle, Runtime};
+use tokio::runtime::{Builder, Runtime};
 use tokio_stream::wrappers::IntervalStream;
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
@@ -65,10 +72,12 @@ pub struct DiemHandle {
     _backup: Runtime,
     _consensus_runtime: Option<Runtime>,
     _debug: NodeDebugService,
+    _diemnet_data_client: Runtime,
     _mempool: Runtime,
     _network_runtimes: Vec<Runtime>,
     _state_sync: StateSyncMultiplexer,
     _storage_service: Runtime,
+    _streaming_service: Runtime,
 }
 
 pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
@@ -245,10 +254,10 @@ fn setup_storage_service_servers(
 ) -> Runtime {
     // For now, spawn all of the storage-service servers on the same runtime.
     let rt = Builder::new_multi_thread()
-        .thread_name("storage-service-servers")
+        .thread_name("storage-service-server")
         .enable_all()
         .build()
-        .expect("Failed to start the DiemNet storage-service runtime.");
+        .expect("Failed to start the storage service runtime.");
     let storage_reader = StorageReader::new(Arc::clone(&db_rw.reader));
     for events in network_handles {
         let service =
@@ -259,11 +268,10 @@ fn setup_storage_service_servers(
 }
 
 fn setup_diemnet_data_client(
-    runtime_handle: &Handle,
     config: StorageServiceConfig,
     network_handles: HashMap<NetworkId, storage_service_client::StorageServiceNetworkSender>,
     peer_metadata_storage: Arc<PeerMetadataStorage>,
-) -> DiemNetDataClient {
+) -> (DiemNetDataClient, Runtime) {
     // Combine all storage service client handles
     let network_client = StorageServiceClient::new(
         StorageServiceMultiSender::new(network_handles),
@@ -271,8 +279,37 @@ fn setup_diemnet_data_client(
     );
     let (diemnet_data_client, data_summary_poller) =
         DiemNetDataClient::new(config, TimeService::real(), network_client);
-    runtime_handle.spawn(data_summary_poller.start());
-    diemnet_data_client
+
+    // Create a new runtime for the diemnet data client
+    let diemnet_data_client_runtime = Builder::new_multi_thread()
+        .thread_name("diemnet-data-client")
+        .enable_all()
+        .build()
+        .expect("Failed to create data streaming service!");
+    diemnet_data_client_runtime.spawn(data_summary_poller.start());
+
+    (diemnet_data_client, diemnet_data_client_runtime)
+}
+
+fn setup_data_streaming_service(
+    config: DataStreamingServiceConfig,
+    diem_data_client: DiemNetDataClient,
+) -> (StreamingServiceClient, Runtime) {
+    // Create the data streaming service
+    let (streaming_service_client, streaming_service_listener) =
+        new_streaming_service_client_listener_pair();
+    let data_streaming_service =
+        DataStreamingService::new(config, diem_data_client, streaming_service_listener);
+
+    // Start the data streaming service
+    let streaming_service_runtime = Builder::new_multi_thread()
+        .thread_name("data-streaming-service")
+        .enable_all()
+        .build()
+        .expect("Failed to create data streaming service!");
+    streaming_service_runtime.spawn(data_streaming_service.start_service());
+
+    (streaming_service_client, streaming_service_runtime)
 }
 
 async fn periodic_state_dump(node_config: NodeConfig, db: DbReaderWriter) {
@@ -490,18 +527,23 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // and pass network handles to mempool/state sync
 
     // Start the storage service (server-side)
-    let storage_service_rt = setup_storage_service_servers(
-        StorageServiceConfig::default(),
+    let storage_service_runtime = setup_storage_service_servers(
+        node_config.state_sync.storage_service,
         storage_service_server_network_handles,
         &db_rw,
     );
 
     // Start the diemnet data client
-    let diemnet_data_client = setup_diemnet_data_client(
-        storage_service_rt.handle(),
-        StorageServiceConfig::default(),
+    let (diemnet_data_client, diemnet_data_client_runtime) = setup_diemnet_data_client(
+        node_config.state_sync.storage_service,
         storage_service_client_network_handles,
         peer_metadata_storage.clone(),
+    );
+
+    // Start the data streaming service
+    let (streaming_service_client, streaming_service_runtime) = setup_data_streaming_service(
+        node_config.state_sync.data_streaming_service,
+        diemnet_data_client,
     );
 
     // For state sync to send notifications to mempool and receive notifications from consensus.
@@ -522,7 +564,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         node_config,
         genesis_waypoint,
         event_subscription_service,
-        diemnet_data_client,
+        streaming_service_client,
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
 
@@ -588,9 +630,11 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         _backup: backup_service,
         _consensus_runtime: consensus_runtime,
         _debug: debug_if,
+        _diemnet_data_client: diemnet_data_client_runtime,
         _mempool: mempool,
         _network_runtimes: network_runtimes,
         _state_sync: state_sync,
-        _storage_service: storage_service_rt,
+        _storage_service: storage_service_runtime,
+        _streaming_service: streaming_service_runtime,
     }
 }

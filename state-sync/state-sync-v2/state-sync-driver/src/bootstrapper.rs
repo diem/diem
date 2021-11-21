@@ -13,6 +13,7 @@ use data_streaming_service::{
 };
 use diem_config::config::{BootstrappingMode, StateSyncDriverConfig};
 use diem_infallible::Mutex;
+use diem_logger::*;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 use futures::{
     channel::{mpsc, oneshot},
@@ -148,11 +149,12 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         }
 
         // Fetch the epoch ending ledger infos
-        if let Err(_error) = self
+        if let Err(error) = self
             .fetch_epoch_ending_ledger_infos(&latest_storage_summary)
             .await
         {
             // TODO(joshlind): handle this error!
+            error!("Unable to fetch the epoch ending ledger infos: {:?}", error);
         }
 
         Ok(())
@@ -197,6 +199,7 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         // Check if we've bootstrapped
         if highest_ledger_info_version == highest_transaction_version {
             // TODO(joshlind): log me!
+            info!("The node has successfully bootstrapped!");
             self.bootstrapped = true; // We've bootstrapped!
             return Ok(());
         }

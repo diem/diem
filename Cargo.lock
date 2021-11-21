@@ -8059,6 +8059,7 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-infallible",
+ "diem-logger",
  "diem-temppath",
  "diem-types",
  "diem-vm",
