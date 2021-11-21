@@ -6,6 +6,7 @@
 use consensus_notifications::ConsensusNotificationListener;
 use data_streaming_service::streaming_client::StreamingServiceClient;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
+use diem_data_client::diemnet::DiemNetDataClient;
 use diem_types::{move_resource::MoveStorage, waypoint::Waypoint};
 use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use executor_types::ChunkExecutor;
@@ -37,6 +38,7 @@ impl StateSyncMultiplexer {
         node_config: &NodeConfig,
         waypoint: Waypoint,
         mut event_subscription_service: EventSubscriptionService,
+        diem_data_client: DiemNetDataClient,
         streaming_service_client: StreamingServiceClient,
     ) -> Self {
         // Notify subscribers of the initial on-chain config values
@@ -73,6 +75,7 @@ impl StateSyncMultiplexer {
                 mempool_notifier,
                 consensus_listener,
                 event_subscription_service,
+                diem_data_client,
                 streaming_service_client,
             ));
         } else {
@@ -130,9 +133,11 @@ mod tests {
     use data_streaming_service::streaming_client::new_streaming_service_client_listener_pair;
     use diem_config::{config::RocksdbConfig, utils::get_genesis_txn};
     use diem_crypto::HashValue;
+    use diem_data_client::diemnet::DiemNetDataClient;
     use diem_genesis_tool::test_config;
     use diem_infallible::RwLock;
     use diem_temppath::TempPath;
+    use diem_time_service::TimeService;
     use diem_types::{
         block_info::BlockInfo, ledger_info::LedgerInfo, on_chain_config::ON_CHAIN_CONFIG_REGISTRY,
         protocol_spec::DpnProto, waypoint::Waypoint,
@@ -144,8 +149,10 @@ mod tests {
     use executor_test_helpers::bootstrap_genesis;
     use futures::{FutureExt, StreamExt};
     use mempool_notifications::new_mempool_notifier_listener_pair;
-    use std::sync::Arc;
+    use network::application::{interface::MultiNetworkSender, storage::PeerMetadataStorage};
+    use std::{collections::HashMap, sync::Arc};
     use storage_interface::default_protocol::DbReaderWriter;
+    use storage_service_client::StorageServiceClient;
 
     #[test]
     fn test_new_initialized_configs() {
@@ -174,6 +181,17 @@ mod tests {
         // Create a test streaming service client
         let (streaming_service_client, _) = new_streaming_service_client_listener_pair();
 
+        // Create a test diem data client
+        let network_client = StorageServiceClient::new(
+            MultiNetworkSender::new(HashMap::new()),
+            PeerMetadataStorage::new(&[]),
+        );
+        let (diem_data_client, _) = DiemNetDataClient::new(
+            node_config.state_sync.storage_service,
+            TimeService::mock(),
+            network_client,
+        );
+
         // Create the multiplexer
         let _ = StateSyncMultiplexer::new(
             vec![],
@@ -184,6 +202,7 @@ mod tests {
             &node_config,
             Waypoint::new_any(&LedgerInfo::new(BlockInfo::empty(), HashValue::random())),
             event_subscription_service,
+            diem_data_client,
             streaming_service_client,
         );
 

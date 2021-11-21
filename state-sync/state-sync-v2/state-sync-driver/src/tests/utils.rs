@@ -18,7 +18,9 @@ use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519Signature},
     HashValue, PrivateKey, Uniform,
 };
+use diem_data_client::diemnet::DiemNetDataClient;
 use diem_infallible::RwLock;
+use diem_time_service::TimeService;
 use diem_types::{
     account_address::AccountAddress,
     block_info::BlockInfo,
@@ -44,8 +46,13 @@ use futures::channel::{mpsc, oneshot};
 use mempool_notifications::{
     MempoolNotificationListener, MempoolNotificationSender, MempoolNotifier,
 };
-use std::{collections::BTreeMap, sync::Arc};
+use network::application::{interface::MultiNetworkSender, storage::PeerMetadataStorage};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 use storage_interface::{default_protocol::DbReaderWriter, DbReader};
+use storage_service_client::StorageServiceClient;
 
 /// Creates a state sync driver with the given config and waypoint
 pub fn create_driver_with_config_and_waypoint(
@@ -132,6 +139,17 @@ fn create_driver_for_tests(
     // Create a streaming service client
     let (streaming_service_client, _) = new_streaming_service_client_listener_pair();
 
+    // Create a test diem data client
+    let network_client = StorageServiceClient::new(
+        MultiNetworkSender::new(HashMap::new()),
+        PeerMetadataStorage::new(&[]),
+    );
+    let (diem_data_client, _) = DiemNetDataClient::new(
+        node_config.state_sync.storage_service,
+        TimeService::mock(),
+        network_client,
+    );
+
     // Create and spawn the driver
     let driver_factory = DriverFactory::create_and_spawn_driver(
         false,
@@ -142,6 +160,7 @@ fn create_driver_for_tests(
         mempool_notifier,
         consensus_listener,
         event_subscription_service,
+        diem_data_client,
         streaming_service_client,
     );
 

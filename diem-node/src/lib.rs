@@ -543,7 +543,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // Start the data streaming service
     let (streaming_service_client, streaming_service_runtime) = setup_data_streaming_service(
         node_config.state_sync.data_streaming_service,
-        diemnet_data_client,
+        diemnet_data_client.clone(),
     );
 
     // For state sync to send notifications to mempool and receive notifications from consensus.
@@ -564,6 +564,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         node_config,
         genesis_waypoint,
         event_subscription_service,
+        diemnet_data_client,
         streaming_service_client,
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);

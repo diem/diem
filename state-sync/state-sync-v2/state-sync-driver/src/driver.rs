@@ -13,6 +13,7 @@ use consensus_notifications::{
 };
 use data_streaming_service::streaming_client::StreamingServiceClient;
 use diem_config::config::{BootstrappingMode, RoleType, StateSyncDriverConfig};
+use diem_data_client::DiemDataClient;
 use diem_infallible::Mutex;
 use diem_logger::*;
 use diem_types::{transaction::Transaction, waypoint::Waypoint};
@@ -47,7 +48,7 @@ impl DriverConfiguration {
 }
 
 /// The state sync driver that drives synchronization progress
-pub struct StateSyncDriver<M, S> {
+pub struct StateSyncDriver<D, M, S> {
     // The component that manages the initial bootrapping of the node
     bootstrapper: Bootstrapper<S>,
 
@@ -56,6 +57,9 @@ pub struct StateSyncDriver<M, S> {
 
     // The listener for client notifications
     client_notification_listener: ClientNotificationListener,
+
+    // The client for checking the global data summary of our peers
+    diem_data_client: D,
 
     // The configuration for the driver
     driver_configuration: DriverConfiguration,
@@ -73,7 +77,12 @@ pub struct StateSyncDriver<M, S> {
     streaming_service_client: StreamingServiceClient,
 }
 
-impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDriver<M, S> {
+impl<
+        D: DiemDataClient + Send + Clone + 'static,
+        M: MempoolNotificationSender,
+        S: StorageSynchronizerInterface,
+    > StateSyncDriver<D, M, S>
+{
     pub fn new(
         client_notification_listener: ClientNotificationListener,
         consensus_notification_handler: ConsensusNotificationHandler,
@@ -81,6 +90,7 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
         event_subscription_service: EventSubscriptionService,
         mempool_notification_handler: MempoolNotificationHandler<M>,
         storage_synchronizer: S,
+        diem_data_client: D,
         streaming_service_client: StreamingServiceClient,
     ) -> Self {
         let storage_synchronizer = Arc::new(Mutex::new(storage_synchronizer));
@@ -94,6 +104,7 @@ impl<M: MempoolNotificationSender, S: StorageSynchronizerInterface> StateSyncDri
             bootstrapper,
             client_notification_listener,
             consensus_notification_handler,
+            diem_data_client,
             driver_configuration,
             event_subscription_service,
             mempool_notification_handler,
