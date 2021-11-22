@@ -204,10 +204,10 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
             })?;
 
         if max_num_requests_to_send > 0 {
-            for client_request in self
+            let client_requests = self
                 .stream_engine
-                .create_data_client_requests(max_num_requests_to_send, global_data_summary)?
-            {
+                .create_data_client_requests(max_num_requests_to_send, global_data_summary)?;
+            for client_request in &client_requests {
                 // Send the client request
                 let pending_client_response = self.send_client_request(client_request.clone());
 
@@ -221,7 +221,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                     .event(LogEvent::Success)
                     .message(&format!(
                         "Sent {:?} data requests to the network",
-                        max_num_requests_to_send
+                        client_requests.len()
                     )))
             );
         }
@@ -443,8 +443,8 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                     .stream_id(self.data_stream_id)
                     .event(LogEvent::Success)
                     .message(&format!(
-                        "Sent a single stream notification! Notification ID: {:?}",
-                        notification_id
+                        "Sent a single stream notification! Notification ID: {:?}, notification: {:?}",
+                        notification_id, data_notification
                     )))
             );
             self.send_data_notification(data_notification)?;

@@ -12,6 +12,7 @@ use diem_types::{
         Version,
     },
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use storage_service::UnexpectedResponseError;
@@ -253,6 +254,11 @@ impl GlobalDataSummary {
             optimal_chunk_sizes: OptimalChunkSizes::empty(),
         }
     }
+
+    /// Returns true iff the global data summary is empty
+    pub fn is_empty(&self) -> bool {
+        self == &Self::empty()
+    }
 }
 
 /// Holds the optimal chunk sizes that clients should use when
@@ -337,5 +343,30 @@ impl AdvertisedData {
             }
         }
         true
+    }
+
+    /// Returns the highest epoch ending ledger info advertised in the network
+    pub fn highest_epoch_ending_ledger_info(&self) -> Option<Epoch> {
+        self.epoch_ending_ledger_infos
+            .iter()
+            .map(|epoch_range| epoch_range.highest())
+            .max()
+    }
+
+    /// Returns the highest synced ledger info advertised in the network
+    pub fn highest_synced_ledger_info(&self) -> Option<LedgerInfoWithSignatures> {
+        let highest_synced_position = self
+            .synced_ledger_infos
+            .iter()
+            .map(|ledger_info_with_sigs| ledger_info_with_sigs.ledger_info().version())
+            .position_max();
+
+        if let Some(highest_synced_position) = highest_synced_position {
+            self.synced_ledger_infos
+                .get(highest_synced_position)
+                .cloned()
+        } else {
+            None
+        }
     }
 }

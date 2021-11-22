@@ -10,6 +10,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("State sync has already finished bootstrapping! Error: {0}")]
     AlreadyBootstrapped(String),
+    #[error("Advertised data error: {0}")]
+    AdvertisedDataError(String),
     #[error("State sync has not yet finished bootstrapping! Error: {0}")]
     BootstrapNotComplete(String),
     #[error("Failed to send callback: {0}")]

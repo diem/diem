@@ -313,7 +313,9 @@ pub trait StorageReaderInterface: Clone + Send + 'static {
     ) -> Result<TransactionListWithProof, Error>;
 
     /// Returns a list of epoch ending ledger infos, starting at `start_epoch`
-    /// and ending at the `expected_end_epoch` (inclusive).
+    /// and ending at the `expected_end_epoch` (inclusive). For example, if
+    /// `start_epoch` is 0 and `end_epoch` is 1, this will return 2 epoch ending
+    /// ledger infos (ending epoch 0 and 1, respectively).
     fn get_epoch_ending_ledger_infos(
         &self,
         start_epoch: u64,
@@ -502,6 +504,11 @@ impl StorageReaderInterface for StorageReader {
         start_epoch: u64,
         expected_end_epoch: u64,
     ) -> Result<EpochChangeProof, Error> {
+        // The DbReader interface returns the epochs up to expected_end_epoch - 1.
+        // But we want to include expected_end_epoch.
+        let expected_end_epoch = expected_end_epoch.checked_add(1).ok_or_else(|| {
+            Error::UnexpectedErrorEncountered("Expected end epoch has overflown!".into())
+        })?;
         let epoch_change_proof = self
             .storage
             .get_epoch_ending_ledger_infos(start_epoch, expected_end_epoch)

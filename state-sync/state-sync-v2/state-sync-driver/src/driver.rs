@@ -13,7 +13,7 @@ use consensus_notifications::{
 };
 use data_streaming_service::streaming_client::StreamingServiceClient;
 use diem_config::config::{BootstrappingMode, RoleType, StateSyncDriverConfig};
-use diem_data_client::DiemDataClient;
+use diem_data_client::{DiemDataClient, GlobalDataSummary};
 use diem_infallible::Mutex;
 use diem_logger::*;
 use diem_types::{transaction::Transaction, waypoint::Waypoint};
@@ -137,6 +137,7 @@ impl<
 
     /// Handles a notification sent by consensus
     async fn handle_consensus_notification(&mut self, notification: ConsensusNotification) {
+        debug!("Received a consensus notification: {:?}", notification);
         // Handle the notification
         let result = match notification {
             ConsensusNotification::NotifyCommit(commit_notification) => {
@@ -161,6 +162,11 @@ impl<
         &mut self,
         commit_notification: ConsensusCommitNotification,
     ) -> Result<(), Error> {
+        debug!(
+            "Handling the consensus commit notification: {:?}",
+            commit_notification
+        );
+
         // Full nodes shouldn't receive commit notifications
         if self.driver_configuration.role == RoleType::FullNode {
             let error = Err(Error::FullNodeConsensusNotification(
@@ -208,6 +214,11 @@ impl<
         &mut self,
         sync_notification: ConsensusSyncNotification,
     ) -> Result<(), Error> {
+        debug!(
+            "Handling the consensus sync notification: {:?}",
+            sync_notification
+        );
+
         // Full nodes don't support sync requests
         if self.driver_configuration.role == RoleType::FullNode {
             let error = Err(Error::FullNodeConsensusNotification(
@@ -250,11 +261,14 @@ impl<
         &mut self,
         notification: DriverNotification,
     ) -> Result<(), Error> {
+        debug!("Received a client notification: {:?}", notification);
+
         // Extract the bootstrap notifier channel
         let DriverNotification::NotifyOnceBootstrapped(notifier_channel) = notification;
 
         // Subscribe the bootstrap notifier channel
-        self.bootstrapper.notify_when_bootstrapped(notifier_channel)
+        self.bootstrapper
+            .subscribe_to_bootstrap_notifications(notifier_channel)
     }
 
     /// Checks if the node has successfully reached the sync target
@@ -282,8 +296,16 @@ impl<
             return;
         }
 
+        // Fetch the global data summary and verify we have active peers
+        let global_data_summary = self.diem_data_client.get_global_data_summary();
+        if global_data_summary.is_empty() {
+            debug!("The global data summary is empty! It's likely that we have no active peers.");
+            return;
+        }
+
         // Check the progress of any sync requests
         if self.consensus_notification_handler.active_sync_request() {
+            debug!("There's an active sync request!");
             // TODO(joshlind): handle the case where we're driving towards a sync request
 
             // Check if we've hit the sync request target or timed out
@@ -299,7 +321,7 @@ impl<
         if self.bootstrapper.is_bootstrapped() {
             let mode = self.driver_configuration.config.syncing_mode;
             unimplemented!("Syncing mode {:?} is not yet supported!", mode);
-        } else if let Err(error) = self.bootstrapper.check_progress().await {
+        } else if let Err(error) = self.bootstrapper.check_progress(&global_data_summary).await {
             error!(
                 "Error found when checking the bootstrapper progress: {:?}",
                 error

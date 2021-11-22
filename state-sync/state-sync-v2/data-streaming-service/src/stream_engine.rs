@@ -22,7 +22,6 @@ use diem_id_generator::{IdGenerator, U64IdGenerator};
 use diem_logger::prelude::*;
 use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
 use enum_dispatch::enum_dispatch;
-use itertools::Itertools;
 use std::{cmp, sync::Arc};
 
 macro_rules! invalid_client_request {
@@ -360,7 +359,7 @@ impl ContinuousTransactionStreamEngine {
         &self,
         advertised_data: &AdvertisedData,
     ) -> Result<LedgerInfoWithSignatures, Error> {
-        if let Some(highest_synced_ledger_info) = highest_synced_ledger_info(advertised_data) {
+        if let Some(highest_synced_ledger_info) = advertised_data.highest_synced_ledger_info() {
             let (next_request_version, _) = self.next_request_version_and_epoch;
             if next_request_version > highest_synced_ledger_info.ledger_info().version() {
                 Err(Error::NoDataToFetch(
@@ -695,12 +694,14 @@ impl EpochEndingStreamEngine {
         request: &GetAllEpochEndingLedgerInfosRequest,
         advertised_data: &AdvertisedData,
     ) -> Result<Self, Error> {
-        let end_epoch = highest_epoch_ending_ledger_info(advertised_data).ok_or_else(|| {
-            Error::DataIsUnavailable(format!(
-                "Unable to find any epoch ending ledger info in the network: {:?}",
-                advertised_data
-            ))
-        })?;
+        let end_epoch = advertised_data
+            .highest_epoch_ending_ledger_info()
+            .ok_or_else(|| {
+                Error::DataIsUnavailable(format!(
+                    "Unable to find any epoch ending ledger info in the network: {:?}",
+                    advertised_data
+                ))
+            })?;
         if request.start_epoch > end_epoch {
             return Err(Error::DataIsUnavailable(format!(
                 "The epoch to start syncing from is higher than the highest ending epoch! Highest: {:?}, start: {:?}",
@@ -1149,35 +1150,6 @@ fn create_data_client_request(
             }
             request => invalid_stream_request!(request),
         },
-    }
-}
-
-/// Returns the highest epoch ending ledger info advertised in the network
-fn highest_epoch_ending_ledger_info(advertised_data: &AdvertisedData) -> Option<Epoch> {
-    advertised_data
-        .epoch_ending_ledger_infos
-        .iter()
-        .map(|epoch_range| epoch_range.highest())
-        .max()
-}
-
-/// Returns the highest synced ledger info advertised in the network
-fn highest_synced_ledger_info(
-    advertised_data: &AdvertisedData,
-) -> Option<LedgerInfoWithSignatures> {
-    let highest_synced_position = advertised_data
-        .synced_ledger_infos
-        .iter()
-        .map(|ledger_info_with_sigs| ledger_info_with_sigs.ledger_info().version())
-        .position_max();
-
-    if let Some(highest_synced_position) = highest_synced_position {
-        advertised_data
-            .synced_ledger_infos
-            .get(highest_synced_position)
-            .cloned()
-    } else {
-        None
     }
 }
 

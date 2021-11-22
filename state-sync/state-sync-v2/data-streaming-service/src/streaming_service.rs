@@ -12,7 +12,7 @@ use crate::{
     },
 };
 use diem_config::config::DataStreamingServiceConfig;
-use diem_data_client::{DiemDataClient, GlobalDataSummary, OptimalChunkSizes};
+use diem_data_client::{DiemDataClient, GlobalDataSummary};
 use diem_id_generator::{IdGenerator, U64IdGenerator};
 use diem_logger::prelude::*;
 use futures::StreamExt;
@@ -216,7 +216,7 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
 
     fn fetch_global_data_summary(&mut self) -> Result<(), Error> {
         let global_data_summary = self.diem_data_client.get_global_data_summary();
-        verify_optimal_chunk_sizes(&global_data_summary.optimal_chunk_sizes)?;
+        verify_optimal_chunk_sizes(&global_data_summary)?;
         self.global_data_summary = global_data_summary;
         Ok(())
     }
@@ -298,7 +298,8 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
 
 /// Verifies that all optimal chunk sizes are valid (i.e., not zero). Returns an
 /// error if a chunk size is 0.
-fn verify_optimal_chunk_sizes(optimal_chunk_sizes: &OptimalChunkSizes) -> Result<(), Error> {
+fn verify_optimal_chunk_sizes(global_data_summary: &GlobalDataSummary) -> Result<(), Error> {
+    let optimal_chunk_sizes = &global_data_summary.optimal_chunk_sizes;
     if optimal_chunk_sizes.account_states_chunk_size == 0
         || optimal_chunk_sizes.epoch_chunk_size == 0
         || optimal_chunk_sizes.transaction_chunk_size == 0
@@ -306,7 +307,7 @@ fn verify_optimal_chunk_sizes(optimal_chunk_sizes: &OptimalChunkSizes) -> Result
     {
         Err(Error::DiemDataClientResponseIsInvalid(format!(
             "Found at least one optimal chunk size of zero: {:?}",
-            optimal_chunk_sizes
+            global_data_summary
         )))
     } else {
         Ok(())
