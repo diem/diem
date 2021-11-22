@@ -261,7 +261,7 @@ impl<
         &mut self,
         notification: DriverNotification,
     ) -> Result<(), Error> {
-        debug!("Received a client notification: {:?}", notification);
+        debug!("Received a client notification!");
 
         // Extract the bootstrap notifier channel
         let DriverNotification::NotifyOnceBootstrapped(notifier_channel) = notification;

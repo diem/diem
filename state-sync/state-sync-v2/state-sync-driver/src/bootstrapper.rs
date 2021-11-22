@@ -7,7 +7,7 @@ use crate::{
     storage_synchronizer::{StorageStateSummary, StorageSynchronizerInterface},
 };
 use data_streaming_service::{
-    data_notification::{DataNotification, DataPayload},
+    data_notification::{DataNotification, DataPayload, NotificationId},
     data_stream::DataStreamListener,
     streaming_client::{DataStreamingClient, NotificationFeedback, StreamingServiceClient},
 };
@@ -16,7 +16,12 @@ use diem_data_client::GlobalDataSummary;
 use diem_infallible::Mutex;
 use diem_logger::*;
 use diem_types::{
-    ledger_info::LedgerInfoWithSignatures, transaction::default_protocol::TransactionListWithProof,
+    account_state_blob::AccountStatesChunkWithProof,
+    ledger_info::LedgerInfoWithSignatures,
+    transaction::{
+        default_protocol::{TransactionListWithProof, TransactionOutputListWithProof},
+        Version,
+    },
 };
 use futures::{
     channel::{mpsc, oneshot},
@@ -118,17 +123,46 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
             ));
         }
 
-        // Identify how to make progress based on the bootstrapping mode
+        // Bootstrap the epoch ending ledger infos first
+        if !self.bootstrapped_epoch_ending_ledger_infos {
+            return if self.active_data_stream.is_some() {
+                self.process_epoch_ending_ledger_infos().await
+            } else {
+                self.fetch_epoch_ending_ledger_infos(global_data_summary)
+                    .await
+            };
+        }
+
+        // Once we have the epoch ending ledger infos, bootstrap using the mode
         match self.driver_configuration.config.bootstrapping_mode {
+            BootstrappingMode::ApplyTransactionOutputsFromGenesis => {
+                self.apply_transaction_outputs_from_genesis(global_data_summary)
+                    .await?;
+            }
             BootstrappingMode::ExecuteTransactionsFromGenesis => {
                 self.execute_transactions_from_genesis(global_data_summary)
                     .await?;
             }
-            mode => unimplemented!("Bootstrapping mode {:?} is not supported!", mode),
+            BootstrappingMode::DownloadLatestAccountStates => {
+                self.download_latest_account_states(global_data_summary)
+                    .await?;
+            }
         }
 
         // Check if we've now bootstrapped
         self.notify_if_bootstrapped()
+    }
+
+    /// Attempts to make bootstrapping progress by applying transaction outputs since genesis
+    async fn apply_transaction_outputs_from_genesis(
+        &mut self,
+        global_data_summary: &GlobalDataSummary,
+    ) -> Result<(), Error> {
+        if self.active_data_stream.is_some() {
+            self.process_transaction_outputs_with_proof().await
+        } else {
+            self.fetch_transaction_outputs_with_proofs().await
+        }
     }
 
     /// Attempts to make bootstrapping progress by executing transactions since genesis
@@ -136,40 +170,53 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         &mut self,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<(), Error> {
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
-
-        // Check if there are already active streams
         if self.active_data_stream.is_some() {
-            if self.bootstrapped_epoch_ending_ledger_infos {
-                return self
-                    .process_transactions_with_proofs(&latest_storage_summary)
-                    .await;
-            } else {
-                return self
-                    .process_epoch_ending_ledger_infos(&latest_storage_summary)
-                    .await;
-            }
-        }
-
-        if self.bootstrapped_epoch_ending_ledger_infos {
-            // If we've already fetched the epoch ending ledger infos, fetch the transactions
-            self.fetch_transactions_with_proofs(&latest_storage_summary)
-                .await
+            self.process_transactions_with_proofs().await
         } else {
-            // Fetch the epoch ending ledger infos
-            self.fetch_epoch_ending_ledger_infos(&latest_storage_summary, global_data_summary)
-                .await
+            self.fetch_transactions_with_proofs().await
         }
+    }
+
+    /// Attempts to make bootstrapping progress by downloading the latest account states
+    async fn download_latest_account_states(
+        &mut self,
+        global_data_summary: &GlobalDataSummary,
+    ) -> Result<(), Error> {
+        if self.active_data_stream.is_some() {
+            self.process_account_states_with_proofs().await
+        } else {
+            self.fetch_account_states_with_proofs().await
+        }
+    }
+
+    /// Fetches all accounts: at the highest epoch ending ledger info version
+    async fn fetch_account_states_with_proofs(&mut self) -> Result<(), Error> {
+        // Fetch the highest ledger info stored locally
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let latest_ledger_info = latest_storage_summary.latest_ledger_info.ledger_info();
+        let latest_ledger_info_version = latest_ledger_info.version();
+
+        // Fetch the accounts at the latest ledger info version
+        debug!(
+            "Fetching the account states stream at version: {:?}",
+            latest_ledger_info_version
+        );
+        let account_states_stream = self
+            .streaming_service_client
+            .get_all_accounts(latest_ledger_info_version, None)
+            .await?;
+        self.active_data_stream = Some(account_states_stream);
+
+        Ok(())
     }
 
     /// Fetches all epoch ending ledger infos: from the current epoch to the
     /// maximum that can be found by the data streaming service.
     async fn fetch_epoch_ending_ledger_infos(
         &mut self,
-        latest_storage_summary: &StorageStateSummary,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<(), Error> {
-        // Fetch the highest advertised epoch that has ended
+        // Get the highest advertised epoch that has ended
         let advertised_highest_epoch_end = global_data_summary
             .advertised_data
             .highest_epoch_ending_ledger_info()
@@ -180,6 +227,7 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
             })?;
 
         // Fetch the highest epoch end stored locally
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
         let latest_ledger_info = latest_storage_summary.latest_ledger_info.ledger_info();
         let local_highest_epoch_end = if latest_ledger_info.ends_epoch() {
             Some(latest_ledger_info.epoch())
@@ -193,6 +241,7 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
 
         // Compare the local highest epoch end to the advertised epoch end
         if let Some(local_highest_epoch_end) = local_highest_epoch_end {
+            // TODO(joshlind): <
             if local_highest_epoch_end <= advertised_highest_epoch_end {
                 // There's higher epoch ending ledger infos available
                 debug!("Found higher epoch ending ledger infos in the network! Local: {:?}, advertised: {:?}",
@@ -224,25 +273,32 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         Ok(())
     }
 
-    /// Fetches all transactions: from the highest synced transaction version to
-    /// the highest stored ledger info version.
-    async fn fetch_transactions_with_proofs(
-        &mut self,
-        latest_storage_summary: &StorageStateSummary,
-    ) -> Result<(), Error> {
-        let highest_transaction_version = latest_storage_summary.latest_synced_version;
+    /// Returns the highest synced and ledger versions in storage
+    fn get_highest_synced_and_ledger_versions(&self) -> Result<(Version, Version), Error> {
+        // Fetch the highest synced and ledger info versions
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let highest_synced_version = latest_storage_summary.latest_synced_version;
         let highest_ledger_info_version = latest_storage_summary
             .latest_ledger_info
             .ledger_info()
             .version();
 
-        // Ensure that the ledger info version is higher than our highest transaction
-        if highest_ledger_info_version < highest_transaction_version {
-            return Err(Error::UnexpectedError(format!(
-                "Highest ledger info version ({:?}) < highest transaction version ({:?})",
-                highest_ledger_info_version, highest_transaction_version
-            )));
+        // Ensure that the ledger info version is >= the synced version
+        if highest_ledger_info_version < highest_synced_version {
+            Err(Error::UnexpectedError(format!(
+                "Highest ledger info version ({:?}) < highest synced version ({:?})",
+                highest_ledger_info_version, highest_synced_version
+            )))
+        } else {
+            Ok((highest_synced_version, highest_ledger_info_version))
         }
+    }
+
+    /// Fetches all transactions: from the highest synced transaction version + 1
+    /// to the highest stored ledger info version.
+    async fn fetch_transactions_with_proofs(&mut self) -> Result<(), Error> {
+        let (highest_synced_version, highest_ledger_info_version) =
+            self.get_highest_synced_and_ledger_versions()?;
 
         // Check if we've bootstrapped
         //if highest_ledger_info_version == highest_transaction_version {
@@ -253,10 +309,13 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         //}
 
         // Fetch all transactions until the ledger info version
+        let next_transaction_version = highest_synced_version.checked_add(1).ok_or_else(|| {
+            Error::IntegerOverflow("The next transaction version has overflown!".into())
+        })?;
         let transaction_stream = self
             .streaming_service_client
             .get_all_transactions(
-                highest_transaction_version,
+                next_transaction_version,
                 highest_ledger_info_version,
                 highest_ledger_info_version,
                 false,
@@ -267,111 +326,214 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         Ok(())
     }
 
-    async fn process_epoch_ending_ledger_infos(
-        &mut self,
-        latest_storage_summary: &StorageStateSummary,
-    ) -> Result<(), Error> {
-        let mut data_notification_id = None;
-        let mut stream_feedback = None;
+    /// Fetches all transaction outputs: from the highest synced transaction
+    /// version + 1 to the highest stored ledger info version.
+    async fn fetch_transaction_outputs_with_proofs(&mut self) -> Result<(), Error> {
+        let (highest_synced_version, highest_ledger_info_version) =
+            self.get_highest_synced_and_ledger_versions()?;
 
-        // Pull data notifications from the stream
-        if let Some(active_data_stream) = &mut self.active_data_stream {
-            loop {
-                let data_notification = get_data_notification(active_data_stream).await;
-                if let Some(data_notification) = data_notification {
-                    data_notification_id = Some(data_notification.notification_id);
+        // Check if we've bootstrapped
+        //if highest_ledger_info_version == highest_synced_version {
+        //    // TODO(joshlind): log me!
+        //    info!("The node has successfully bootstrapped!");
+        //    self.bootstrapped = true; // We've bootstrapped!
+        //    return Ok(());
+        //}
 
-                    match data_notification.data_payload {
-                        DataPayload::EpochEndingLedgerInfos(epoch_ending_ledger_infos) => {
-                            process_epoch_ending_payload(
-                                latest_storage_summary,
-                                epoch_ending_ledger_infos,
-                            )
-                            .await?;
-                        }
-                        DataPayload::EndOfStream => {
-                            debug!("Received the end of epoch stream data notification!");
-                            let latest_ledger_info =
-                                latest_storage_summary.latest_ledger_info.ledger_info();
-                            let waypoint = self.driver_configuration.waypoint;
-                            if latest_ledger_info.version() >= waypoint.version() {
-                                debug!("The waypoint was successfully verified!");
-                                // The waypoint was verified successfully. We've bootstrapped.
-                                self.bootstrapped_epoch_ending_ledger_infos = true;
-                            }
-                            stream_feedback = Some(NotificationFeedback::EndOfStream);
-                        }
-                        _ => {
-                            stream_feedback = Some(NotificationFeedback::PayloadTypeIsIncorrect);
-                        }
-                    }
-                } else {
-                    break; // TODO(joshlind): log the fact that nothing was found on the stream
-                }
-            }
-        }
-
-        // Terminate the currently active stream
-        if let Some(stream_feedback) = stream_feedback {
-            if let Some(data_notification_id) = data_notification_id {
-                self.streaming_service_client
-                    .terminate_stream_with_feedback(data_notification_id, stream_feedback)
-                    .await?;
-                self.active_data_stream = None;
-                // TODO(joshlind): log the stream termination and reason
-            }
-        }
+        // Fetch all transaction outputs until the ledger info version
+        let next_output_version = highest_synced_version.checked_add(1).ok_or_else(|| {
+            Error::IntegerOverflow("The next output version has overflown!".into())
+        })?;
+        let transaction_stream = self
+            .streaming_service_client
+            .get_all_transaction_outputs(
+                next_output_version,
+                highest_ledger_info_version,
+                highest_ledger_info_version,
+            )
+            .await?;
+        self.active_data_stream = Some(transaction_stream);
 
         Ok(())
     }
 
-    async fn process_transactions_with_proofs(
-        &mut self,
-        latest_storage_summary: &StorageStateSummary,
-    ) -> Result<(), Error> {
-        let mut data_notification_id = None;
-        let mut stream_feedback = None;
-
+    async fn process_account_states_with_proofs(&mut self) -> Result<(), Error> {
         // Pull data notifications from the stream
+        let mut stream_feedback = None;
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
         if let Some(active_data_stream) = &mut self.active_data_stream {
-            loop {
-                let data_notification = get_data_notification(active_data_stream).await;
-                if let Some(data_notification) = data_notification {
-                    data_notification_id = Some(data_notification.notification_id);
-
-                    match data_notification.data_payload {
-                        DataPayload::TransactionsWithProof(transactions_with_proof) => {
-                            process_transactions_with_proof(
-                                latest_storage_summary,
-                                transactions_with_proof,
-                            )
-                            .await?;
-                        }
-                        DataPayload::EndOfStream => {
-                            debug!("Received the end of transaction stream data notification!");
-                            info!("The node has successfully bootstrapped!");
-                            self.bootstrapped = true; // We've bootstrapped!
-                            stream_feedback = Some(NotificationFeedback::EndOfStream);
-                        }
-                        _ => {
-                            stream_feedback = Some(NotificationFeedback::PayloadTypeIsIncorrect);
-                        }
+            while let Some(data_notification) = get_data_notification(active_data_stream).await {
+                match data_notification.data_payload {
+                    DataPayload::AccountStatesWithProof(account_states_with_proof) => {
+                        process_account_states_payload(
+                            &latest_storage_summary,
+                            account_states_with_proof,
+                        )
+                        .await?;
                     }
-                } else {
-                    break; // TODO(joshlind): log the fact that nothing was found on the stream
+                    DataPayload::EndOfStream => {
+                        debug!("Received the end of account states stream data notification!");
+                        stream_feedback = Some((
+                            NotificationFeedback::EndOfStream,
+                            data_notification.notification_id,
+                        ));
+                    }
+                    _ => {
+                        stream_feedback = Some((
+                            NotificationFeedback::PayloadTypeIsIncorrect,
+                            data_notification.notification_id,
+                        ));
+                        break;
+                    }
                 }
             }
         }
 
-        // Terminate the currently active stream
-        if let Some(stream_feedback) = stream_feedback {
-            if let Some(data_notification_id) = data_notification_id {
-                self.streaming_service_client
-                    .terminate_stream_with_feedback(data_notification_id, stream_feedback)
-                    .await?;
-                self.active_data_stream = None;
-                // TODO(joshlind): log the stream termination and reason
+        // Handle any feedback for the stream
+        self.terminate_active_stream_if_feedback(stream_feedback)
+            .await
+    }
+
+    async fn process_epoch_ending_ledger_infos(&mut self) -> Result<(), Error> {
+        // Pull data notifications from the stream
+        let mut stream_feedback = None;
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        if let Some(active_data_stream) = &mut self.active_data_stream {
+            while let Some(data_notification) = get_data_notification(active_data_stream).await {
+                match data_notification.data_payload {
+                    DataPayload::EpochEndingLedgerInfos(epoch_ending_ledger_infos) => {
+                        process_epoch_ending_payload(
+                            &latest_storage_summary,
+                            epoch_ending_ledger_infos,
+                        )
+                        .await?;
+                    }
+                    DataPayload::EndOfStream => {
+                        debug!("Received the end of epoch stream data notification!");
+                        let latest_ledger_info =
+                            latest_storage_summary.latest_ledger_info.ledger_info();
+                        let waypoint = self.driver_configuration.waypoint;
+                        if latest_ledger_info.version() >= waypoint.version() {
+                            debug!("The waypoint was successfully verified!");
+                            // The waypoint was verified successfully. We've bootstrapped.
+                            self.bootstrapped_epoch_ending_ledger_infos = true;
+                        }
+                        stream_feedback = Some((
+                            NotificationFeedback::EndOfStream,
+                            data_notification.notification_id,
+                        ));
+                    }
+                    _ => {
+                        stream_feedback = Some((
+                            NotificationFeedback::PayloadTypeIsIncorrect,
+                            data_notification.notification_id,
+                        ));
+                        break;
+                    }
+                }
             }
+        }
+
+        // Handle any feedback for the stream
+        self.terminate_active_stream_if_feedback(stream_feedback)
+            .await
+    }
+
+    async fn process_transactions_with_proofs(&mut self) -> Result<(), Error> {
+        // Pull data notifications from the stream
+        let mut stream_feedback = None;
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        if let Some(active_data_stream) = &mut self.active_data_stream {
+            while let Some(data_notification) = get_data_notification(active_data_stream).await {
+                match data_notification.data_payload {
+                    DataPayload::TransactionsWithProof(transactions_with_proof) => {
+                        process_transactions_payload(
+                            &latest_storage_summary,
+                            transactions_with_proof,
+                        )
+                        .await?;
+                    }
+                    DataPayload::EndOfStream => {
+                        // TODO(joshlind): verify we actually bootstrapped! Not just ended the stream
+                        debug!("Received the end of transaction stream data notification!");
+                        info!("The node has successfully bootstrapped!");
+                        self.bootstrapped = true; // We've bootstrapped!
+                        stream_feedback = Some((
+                            NotificationFeedback::EndOfStream,
+                            data_notification.notification_id,
+                        ));
+                    }
+                    _ => {
+                        stream_feedback = Some((
+                            NotificationFeedback::PayloadTypeIsIncorrect,
+                            data_notification.notification_id,
+                        ));
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Handle any feedback for the stream
+        self.terminate_active_stream_if_feedback(stream_feedback)
+            .await
+    }
+
+    async fn process_transaction_outputs_with_proof(&mut self) -> Result<(), Error> {
+        // Pull data notifications from the stream
+        let mut stream_feedback = None;
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        if let Some(active_data_stream) = &mut self.active_data_stream {
+            while let Some(data_notification) = get_data_notification(active_data_stream).await {
+                match data_notification.data_payload {
+                    DataPayload::TransactionOutputsWithProof(transaction_outputs_with_proof) => {
+                        process_transaction_outputs_payload(
+                            &latest_storage_summary,
+                            transaction_outputs_with_proof,
+                        )
+                        .await?;
+                    }
+                    DataPayload::EndOfStream => {
+                        // TODO(joshlind): verify we actually bootstrapped! Not just ended the stream
+                        debug!("Received the end of transaction output stream data notification!");
+                        info!("The node has successfully bootstrapped!");
+                        self.bootstrapped = true; // We've bootstrapped!
+                        stream_feedback = Some((
+                            NotificationFeedback::EndOfStream,
+                            data_notification.notification_id,
+                        ));
+                    }
+                    _ => {
+                        stream_feedback = Some((
+                            NotificationFeedback::PayloadTypeIsIncorrect,
+                            data_notification.notification_id,
+                        ));
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Handle any feedback for the stream
+        self.terminate_active_stream_if_feedback(stream_feedback)
+            .await
+    }
+
+    /// Terminates the currently active stream if stream feeback is provided
+    async fn terminate_active_stream_if_feedback(
+        &mut self,
+        stream_feedback: Option<(NotificationFeedback, NotificationId)>,
+    ) -> Result<(), Error> {
+        if let Some(stream_feedback) = stream_feedback {
+            let (notification_feedback, notification_id) = stream_feedback;
+            debug!(
+                "Terminating the currently active stream! Feedback: {:?}, notification ID: {:?}",
+                notification_feedback, notification_id
+            );
+            self.streaming_service_client
+                .terminate_stream_with_feedback(notification_id, notification_feedback)
+                .await?;
+            self.active_data_stream = None;
         }
 
         Ok(())
@@ -390,8 +552,23 @@ async fn get_data_notification(
     {
         Some(data_notification)
     } else {
+        debug!("No data notification immediately available when listening to the stream.");
         None
     }
+}
+
+async fn process_account_states_payload(
+    latest_storage_summary: &StorageStateSummary,
+    account_states_with_proof: AccountStatesChunkWithProof,
+) -> Result<(), Error> {
+    debug!(
+        "Received an account states with proof! {:?}",
+        account_states_with_proof
+    );
+    // TODO(joshlind): process the transaction list with proof!
+    // TODO(joshlind): verify the waypoint!
+
+    Ok(())
 }
 
 async fn process_epoch_ending_payload(
@@ -408,7 +585,21 @@ async fn process_epoch_ending_payload(
     Ok(())
 }
 
-async fn process_transactions_with_proof(
+async fn process_transaction_outputs_payload(
+    latest_storage_summary: &StorageStateSummary,
+    transaction_outputs_with_proof: TransactionOutputListWithProof,
+) -> Result<(), Error> {
+    debug!(
+        "Received a transaction output with proof! {:?}",
+        transaction_outputs_with_proof
+    );
+    // TODO(joshlind): process the transaction list with proof!
+    // TODO(joshlind): verify the waypoint!
+
+    Ok(())
+}
+
+async fn process_transactions_payload(
     latest_storage_summary: &StorageStateSummary,
     transactions_with_proof: TransactionListWithProof,
 ) -> Result<(), Error> {
