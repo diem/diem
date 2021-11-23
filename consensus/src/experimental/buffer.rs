@@ -38,6 +38,7 @@ impl<T: Hashable> Buffer<T> {
         &self.head
     }
 
+    #[cfg(test)]
     pub fn tail_cursor(&self) -> &Cursor {
         &self.tail
     }

@@ -15,7 +15,6 @@ use diem_infallible::Mutex;
 use diem_secure_storage::Storage;
 use diem_types::{
     account_address::AccountAddress,
-    block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier,
@@ -154,14 +153,4 @@ pub fn prepare_executed_blocks_with_ordered_ledger_info(
         0,
     );
     (executed_blocks, li_sig)
-}
-
-pub fn new_executed_ledger_info_with_empty_signature(
-    block_info: BlockInfo,
-    li: &LedgerInfo,
-) -> LedgerInfoWithSignatures {
-    LedgerInfoWithSignatures::new(
-        LedgerInfo::new(block_info, li.consensus_data_hash()),
-        BTreeMap::<AccountAddress, Ed25519Signature>::new(), //empty
-    )
 }

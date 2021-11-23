@@ -26,10 +26,6 @@ impl<T: StatelessPipeline> PhaseTester<T> {
         Self { cases: vec![] }
     }
 
-    pub fn new_with_cases(cases: Vec<PhaseTestCase<T>>) -> Self {
-        Self { cases }
-    }
-
     pub fn add_test_case(&mut self, input: T::Request, judge: Box<dyn Fn(T::Response)>) {
         self.add_test_case_with_prompt(input, judge, None)
     }

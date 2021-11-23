@@ -14,7 +14,7 @@ use executor_types::{Error, StateComputeResult};
 
 use crate::{
     experimental::{
-        buffer_manager::{create_channel, Receiver, Sender},
+        buffer_manager::create_channel,
         execution_phase::{ExecutionPhase, ExecutionRequest, ExecutionResponse},
         pipeline_phase::PipelinePhase,
         tests::phase_tester::PhaseTester,
@@ -27,31 +27,6 @@ pub fn prepare_execution_phase() -> (HashValue, ExecutionPhase) {
     let random_hash_value = execution_proxy.get_root_hash();
     let execution_phase = ExecutionPhase::new(execution_proxy);
     (random_hash_value, execution_phase)
-}
-
-pub fn prepare_execution_pipeline() -> (
-    Sender<ExecutionRequest>,
-    Receiver<ExecutionResponse>,
-    HashValue,
-    PipelinePhase<ExecutionPhase>,
-) {
-    let (in_channel_tx, in_channel_rx) = create_channel::<ExecutionRequest>();
-    let (out_channel_tx, out_channel_rx) = create_channel::<ExecutionResponse>();
-
-    let (hash_val, execution_phase) = prepare_execution_phase();
-
-    let execution_phase_pipeline = PipelinePhase::new(
-        in_channel_rx,
-        Some(out_channel_tx),
-        Box::new(execution_phase),
-    );
-
-    (
-        in_channel_tx,
-        out_channel_rx,
-        hash_val,
-        execution_phase_pipeline,
-    )
 }
 
 fn add_execution_phase_test_cases(

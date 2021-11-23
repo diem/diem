@@ -320,17 +320,6 @@ impl BufferItem {
         self.get_blocks().last().unwrap().id()
     }
 
-    pub fn get_commit_info(&self) -> &BlockInfo {
-        match self {
-            Self::Ordered(_) => {
-                panic!("Ordered buffer item does not contain commit info");
-            }
-            Self::Executed(executed) => &executed.commit_info,
-            Self::Signed(signed) => signed.commit_proof.ledger_info().commit_info(),
-            Self::Aggregated(aggregated) => aggregated.commit_proof.ledger_info().commit_info(),
-        }
-    }
-
     pub fn add_signature_if_matched(&mut self, vote: CommitVote) -> anyhow::Result<()> {
         let target_commit_info = vote.commit_info();
         let author = vote.author();
@@ -371,10 +360,6 @@ impl BufferItem {
             }
         }
         Err(anyhow!("Inconsistent commit info."))
-    }
-
-    pub fn has_been_executed(&self) -> bool {
-        !self.is_ordered()
     }
 
     pub fn is_ordered(&self) -> bool {
