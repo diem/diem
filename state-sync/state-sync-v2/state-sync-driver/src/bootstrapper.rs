@@ -284,8 +284,6 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         &mut self,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<(), Error> {
-        panic!("Given waypoint! {:?}", self.driver_configuration.waypoint);
-
         // Get the highest advertised synced ledger info version
         let highest_advertised_ledger_info = global_data_summary
             .advertised_data

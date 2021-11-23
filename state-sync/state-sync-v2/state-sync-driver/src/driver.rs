@@ -319,8 +319,12 @@ impl<
 
         // Check progress depending on if we're bootstrapping or continuously syncing
         if self.bootstrapper.is_bootstrapped() {
-            let mode = self.driver_configuration.config.syncing_mode;
-            unimplemented!("Syncing mode {:?} is not yet supported!", mode);
+            /*if let Err(error) = self.continuous_syncer.check_progress(&global_data_summary).await {
+                error!(
+                    "Error found when checking the bootstrapper progress: {:?}",
+                    error
+                );
+            }*/
         } else if let Err(error) = self.bootstrapper.check_progress(&global_data_summary).await {
             error!(
                 "Error found when checking the bootstrapper progress: {:?}",
