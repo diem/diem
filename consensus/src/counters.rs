@@ -253,6 +253,15 @@ pub static PENDING_CONSENSUS_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| 
     .unwrap()
 });
 
+/// Count of the pending state sync notification.
+pub static PENDING_STATE_SYNC_NOTIFICATION: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "diem_consensus_pending_state_sync_notification",
+        "Count of the pending state sync notification"
+    )
+    .unwrap()
+});
+
 pub static BUFFER_MANAGER_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "diem_consensus_buffer_manager_msgs_count",

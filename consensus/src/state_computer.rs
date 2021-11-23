@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    counters,
     error::StateSyncError,
     state_replication::{StateComputer, StateComputerCommitCallBackType, TxnManager},
 };
@@ -11,30 +12,57 @@ use consensus_types::{block::Block, executed_block::ExecutedBlock};
 use diem_crypto::HashValue;
 use diem_logger::prelude::*;
 use diem_metrics::monitor;
-use diem_types::ledger_info::LedgerInfoWithSignatures;
+use diem_types::{
+    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
+};
 use execution_correctness::ExecutionCorrectness;
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
+use futures::{SinkExt, StreamExt};
 use std::{boxed::Box, sync::Arc};
+
+type NotificationType = (
+    Box<dyn FnOnce() -> () + Send + Sync>,
+    Vec<Transaction>,
+    Vec<ContractEvent>,
+);
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
     execution_correctness_client: Box<dyn ExecutionCorrectness + Send + Sync>,
     mempool_notifier: Arc<dyn TxnManager>,
-    state_sync_notifier: Box<dyn ConsensusNotificationSender>,
+    state_sync_notifier: Arc<dyn ConsensusNotificationSender>,
+    async_state_sync_notifier: channel::Sender<NotificationType>,
 }
 
 impl ExecutionProxy {
     pub fn new(
         execution_correctness_client: Box<dyn ExecutionCorrectness + Send + Sync>,
         mempool_notifier: Arc<dyn TxnManager>,
-        state_sync_notifier: Box<dyn ConsensusNotificationSender>,
+        state_sync_notifier: Arc<dyn ConsensusNotificationSender>,
+        handle: &tokio::runtime::Handle,
     ) -> Self {
+        let (tx, mut rx) =
+            channel::new::<NotificationType>(10, &counters::PENDING_STATE_SYNC_NOTIFICATION);
+        let notifier = state_sync_notifier.clone();
+        handle.spawn(async move {
+            while let Some((callback, txns, reconfig_events)) = rx.next().await {
+                if let Err(e) = monitor!(
+                    "notify_state_sync",
+                    notifier.notify_new_commit(txns, reconfig_events).await
+                ) {
+                    error!(error = ?e, "Failed to notify state synchronizer");
+                }
+
+                callback();
+            }
+        });
         Self {
             execution_correctness_client,
             mempool_notifier,
             state_sync_notifier,
+            async_state_sync_notifier: tx,
         }
     }
 }
@@ -102,16 +130,15 @@ impl StateComputer for ExecutionProxy {
                 .commit_blocks(block_ids, finality_proof.clone())?
         );
 
-        if let Err(e) = monitor!(
-            "notify_state_sync",
-            self.state_sync_notifier
-                .notify_new_commit(txns, reconfig_events)
-                .await
-        ) {
-            error!(error = ?e, "Failed to notify state synchronizer");
-        }
-
-        callback(blocks, finality_proof);
+        let blocks = blocks.to_vec();
+        let wrapped_callback = move || {
+            callback(&blocks, finality_proof);
+        };
+        self.async_state_sync_notifier
+            .clone()
+            .send((Box::new(wrapped_callback), txns, reconfig_events))
+            .await
+            .expect("Failed to send async state sync notification");
 
         Ok(())
     }

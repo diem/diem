@@ -566,7 +566,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             node_config,
             consensus_network_sender,
             consensus_network_events,
-            Box::new(consensus_notifier),
+            Arc::new(consensus_notifier),
             consensus_to_mempool_sender,
             db_rw.clone(),
             consensus_reconfig_subscription

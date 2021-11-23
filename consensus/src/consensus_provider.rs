@@ -28,7 +28,7 @@ pub fn start_consensus(
     node_config: &NodeConfig,
     mut network_sender: ConsensusNetworkSender,
     network_events: ConsensusNetworkEvents,
-    state_sync_notifier: Box<dyn ConsensusNotificationSender>,
+    state_sync_notifier: Arc<dyn ConsensusNotificationSender>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     diem_db: DbReaderWriter,
     reconfig_events: ReconfigNotificationListener,
@@ -52,6 +52,7 @@ pub fn start_consensus(
         execution_correctness_manager.client(),
         txn_manager.clone(),
         state_sync_notifier,
+        runtime.handle(),
     ));
 
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));

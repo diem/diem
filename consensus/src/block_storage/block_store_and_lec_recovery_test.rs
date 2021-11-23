@@ -69,7 +69,8 @@ fn build_inserter(
     let state_computer = Arc::new(ExecutionProxy::new(
         lec_client,
         Arc::new(MockTransactionManager::new(None)),
-        Box::new(consensus_notifier),
+        Arc::new(consensus_notifier),
+        &tokio::runtime::Handle::current(),
     ));
 
     TreeInserter::new_with_store(
