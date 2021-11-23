@@ -4,6 +4,7 @@
 use crate::util::time_service::{ScheduledTask, TimeService};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
+use futures::future::AbortHandle;
 use std::{sync::Arc, time::Duration};
 
 /// SimulatedTimeService implements TimeService, however it does not depend on actual time
@@ -27,7 +28,7 @@ struct SimulatedTimeServiceInner {
 }
 
 impl TimeService for SimulatedTimeService {
-    fn run_after(&self, timeout: Duration, mut t: Box<dyn ScheduledTask>) {
+    fn run_after(&self, timeout: Duration, mut t: Box<dyn ScheduledTask>) -> AbortHandle {
         let mut inner = self.inner.lock();
         let now = inner.now;
         let deadline = now + timeout;
@@ -52,6 +53,8 @@ impl TimeService for SimulatedTimeService {
             // Perhaps this could be done better, but I think its good enough for tests...
             futures::executor::block_on(t.run());
         }
+        let (handle, _) = AbortHandle::new_pair();
+        handle
     }
 
     fn get_current_timestamp(&self) -> Duration {

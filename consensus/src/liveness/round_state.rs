@@ -9,6 +9,7 @@ use crate::{
 use consensus_types::{common::Round, sync_info::SyncInfo, vote::Vote};
 use diem_logger::{prelude::*, Schema};
 use diem_types::validator_verifier::ValidatorVerifier;
+use futures::future::AbortHandle;
 use serde::Serialize;
 use std::{fmt, sync::Arc, time::Duration};
 
@@ -149,6 +150,8 @@ pub struct RoundState {
     pending_votes: PendingVotes,
     // Vote sent locally for the current round.
     vote_sent: Option<Vote>,
+    // The handle to cancel previous timeout task when moving to next round.
+    abort_handle: Option<AbortHandle>,
 }
 
 #[derive(Default, Schema)]
@@ -193,6 +196,7 @@ impl RoundState {
             timeout_sender,
             pending_votes: PendingVotes::new(),
             vote_sent: None,
+            abort_handle: None,
         }
     }
 
@@ -283,8 +287,12 @@ impl RoundState {
             timeout.as_millis(),
             self.current_round
         );
-        self.time_service
+        let abort_handle = self
+            .time_service
             .run_after(timeout, SendTask::make(timeout_sender, self.current_round));
+        if let Some(handle) = self.abort_handle.replace(abort_handle) {
+            handle.abort();
+        }
         timeout
     }
 

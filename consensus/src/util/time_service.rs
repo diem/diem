@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_logger::prelude::*;
-use futures::{Future, FutureExt, SinkExt};
+use futures::{
+    future::{AbortHandle, Abortable},
+    Future, FutureExt, SinkExt,
+};
 use std::{pin::Pin, thread, time::Duration};
 
 use crate::counters;
@@ -16,8 +19,8 @@ use tokio::{runtime::Handle, time::sleep};
 /// For example instead of scheduling O(N) tasks in TaskExecutor we could have more optimal code
 /// that only keeps single task in TaskExecutor
 pub trait TimeService: Send + Sync {
-    /// Sends message to given sender after timeout
-    fn run_after(&self, timeout: Duration, task: Box<dyn ScheduledTask>);
+    /// Sends message to given sender after timeout, returns a handle that could use to cancel the task.
+    fn run_after(&self, timeout: Duration, task: Box<dyn ScheduledTask>) -> AbortHandle;
 
     /// Retrieve the current time stamp as a Duration (assuming it is on or after the UNIX_EPOCH)
     fn get_current_timestamp(&self) -> Duration;
@@ -106,12 +109,17 @@ impl ClockTimeService {
 }
 
 impl TimeService for ClockTimeService {
-    fn run_after(&self, timeout: Duration, mut t: Box<dyn ScheduledTask>) {
-        let task = async move {
-            sleep(timeout).await;
-            t.run().await;
-        };
+    fn run_after(&self, timeout: Duration, mut t: Box<dyn ScheduledTask>) -> AbortHandle {
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        let task = Abortable::new(
+            async move {
+                sleep(timeout).await;
+                t.run().await;
+            },
+            abort_registration,
+        );
         self.executor.spawn(task);
+        abort_handle
     }
 
     fn get_current_timestamp(&self) -> Duration {
@@ -121,4 +129,23 @@ impl TimeService for ClockTimeService {
     fn sleep(&self, t: Duration) {
         thread::sleep(t)
     }
+}
+
+#[tokio::test]
+async fn test_time_service_abort() {
+    use futures::StreamExt;
+
+    let time_service = ClockTimeService::new(tokio::runtime::Handle::current());
+    let (tx, mut rx) = channel::new_test(10);
+    let task1 = SendTask::make(tx.clone(), 1);
+    let task2 = SendTask::make(tx.clone(), 2);
+    let handle1 = time_service.run_after(Duration::from_millis(100), task1);
+    let handle2 = time_service.run_after(Duration::from_millis(200), task2);
+    handle1.abort();
+    // task 1 is aborted
+    assert_eq!(rx.next().await, Some(2));
+    drop(tx);
+    assert_eq!(rx.next().await, None);
+    // abort an already finished task is no-op
+    handle2.abort();
 }
