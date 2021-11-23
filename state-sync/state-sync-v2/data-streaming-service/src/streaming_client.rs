@@ -287,6 +287,10 @@ impl DataStreamingClient for StreamingServiceClient {
         max_proof_version: u64,
         include_events: bool,
     ) -> Result<DataStreamListener, Error> {
+        if start_version > end_version || end_version > max_proof_version {
+            return Err(Error::UnexpectedErrorEncountered(format!("Invalid transaction stream request! Start: {:?}, end: {:?}, max proof version: {:?}", start_version, end_version, max_proof_version)));
+        };
+
         let client_request = StreamRequest::GetAllTransactions(GetAllTransactionsRequest {
             start_version,
             end_version,
@@ -302,6 +306,10 @@ impl DataStreamingClient for StreamingServiceClient {
         end_version: u64,
         max_proof_version: u64,
     ) -> Result<DataStreamListener, Error> {
+        if start_version > end_version || end_version > max_proof_version {
+            return Err(Error::UnexpectedErrorEncountered(format!("Invalid transaction output stream request! Start: {:?}, end: {:?}, max proof version: {:?}", start_version, end_version, max_proof_version)));
+        };
+
         let client_request =
             StreamRequest::GetAllTransactionOutputs(GetAllTransactionOutputsRequest {
                 start_version,

@@ -48,7 +48,7 @@ pub struct Bootstrapper<S> {
     // The channel used to notify a listener of successful bootstrapping
     bootstrap_notifier_channel: Option<oneshot::Sender<Result<(), Error>>>,
 
-    // If the node has already been bootstrapped
+    // If the node has completed bootstrapped
     bootstrapped: bool,
 
     // If the node has already bootstrapped all epoch ending ledger infos
@@ -62,6 +62,9 @@ pub struct Bootstrapper<S> {
 
     // The storage synchronizer used to update local storage
     storage_synchronizer: Arc<Mutex<S>>,
+
+    // If the node has successfully verified the waypoint it was given
+    verified_waypoint: bool,
 }
 
 impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
@@ -78,6 +81,7 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
             driver_configuration,
             streaming_service_client,
             storage_synchronizer,
+            verified_waypoint: false,
         }
     }
 
@@ -201,9 +205,11 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
             "Fetching the account states stream at version: {:?}",
             latest_ledger_info_version
         );
+        // TODO(joshlind): identify the start index and keep track of how many accounts we've written!
+        let start_index = 0;
         let account_states_stream = self
             .streaming_service_client
-            .get_all_accounts(latest_ledger_info_version, None)
+            .get_all_accounts(latest_ledger_info_version, Some(start_index))
             .await?;
         self.active_data_stream = Some(account_states_stream);
 
@@ -216,53 +222,53 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         &mut self,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<(), Error> {
+        // Verify the waypoint can be satisfied by our peers
+        self.verify_waypoint_is_satisfiable(global_data_summary)?;
+
         // Get the highest advertised epoch that has ended
-        let advertised_highest_epoch_end = global_data_summary
+        let highest_advertised_epoch_end = global_data_summary
             .advertised_data
             .highest_epoch_ending_ledger_info()
             .ok_or_else(|| {
                 Error::AdvertisedDataError(
-                    "No advertised highest epoch end found in the network!".into(),
+                    "No highest advertised epoch end found in the network!".into(),
                 )
             })?;
 
         // Fetch the highest epoch end stored locally
         let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
         let latest_ledger_info = latest_storage_summary.latest_ledger_info.ledger_info();
-        let local_highest_epoch_end = if latest_ledger_info.ends_epoch() {
+        let highest_local_epoch_end = if latest_ledger_info.ends_epoch() {
             Some(latest_ledger_info.epoch())
         } else if latest_ledger_info.epoch() > 0 {
             Some(latest_ledger_info.epoch().checked_sub(1).ok_or_else(|| {
-                Error::IntegerOverflow("The highest epoch end has overflown!".into())
+                Error::IntegerOverflow("The highest local epoch end has overflown!".into())
             })?)
         } else {
             None
         };
 
-        // Compare the local highest epoch end to the advertised epoch end
-        if let Some(local_highest_epoch_end) = local_highest_epoch_end {
-            // TODO(joshlind): <
-            if local_highest_epoch_end <= advertised_highest_epoch_end {
-                // There's higher epoch ending ledger infos available
+        // Compare the highest local epoch end to the highest advertised epoch end
+        if let Some(highest_local_epoch_end) = highest_local_epoch_end {
+            if highest_local_epoch_end < highest_advertised_epoch_end {
                 debug!("Found higher epoch ending ledger infos in the network! Local: {:?}, advertised: {:?}",
-                       local_highest_epoch_end, advertised_highest_epoch_end);
-                let next_epoch_end = local_highest_epoch_end.checked_add(1).ok_or_else(|| {
+                       highest_local_epoch_end, highest_advertised_epoch_end);
+                let next_epoch_end = highest_local_epoch_end.checked_add(1).ok_or_else(|| {
                     Error::IntegerOverflow("The next epoch end has overflown!".into())
                 })?;
                 let epoch_ending_stream = self
                     .streaming_service_client
-                    .get_all_epoch_ending_ledger_infos(0)
+                    .get_all_epoch_ending_ledger_infos(next_epoch_end)
                     .await?;
                 self.active_data_stream = Some(epoch_ending_stream);
-            } else {
-                // There's no higher epoch ending ledger info available
-                // TODO(joshlind): verify that we've processed the waypoint
-                self.bootstrapped_epoch_ending_ledger_infos = true;
+            } else if self.verified_waypoint || self.driver_configuration.waypoint.version() == 0 {
                 debug!("We've bootstrapped the epoch ending ledger infos!");
+                self.bootstrapped_epoch_ending_ledger_infos = true;
+            } else {
+                error!("Our waypoint is unverified, but there's no higher epoch ending ledger infos advertised!");
             };
         } else {
-            // There's no local highest epoch end. Start syncing at 0.
-            debug!("No local highest epoch end found! Starting syncing at 0.");
+            debug!("No highest local epoch end found! Starting to sync at epoch 0.");
             let epoch_ending_stream = self
                 .streaming_service_client
                 .get_all_epoch_ending_ledger_infos(0)
@@ -273,7 +279,39 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         Ok(())
     }
 
-    /// Returns the highest synced and ledger versions in storage
+    /// Verifies that connected peers have advertised data beyond our waypoint
+    fn verify_waypoint_is_satisfiable(
+        &mut self,
+        global_data_summary: &GlobalDataSummary,
+    ) -> Result<(), Error> {
+        panic!("Given waypoint! {:?}", self.driver_configuration.waypoint);
+
+        // Get the highest advertised synced ledger info version
+        let highest_advertised_ledger_info = global_data_summary
+            .advertised_data
+            .highest_synced_ledger_info()
+            .ok_or_else(|| {
+                Error::AdvertisedDataError(
+                    "No highest advertised ledger info found in the network!".into(),
+                )
+            })?;
+        let highest_advertised_version = highest_advertised_ledger_info.ledger_info().version();
+
+        // Compare the highest advertised version with our waypoint
+        let waypoint_version = self.driver_configuration.waypoint.version();
+        if highest_advertised_version < waypoint_version {
+            Err(Error::AdvertisedDataError(
+                format!(
+                    "No advertised version higher than our waypoint! Highest version: {:?}, waypoint version: {:?}",
+                        highest_advertised_version, waypoint_version
+                )
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Returns the highest synced version and ledger version in storage
     fn get_highest_synced_and_ledger_versions(&self) -> Result<(Version, Version), Error> {
         // Fetch the highest synced and ledger info versions
         let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
@@ -301,12 +339,11 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
             self.get_highest_synced_and_ledger_versions()?;
 
         // Check if we've bootstrapped
-        //if highest_ledger_info_version == highest_transaction_version {
-        //    // TODO(joshlind): log me!
-        //    info!("The node has successfully bootstrapped!");
-        //    self.bootstrapped = true; // We've bootstrapped!
-        //    return Ok(());
-        //}
+        if highest_ledger_info_version == highest_synced_version {
+            info!("The node has successfully bootstrapped!");
+            self.bootstrapped = true;
+            return Ok(());
+        }
 
         // Fetch all transactions until the ledger info version
         let next_transaction_version = highest_synced_version.checked_add(1).ok_or_else(|| {
@@ -333,12 +370,11 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
             self.get_highest_synced_and_ledger_versions()?;
 
         // Check if we've bootstrapped
-        //if highest_ledger_info_version == highest_synced_version {
-        //    // TODO(joshlind): log me!
-        //    info!("The node has successfully bootstrapped!");
-        //    self.bootstrapped = true; // We've bootstrapped!
-        //    return Ok(());
-        //}
+        if highest_ledger_info_version == highest_synced_version {
+            info!("The node has successfully bootstrapped!");
+            self.bootstrapped = true;
+            return Ok(());
+        }
 
         // Fetch all transaction outputs until the ledger info version
         let next_output_version = highest_synced_version.checked_add(1).ok_or_else(|| {
@@ -372,7 +408,6 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
                         .await?;
                     }
                     DataPayload::EndOfStream => {
-                        debug!("Received the end of account states stream data notification!");
                         stream_feedback = Some((
                             NotificationFeedback::EndOfStream,
                             data_notification.notification_id,
@@ -409,15 +444,6 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
                         .await?;
                     }
                     DataPayload::EndOfStream => {
-                        debug!("Received the end of epoch stream data notification!");
-                        let latest_ledger_info =
-                            latest_storage_summary.latest_ledger_info.ledger_info();
-                        let waypoint = self.driver_configuration.waypoint;
-                        if latest_ledger_info.version() >= waypoint.version() {
-                            debug!("The waypoint was successfully verified!");
-                            // The waypoint was verified successfully. We've bootstrapped.
-                            self.bootstrapped_epoch_ending_ledger_infos = true;
-                        }
                         stream_feedback = Some((
                             NotificationFeedback::EndOfStream,
                             data_notification.notification_id,
@@ -454,10 +480,6 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
                         .await?;
                     }
                     DataPayload::EndOfStream => {
-                        // TODO(joshlind): verify we actually bootstrapped! Not just ended the stream
-                        debug!("Received the end of transaction stream data notification!");
-                        info!("The node has successfully bootstrapped!");
-                        self.bootstrapped = true; // We've bootstrapped!
                         stream_feedback = Some((
                             NotificationFeedback::EndOfStream,
                             data_notification.notification_id,
@@ -494,10 +516,6 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
                         .await?;
                     }
                     DataPayload::EndOfStream => {
-                        // TODO(joshlind): verify we actually bootstrapped! Not just ended the stream
-                        debug!("Received the end of transaction output stream data notification!");
-                        info!("The node has successfully bootstrapped!");
-                        self.bootstrapped = true; // We've bootstrapped!
                         stream_feedback = Some((
                             NotificationFeedback::EndOfStream,
                             data_notification.notification_id,
