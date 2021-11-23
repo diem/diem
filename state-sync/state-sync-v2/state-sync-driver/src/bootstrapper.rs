@@ -378,7 +378,7 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         let next_output_version = highest_synced_version.checked_add(1).ok_or_else(|| {
             Error::IntegerOverflow("The next output version has overflown!".into())
         })?;
-        let transaction_stream = self
+        let output_stream = self
             .streaming_service_client
             .get_all_transaction_outputs(
                 next_output_version,
@@ -386,7 +386,7 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
                 highest_ledger_info_version,
             )
             .await?;
-        self.active_data_stream = Some(transaction_stream);
+        self.active_data_stream = Some(output_stream);
 
         Ok(())
     }
@@ -577,12 +577,11 @@ async fn process_account_states_payload(
     latest_storage_summary: &StorageStateSummary,
     account_states_with_proof: AccountStatesChunkWithProof,
 ) -> Result<(), Error> {
+    // TODO(joshlind): process the account states!
     debug!(
         "Received an account states with proof! {:?}",
         account_states_with_proof
     );
-    // TODO(joshlind): process the transaction list with proof!
-    // TODO(joshlind): verify the waypoint!
 
     Ok(())
 }
@@ -591,12 +590,12 @@ async fn process_epoch_ending_payload(
     latest_storage_summary: &StorageStateSummary,
     epoch_ending_ledger_infos: Vec<LedgerInfoWithSignatures>,
 ) -> Result<(), Error> {
+    // TODO(joshlind): process the epoch ending ledger infos!
+    // TODO(joshlind): verify the waypoint!
     debug!(
         "Received an epoch ending payload! {:?}",
         epoch_ending_ledger_infos
     );
-    // TODO(joshlind): process the epoch ending ledger infos!
-    // TODO(joshlind): verify the waypoint!
 
     Ok(())
 }
@@ -605,12 +604,11 @@ async fn process_transaction_outputs_payload(
     latest_storage_summary: &StorageStateSummary,
     transaction_outputs_with_proof: TransactionOutputListWithProof,
 ) -> Result<(), Error> {
+    // TODO(joshlind): process the transaction list with proof!
     debug!(
         "Received a transaction output with proof! {:?}",
         transaction_outputs_with_proof
     );
-    // TODO(joshlind): process the transaction list with proof!
-    // TODO(joshlind): verify the waypoint!
 
     Ok(())
 }
@@ -619,12 +617,11 @@ async fn process_transactions_payload(
     latest_storage_summary: &StorageStateSummary,
     transactions_with_proof: TransactionListWithProof,
 ) -> Result<(), Error> {
+    // TODO(joshlind): process the transaction list with proof!
     debug!(
         "Received a transaction with proof! {:?}",
         transactions_with_proof
     );
-    // TODO(joshlind): process the transaction list with proof!
-    // TODO(joshlind): verify the waypoint!
 
     Ok(())
 }

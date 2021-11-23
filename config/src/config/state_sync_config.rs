@@ -66,7 +66,7 @@ pub enum BootstrappingMode {
 /// bootstrapped and the blockchain continues to grow, e.g., continuously
 /// executing all transactions.
 #[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub enum SyncingMode {
+pub enum ContinuousSyncingMode {
     ExecuteTransactions,     // Executes transactions to stay up-to-date
     ApplyTransactionOutputs, // Applies transaction outputs to stay up-to-date
 }
@@ -76,7 +76,7 @@ pub enum SyncingMode {
 pub struct StateSyncDriverConfig {
     pub activate_state_sync_v2: bool,          // Enables state sync v2
     pub bootstrapping_mode: BootstrappingMode, // The mode by which to bootstrap
-    pub syncing_mode: SyncingMode,             // The mode by which to sync after bootstrapping
+    pub continuous_syncing_mode: ContinuousSyncingMode, // The mode by which to sync after bootstrapping
     pub progress_check_interval_ms: u64, // The interval (ms) at which to check state sync progress
 }
 
@@ -87,7 +87,7 @@ impl Default for StateSyncDriverConfig {
         Self {
             activate_state_sync_v2: false, // TODO(joshlind): update me, when v2 works
             bootstrapping_mode: BootstrappingMode::ApplyTransactionOutputsFromGenesis,
-            syncing_mode: SyncingMode::ExecuteTransactions,
+            continuous_syncing_mode: ContinuousSyncingMode::ExecuteTransactions,
             progress_check_interval_ms: 500,
         }
     }

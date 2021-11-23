@@ -3,6 +3,7 @@
 
 use crate::{
     bootstrapper::Bootstrapper,
+    continuous_syncer::ContinuousSyncer,
     driver_client::{ClientNotificationListener, DriverClient, DriverNotification},
     error::Error,
     notification_handlers::{ConsensusNotificationHandler, MempoolNotificationHandler},
@@ -52,11 +53,14 @@ pub struct StateSyncDriver<D, M, S> {
     // The component that manages the initial bootrapping of the node
     bootstrapper: Bootstrapper<S>,
 
+    // The listener for client notifications
+    client_notification_listener: ClientNotificationListener,
+
     // The handler for notifications from consensus
     consensus_notification_handler: ConsensusNotificationHandler,
 
-    // The listener for client notifications
-    client_notification_listener: ClientNotificationListener,
+    // The component that manages the continuous syncing of the node
+    continuous_syncer: ContinuousSyncer<S>,
 
     // The client for checking the global data summary of our peers
     diem_data_client: D,
@@ -99,10 +103,16 @@ impl<
             streaming_service_client.clone(),
             storage_synchronizer.clone(),
         );
+        let continuous_syncer = ContinuousSyncer::new(
+            driver_configuration.clone(),
+            streaming_service_client.clone(),
+            storage_synchronizer.clone(),
+        );
 
         Self {
             bootstrapper,
             client_notification_listener,
+            continuous_syncer,
             consensus_notification_handler,
             diem_data_client,
             driver_configuration,
@@ -252,6 +262,7 @@ impl<
         }
 
         // TODO(joshlind): Start syncing to the sync target!
+        // How do we support this case??
 
         Ok(())
     }
@@ -319,12 +330,12 @@ impl<
 
         // Check progress depending on if we're bootstrapping or continuously syncing
         if self.bootstrapper.is_bootstrapped() {
-            /*if let Err(error) = self.continuous_syncer.check_progress(&global_data_summary).await {
+            if let Err(error) = self.continuous_syncer.check_progress().await {
                 error!(
                     "Error found when checking the bootstrapper progress: {:?}",
                     error
                 );
-            }*/
+            }
         } else if let Err(error) = self.bootstrapper.check_progress(&global_data_summary).await {
             error!(
                 "Error found when checking the bootstrapper progress: {:?}",

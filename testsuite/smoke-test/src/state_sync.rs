@@ -460,7 +460,7 @@ fn test_state_sync_v2_fullnode() {
     vfn_config
         .state_sync
         .state_sync_driver
-        .activate_state_sync_v2 = false;
+        .activate_state_sync_v2 = true;
 
     // Create the fullnode
     let validator_peer_id = swarm.validators().next().unwrap().peer_id();

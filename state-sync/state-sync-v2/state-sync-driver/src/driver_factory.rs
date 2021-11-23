@@ -9,7 +9,9 @@ use crate::{
 };
 use consensus_notifications::ConsensusNotificationListener;
 use data_streaming_service::streaming_client::StreamingServiceClient;
-use diem_config::config::{BootstrappingMode, NodeConfig, StateSyncDriverConfig, SyncingMode};
+use diem_config::config::{
+    BootstrappingMode, ContinuousSyncingMode, NodeConfig, StateSyncDriverConfig,
+};
 use diem_data_client::diemnet::DiemNetDataClient;
 use diem_infallible::RwLock;
 use diem_types::waypoint::Waypoint;

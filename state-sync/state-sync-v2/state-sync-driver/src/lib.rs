@@ -5,6 +5,7 @@
 #![allow(unused)]
 
 mod bootstrapper;
+mod continuous_syncer;
 mod driver;
 mod driver_client;
 pub mod driver_factory;
