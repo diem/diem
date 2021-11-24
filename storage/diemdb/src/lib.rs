@@ -1350,6 +1350,43 @@ impl DbWriter<DpnProto> for DiemDB {
                 .get_snapshot_receiver(version, expected_root_hash)
         })
     }
+
+    fn save_epoch_ending_ledger_infos(
+        &self,
+        epoch_ending_ledger_infos: &[LedgerInfoWithSignatures],
+    ) -> Result<()> {
+        gauged_api("save_epoch_ending_ledger_infos", || {
+            ensure!(
+                !epoch_ending_ledger_infos.is_empty(),
+                "No epoch ending ledger infos to save."
+            );
+
+            // Save the ledger infos
+            let mut cs = ChangeSet::new();
+            epoch_ending_ledger_infos
+                .iter()
+                .map(|li| self.ledger_store.put_ledger_info(li, &mut cs))
+                .collect::<Result<Vec<_>>>()?;
+            self.db.write_schemas(cs.batch)?;
+
+            // Update the latest ledger info
+            if let Some(ledger_info) = self.ledger_store.get_latest_ledger_info_option() {
+                if ledger_info.ledger_info().epoch()
+                    > epoch_ending_ledger_infos
+                        .last()
+                        .unwrap()
+                        .ledger_info()
+                        .epoch()
+                {
+                    // No need to update latest ledger info.
+                    return Ok(());
+                }
+            }
+            self.ledger_store
+                .set_latest_ledger_info(epoch_ending_ledger_infos.last().unwrap().clone());
+            Ok(())
+        })
+    }
 }
 
 // Convert requested range and order to a range in ascending order.

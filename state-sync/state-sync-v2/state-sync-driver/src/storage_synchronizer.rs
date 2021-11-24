@@ -62,7 +62,7 @@ pub trait StorageSynchronizerInterface {
     /// Note: this assumes that the ledger infos have already been verified.
     fn save_epoch_ending_ledger_infos(
         &mut self,
-        epoch_ending_ledger_infos: Vec<LedgerInfoWithSignatures>,
+        epoch_ending_ledger_infos: &[LedgerInfoWithSignatures],
     ) -> Result<(), Error>;
 }
 
@@ -86,6 +86,10 @@ impl StorageSynchronizer {
             storage,
             cached_storage_summary: None,
         }
+    }
+
+    fn invalidate_cached_storage_summary(&mut self) {
+        self.cached_storage_summary = None;
     }
 
     fn refresh_cached_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
@@ -178,8 +182,21 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
 
     fn save_epoch_ending_ledger_infos(
         &mut self,
-        epoch_ending_ledger_infos: Vec<LedgerInfoWithSignatures>,
+        epoch_ending_ledger_infos: &[LedgerInfoWithSignatures],
     ) -> Result<(), Error> {
-        unimplemented!("Saving epoch ending ledger infos to storage is not currently supported!")
+        // Save the epoch ending ledger infos
+        self.storage
+            .write()
+            .writer
+            .save_epoch_ending_ledger_infos(epoch_ending_ledger_infos)
+            .map_err(|error| {
+                Error::StorageError(format!(
+                    "Failed to get the latest transaction info from storage: {:?}",
+                    error
+                ))
+            })?;
+
+        self.invalidate_cached_storage_summary();
+        Ok(())
     }
 }

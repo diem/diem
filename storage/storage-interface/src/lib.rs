@@ -600,6 +600,14 @@ pub trait DbWriter<PS: ProtocolSpec>: Send + Sync {
     ) -> Result<Box<dyn StateSnapshotReceiver<AccountStateBlob>>> {
         unimplemented!()
     }
+
+    /// Saves the given epoch ending ledger infos to storage.
+    fn save_epoch_ending_ledger_infos(
+        &self,
+        epoch_ending_ledger_infos: &[LedgerInfoWithSignatures],
+    ) -> Result<()> {
+        unimplemented!()
+    }
 }
 
 pub trait MoveDbReader<PS: ProtocolSpec>:
