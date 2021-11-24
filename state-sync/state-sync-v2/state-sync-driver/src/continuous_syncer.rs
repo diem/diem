@@ -174,147 +174,160 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
     }
 
     async fn process_transactions_with_proofs(&mut self) -> Result<(), Error> {
-        // Pull data notifications from the stream
-        let mut stream_feedback = None;
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
-        if let Some(active_data_stream) = &mut self.active_data_stream {
-            while let Some(data_notification) = get_data_notification(active_data_stream).await {
-                match data_notification.data_payload {
-                    DataPayload::ContinuousTransactionsWithProof(
+        loop {
+            let data_notification = self.get_data_notification().await?;
+            if data_notification.is_none() {
+                return Ok(()); // Nothing to do!
+            }
+
+            // Process the notification
+            let data_notification = data_notification.expect("A data notification should exist!");
+            match data_notification.data_payload {
+                DataPayload::ContinuousTransactionsWithProof(
+                    ledger_info_with_sigs,
+                    transactions_with_proof,
+                ) => {
+                    self.process_continuous_transactions_payload(
+                        data_notification.notification_id,
                         ledger_info_with_sigs,
                         transactions_with_proof,
-                    ) => {
-                        process_transactions_payload(
-                            &latest_storage_summary,
-                            ledger_info_with_sigs,
-                            transactions_with_proof,
-                        )
-                        .await?;
-                    }
-                    DataPayload::EndOfStream => {
-                        stream_feedback = Some((
-                            NotificationFeedback::EndOfStream,
-                            data_notification.notification_id,
-                        ));
-                    }
-                    _ => {
-                        stream_feedback = Some((
-                            NotificationFeedback::PayloadTypeIsIncorrect,
-                            data_notification.notification_id,
-                        ));
-                        break;
-                    }
+                    )
+                    .await?;
+                }
+                _ => {
+                    return self
+                        .handle_end_of_stream_or_invalid_payload(data_notification)
+                        .await
                 }
             }
         }
-
-        // Handle any feedback for the stream
-        self.terminate_active_stream_if_feedback(stream_feedback)
-            .await
     }
 
     async fn process_transaction_outputs_with_proof(&mut self) -> Result<(), Error> {
-        // Pull data notifications from the stream
-        let mut stream_feedback = None;
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
-        if let Some(active_data_stream) = &mut self.active_data_stream {
-            while let Some(data_notification) = get_data_notification(active_data_stream).await {
-                match data_notification.data_payload {
-                    DataPayload::ContinuousTransactionOutputsWithProof(
+        loop {
+            let data_notification = self.get_data_notification().await?;
+            if data_notification.is_none() {
+                return Ok(()); // Nothing to do!
+            }
+
+            // Process the notification
+            let data_notification = data_notification.expect("A data notification should exist!");
+            match data_notification.data_payload {
+                DataPayload::ContinuousTransactionOutputsWithProof(
+                    ledger_info_with_sigs,
+                    transaction_outputs_with_proof,
+                ) => {
+                    self.process_continuous_transaction_outputs_payload(
+                        data_notification.notification_id,
                         ledger_info_with_sigs,
                         transaction_outputs_with_proof,
-                    ) => {
-                        process_transaction_outputs_payload(
-                            &latest_storage_summary,
-                            ledger_info_with_sigs,
-                            transaction_outputs_with_proof,
-                        )
-                        .await?;
-                    }
-                    DataPayload::EndOfStream => {
-                        stream_feedback = Some((
-                            NotificationFeedback::EndOfStream,
-                            data_notification.notification_id,
-                        ));
-                    }
-                    _ => {
-                        stream_feedback = Some((
-                            NotificationFeedback::PayloadTypeIsIncorrect,
-                            data_notification.notification_id,
-                        ));
-                        break;
-                    }
+                    )
+                    .await?;
+                }
+                _ => {
+                    return self
+                        .handle_end_of_stream_or_invalid_payload(data_notification)
+                        .await
                 }
             }
         }
-
-        // Handle any feedback for the stream
-        self.terminate_active_stream_if_feedback(stream_feedback)
-            .await
     }
 
-    /// Terminates the currently active stream if stream feeback is provided
-    async fn terminate_active_stream_if_feedback(
-        &mut self,
-        stream_feedback: Option<(NotificationFeedback, NotificationId)>,
-    ) -> Result<(), Error> {
-        if let Some(stream_feedback) = stream_feedback {
-            let (notification_feedback, notification_id) = stream_feedback;
+    /// Fetches a data notification from the `active_data_stream`
+    async fn get_data_notification(&mut self) -> Result<Option<DataNotification>, Error> {
+        let active_data_stream = self
+            .active_data_stream
+            .as_mut()
+            .expect("The active data stream should exist!");
+
+        let data_notification = if let Ok(data_notification) = timeout(
+            Duration::from_millis(MAX_NOTIFICATION_WAIT_TIME_MS),
+            active_data_stream.select_next_some(),
+        )
+        .await
+        {
+            Some(data_notification)
+        } else {
             debug!(
-                "Terminating the currently active stream! Feedback: {:?}, notification ID: {:?}",
-                notification_feedback, notification_id
+                "No data notification immediately found when listening to the active data stream."
             );
-            self.streaming_service_client
-                .terminate_stream_with_feedback(notification_id, notification_feedback)
-                .await?;
-            self.active_data_stream = None;
+            None
+        };
+
+        Ok(data_notification)
+    }
+
+    /// Handles the end of stream notification, or an invalid payload
+    async fn handle_end_of_stream_or_invalid_payload(
+        &mut self,
+        data_notification: DataNotification,
+    ) -> Result<(), Error> {
+        match data_notification.data_payload {
+            DataPayload::EndOfStream => {
+                self.terminate_active_stream(
+                    data_notification.notification_id,
+                    NotificationFeedback::EndOfStream,
+                )
+                .await
+            }
+            _ => {
+                self.terminate_active_stream(
+                    data_notification.notification_id,
+                    NotificationFeedback::PayloadTypeIsIncorrect,
+                )
+                .await
+            }
         }
+    }
+
+    /// Processes a continuous transaction outputs payload received from an active data stream
+    async fn process_continuous_transaction_outputs_payload(
+        &mut self,
+        notification_id: NotificationId,
+        ledger_info_with_signatures: LedgerInfoWithSignatures,
+        transaction_outputs_with_proof: TransactionOutputListWithProof,
+    ) -> Result<(), Error> {
+        // TODO(joshlind): process the transaction list with proof!
+        debug!(
+            "Received a continuous transaction output payload with proof! ID: {:?}, first version: {:?}, num outputs: {:?}, ledger info: {:?}",
+            notification_id, transaction_outputs_with_proof.first_transaction_output_version, transaction_outputs_with_proof.transactions_and_outputs.len(), ledger_info_with_signatures
+        );
 
         Ok(())
     }
-}
 
-/// Fetches a data notification from the given stream listener (or hits the timeout)
-async fn get_data_notification(
-    stream_listener: &mut DataStreamListener,
-) -> Option<DataNotification> {
-    if let Ok(data_notification) = timeout(
-        Duration::from_millis(MAX_NOTIFICATION_WAIT_TIME_MS),
-        stream_listener.select_next_some(),
-    )
-    .await
-    {
-        Some(data_notification)
-    } else {
-        debug!("No data notification immediately available when listening to the stream.");
-        None
+    /// Processes a continuous transactions payload received from an active data stream
+    async fn process_continuous_transactions_payload(
+        &mut self,
+        notification_id: NotificationId,
+        ledger_info_with_signatures: LedgerInfoWithSignatures,
+        transactions_with_proof: TransactionListWithProof,
+    ) -> Result<(), Error> {
+        // TODO(joshlind): process the transaction list with proof!
+        debug!(
+            "Received a continuous transaction output payload with proof! First version: {:?}, num transactions: {:?}, ledger info: {:?}",
+            transactions_with_proof.first_transaction_version, transactions_with_proof.transactions.len(), ledger_info_with_signatures
+        );
+
+        Ok(())
     }
-}
 
-async fn process_transaction_outputs_payload(
-    latest_storage_summary: &StorageStateSummary,
-    ledger_info_with_sigs: LedgerInfoWithSignatures,
-    transaction_outputs_with_proof: TransactionOutputListWithProof,
-) -> Result<(), Error> {
-    // TODO(joshlind): process the transaction output list with proof!
-    debug!(
-        "Received a continuous transaction output payload with proof! First version: {:?}, num outputs: {:?}, ledger info: {:?}",
-        transaction_outputs_with_proof.first_transaction_output_version, transaction_outputs_with_proof.transactions_and_outputs.len(), ledger_info_with_sigs
-    );
+    /// Terminates the currently active stream with the provided feedback
+    async fn terminate_active_stream(
+        &mut self,
+        notification_id: NotificationId,
+        notification_feedback: NotificationFeedback,
+    ) -> Result<(), Error> {
+        debug!(
+            "Terminating the currently active stream! Feedback: {:?}, notification ID: {:?}",
+            notification_feedback, notification_id
+        );
 
-    Ok(())
-}
+        self.active_data_stream = None;
+        self.streaming_service_client
+            .terminate_stream_with_feedback(notification_id, notification_feedback)
+            .await?;
 
-async fn process_transactions_payload(
-    latest_storage_summary: &StorageStateSummary,
-    ledger_info_with_sigs: LedgerInfoWithSignatures,
-    transactions_with_proof: TransactionListWithProof,
-) -> Result<(), Error> {
-    // TODO(joshlind): process the transaction list with proof!
-    debug!(
-        "Received a continuous transaction payload with proof! First version: {:?}, num outputs: {:?}, ledger info: {:?}",
-        transactions_with_proof.first_transaction_version, transactions_with_proof.transactions.len(), ledger_info_with_sigs
-    );
-
-    Ok(())
+        Ok(())
+    }
 }
