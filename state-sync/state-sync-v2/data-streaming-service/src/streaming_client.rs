@@ -47,6 +47,16 @@ pub trait DataStreamingClient {
         start_epoch: Epoch,
     ) -> Result<DataStreamListener, Error>;
 
+    /// Fetches all transaction outputs with proofs from `start_version` to
+    /// `end_version` (inclusive), where the proof versions can be up to the
+    /// specified `max_proof_version` (inclusive).
+    async fn get_all_transaction_outputs(
+        &self,
+        start_version: Version,
+        end_version: Version,
+        max_proof_version: Version,
+    ) -> Result<DataStreamListener, Error>;
+
     /// Fetches all transactions with proofs from `start_version` to
     /// `end_version` (inclusive), where the proof versions can be up to the
     /// specified `max_proof_version` (inclusive). If `include_events` is true,
@@ -59,14 +69,14 @@ pub trait DataStreamingClient {
         include_events: bool,
     ) -> Result<DataStreamListener, Error>;
 
-    /// Fetches all transaction outputs with proofs from `start_version` to
-    /// `end_version` (inclusive), where the proof versions can be up to the
-    /// specified `max_proof_version` (inclusive).
-    async fn get_all_transaction_outputs(
+    /// Continuously streams transaction outputs with proofs as the blockchain
+    /// grows. The stream starts at `start_version` and `start_epoch` (inclusive).
+    /// Transaction output proof versions are tied to ledger infos within the
+    /// same epoch, otherwise epoch ending ledger infos will signify epoch changes.
+    async fn continuously_stream_transaction_outputs(
         &self,
         start_version: Version,
-        end_version: Version,
-        max_proof_version: Version,
+        start_epoch: Epoch,
     ) -> Result<DataStreamListener, Error>;
 
     /// Continuously streams transactions with proofs as the blockchain grows.
@@ -79,16 +89,6 @@ pub trait DataStreamingClient {
         start_version: Version,
         start_epoch: Epoch,
         include_events: bool,
-    ) -> Result<DataStreamListener, Error>;
-
-    /// Continuously streams transaction outputs with proofs as the blockchain
-    /// grows. The stream starts at `start_version` and `start_epoch` (inclusive).
-    /// Transaction output proof versions are tied to ledger infos within the
-    /// same epoch, otherwise epoch ending ledger infos will signify epoch changes.
-    async fn continuously_stream_transaction_outputs(
-        &self,
-        start_version: Version,
-        start_epoch: Epoch,
     ) -> Result<DataStreamListener, Error>;
 
     /// Terminates the stream that sent the notification with the given
@@ -280,6 +280,25 @@ impl DataStreamingClient for StreamingServiceClient {
         self.send_request_and_await_response(client_request).await
     }
 
+    async fn get_all_transaction_outputs(
+        &self,
+        start_version: u64,
+        end_version: u64,
+        max_proof_version: u64,
+    ) -> Result<DataStreamListener, Error> {
+        if start_version > end_version || end_version > max_proof_version {
+            return Err(Error::UnexpectedErrorEncountered(format!("Invalid transaction output stream request! Start: {:?}, end: {:?}, max proof version: {:?}", start_version, end_version, max_proof_version)));
+        };
+
+        let client_request =
+            StreamRequest::GetAllTransactionOutputs(GetAllTransactionOutputsRequest {
+                start_version,
+                end_version,
+                max_proof_version,
+            });
+        self.send_request_and_await_response(client_request).await
+    }
+
     async fn get_all_transactions(
         &self,
         start_version: u64,
@@ -300,22 +319,17 @@ impl DataStreamingClient for StreamingServiceClient {
         self.send_request_and_await_response(client_request).await
     }
 
-    async fn get_all_transaction_outputs(
+    async fn continuously_stream_transaction_outputs(
         &self,
         start_version: u64,
-        end_version: u64,
-        max_proof_version: u64,
+        start_epoch: u64,
     ) -> Result<DataStreamListener, Error> {
-        if start_version > end_version || end_version > max_proof_version {
-            return Err(Error::UnexpectedErrorEncountered(format!("Invalid transaction output stream request! Start: {:?}, end: {:?}, max proof version: {:?}", start_version, end_version, max_proof_version)));
-        };
-
-        let client_request =
-            StreamRequest::GetAllTransactionOutputs(GetAllTransactionOutputsRequest {
+        let client_request = StreamRequest::ContinuouslyStreamTransactionOutputs(
+            ContinuouslyStreamTransactionOutputsRequest {
                 start_version,
-                end_version,
-                max_proof_version,
-            });
+                start_epoch,
+            },
+        );
         self.send_request_and_await_response(client_request).await
     }
 
@@ -331,20 +345,6 @@ impl DataStreamingClient for StreamingServiceClient {
                 start_epoch,
                 include_events,
             });
-        self.send_request_and_await_response(client_request).await
-    }
-
-    async fn continuously_stream_transaction_outputs(
-        &self,
-        start_version: u64,
-        start_epoch: u64,
-    ) -> Result<DataStreamListener, Error> {
-        let client_request = StreamRequest::ContinuouslyStreamTransactionOutputs(
-            ContinuouslyStreamTransactionOutputsRequest {
-                start_version,
-                start_epoch,
-            },
-        );
         self.send_request_and_await_response(client_request).await
     }
 
