@@ -3,7 +3,7 @@
 
 use crate::{data_notification::NotificationId, data_stream::DataStreamListener, error::Error};
 use async_trait::async_trait;
-use diem_types::transaction::Version;
+use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
 use futures::{
     channel::{mpsc, oneshot},
     stream::FusedStream,
@@ -73,10 +73,14 @@ pub trait DataStreamingClient {
     /// grows. The stream starts at `start_version` and `start_epoch` (inclusive).
     /// Transaction output proof versions are tied to ledger infos within the
     /// same epoch, otherwise epoch ending ledger infos will signify epoch changes.
+    ///
+    /// Note: if a `target` is provided, the stream will terminate once it reaches
+    /// the target. Otherwise, it will continue indefinitely.
     async fn continuously_stream_transaction_outputs(
         &self,
         start_version: Version,
         start_epoch: Epoch,
+        target: Option<LedgerInfoWithSignatures>,
     ) -> Result<DataStreamListener, Error>;
 
     /// Continuously streams transactions with proofs as the blockchain grows.
@@ -84,11 +88,15 @@ pub trait DataStreamingClient {
     /// Transaction proof versions are tied to ledger infos within the same
     /// epoch, otherwise epoch ending ledger infos will signify epoch changes.
     /// If `include_events` is true, events are also included in the proofs.
+    ///
+    /// Note: if a `target` is provided, the stream will terminate once it reaches
+    /// the target. Otherwise, it will continue indefinitely.
     async fn continuously_stream_transactions(
         &self,
         start_version: Version,
         start_epoch: Epoch,
         include_events: bool,
+        target: Option<LedgerInfoWithSignatures>,
     ) -> Result<DataStreamListener, Error>;
 
     /// Terminates the stream that sent the notification with the given
@@ -176,19 +184,21 @@ pub struct GetAllTransactionOutputsRequest {
     pub max_proof_version: Version,
 }
 
-/// A client request for continuously streaming transactions with proofs (with no end).
+/// A client request for continuously streaming transactions with proofs
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContinuouslyStreamTransactionsRequest {
     pub start_version: Version,
     pub start_epoch: Epoch,
     pub include_events: bool,
+    pub target: Option<LedgerInfoWithSignatures>,
 }
 
-/// A client request for continuously streaming transaction outputs with proofs (with no end).
+/// A client request for continuously streaming transaction outputs with proofs
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContinuouslyStreamTransactionOutputsRequest {
     pub start_version: Version,
     pub start_epoch: Epoch,
+    pub target: Option<LedgerInfoWithSignatures>,
 }
 
 /// A client request for terminating a stream and providing payload feedback.
@@ -323,11 +333,13 @@ impl DataStreamingClient for StreamingServiceClient {
         &self,
         start_version: u64,
         start_epoch: u64,
+        target: Option<LedgerInfoWithSignatures>,
     ) -> Result<DataStreamListener, Error> {
         let client_request = StreamRequest::ContinuouslyStreamTransactionOutputs(
             ContinuouslyStreamTransactionOutputsRequest {
                 start_version,
                 start_epoch,
+                target,
             },
         );
         self.send_request_and_await_response(client_request).await
@@ -338,12 +350,14 @@ impl DataStreamingClient for StreamingServiceClient {
         start_version: u64,
         start_epoch: u64,
         include_events: bool,
+        target: Option<LedgerInfoWithSignatures>,
     ) -> Result<DataStreamListener, Error> {
         let client_request =
             StreamRequest::ContinuouslyStreamTransactions(ContinuouslyStreamTransactionsRequest {
                 start_version,
                 start_epoch,
                 include_events,
+                target,
             });
         self.send_request_and_await_response(client_request).await
     }

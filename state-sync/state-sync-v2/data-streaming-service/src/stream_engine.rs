@@ -316,7 +316,7 @@ pub struct ContinuousTransactionStreamEngine {
     pub request: StreamRequest,
 
     // The target ledger info that we're currently syncing to
-    pub target_ledger_info: Option<LedgerInfoWithSignatures>,
+    pub current_target_ledger_info: Option<LedgerInfoWithSignatures>,
 
     // True iff a request has been created to fetch an epoch ending ledger info
     pub end_of_epoch_requested: bool,
@@ -328,6 +328,10 @@ pub struct ContinuousTransactionStreamEngine {
     // The next version and epoch that we're waiting to request from
     // the network. All versions before this have been requested.
     pub next_request_version_and_epoch: (Version, Epoch),
+
+    // True iff all data has been sent across the stream. This will only be
+    // possible if there is a target ledger info specified.
+    pub stream_is_complete: bool,
 }
 
 impl ContinuousTransactionStreamEngine {
@@ -336,19 +340,21 @@ impl ContinuousTransactionStreamEngine {
             StreamRequest::ContinuouslyStreamTransactions(request) => {
                 Ok(ContinuousTransactionStreamEngine {
                     request: stream_request.clone(),
-                    target_ledger_info: None,
+                    current_target_ledger_info: None,
                     end_of_epoch_requested: false,
                     next_stream_version_and_epoch: (request.start_version, request.start_epoch),
                     next_request_version_and_epoch: (request.start_version, request.start_epoch),
+                    stream_is_complete: false,
                 })
             }
             StreamRequest::ContinuouslyStreamTransactionOutputs(request) => {
                 Ok(ContinuousTransactionStreamEngine {
                     request: stream_request.clone(),
-                    target_ledger_info: None,
+                    current_target_ledger_info: None,
                     end_of_epoch_requested: false,
                     next_stream_version_and_epoch: (request.start_version, request.start_epoch),
                     next_request_version_and_epoch: (request.start_version, request.start_epoch),
+                    stream_is_complete: false,
                 })
             }
             request => invalid_stream_request!(request),
@@ -359,6 +365,22 @@ impl ContinuousTransactionStreamEngine {
         &self,
         advertised_data: &AdvertisedData,
     ) -> Result<LedgerInfoWithSignatures, Error> {
+        // Check if the stream has a final target ledger info
+        match &self.request {
+            StreamRequest::ContinuouslyStreamTransactions(request) => {
+                if let Some(target) = &request.target {
+                    return Ok(target.clone());
+                }
+            }
+            StreamRequest::ContinuouslyStreamTransactionOutputs(request) => {
+                if let Some(target) = &request.target {
+                    return Ok(target.clone());
+                }
+            }
+            request => invalid_stream_request!(request),
+        };
+
+        // We don't have a final target, select the highest to make progress
         if let Some(highest_synced_ledger_info) = advertised_data.highest_synced_ledger_info() {
             let (next_request_version, _) = self.next_request_version_and_epoch;
             if next_request_version > highest_synced_ledger_info.ledger_info().version() {
@@ -376,7 +398,7 @@ impl ContinuousTransactionStreamEngine {
     }
 
     fn get_target_ledger_info(&self) -> &LedgerInfoWithSignatures {
-        self.target_ledger_info
+        self.current_target_ledger_info
             .as_ref()
             .expect("No target ledger info found!")
     }
@@ -396,7 +418,7 @@ impl ContinuousTransactionStreamEngine {
 
         // Update the target ledger info if we've hit it
         if request_end_version == self.get_target_ledger_info().ledger_info().version() {
-            self.target_ledger_info = None;
+            self.current_target_ledger_info = None;
         }
 
         Ok(data_notification)
@@ -413,6 +435,25 @@ impl ContinuousTransactionStreamEngine {
             request_start_version,
             request_end_version,
         );
+
+        // Check if the stream is now complete
+        match &self.request {
+            StreamRequest::ContinuouslyStreamTransactions(request) => {
+                if let Some(target) = &request.target {
+                    if request_end_version == target.ledger_info().version() {
+                        self.stream_is_complete = true;
+                    }
+                }
+            }
+            StreamRequest::ContinuouslyStreamTransactionOutputs(request) => {
+                if let Some(target) = &request.target {
+                    if request_end_version == target.ledger_info().version() {
+                        self.stream_is_complete = true;
+                    }
+                }
+            }
+            request => invalid_stream_request!(request),
+        };
 
         // Update the next stream version and epoch
         if request_end_version == self.get_target_ledger_info().ledger_info().version()
@@ -491,13 +532,13 @@ impl DataStreamEngine for ContinuousTransactionStreamEngine {
         max_number_of_requests: u64,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<Vec<DataClientRequest>, Error> {
-        if self.target_ledger_info.is_none() && self.end_of_epoch_requested {
+        if self.current_target_ledger_info.is_none() && self.end_of_epoch_requested {
             return Ok(vec![]); // We are waiting for the epoch ending ledger info
         }
 
         // If we don't have a syncing target, select one.
         let (next_request_version, next_request_epoch) = self.next_request_version_and_epoch;
-        if self.target_ledger_info.is_none() {
+        if self.current_target_ledger_info.is_none() {
             // Select a new ledger info from the advertised data
             let target_ledger_info =
                 self.select_target_ledger_info(&global_data_summary.advertised_data)?;
@@ -528,7 +569,7 @@ impl DataStreamEngine for ContinuousTransactionStreamEngine {
                             target_ledger_info.ledger_info().epoch()
                         )))
                 );
-                self.target_ledger_info = Some(target_ledger_info);
+                self.current_target_ledger_info = Some(target_ledger_info);
             }
         }
 
@@ -573,8 +614,31 @@ impl DataStreamEngine for ContinuousTransactionStreamEngine {
             request => invalid_stream_request!(request),
         };
 
-        // Verify we can satisfy the next transaction version
+        // If the stream has a target end, verify we can get there.
         let (next_request_version, _) = self.next_request_version_and_epoch;
+        match &self.request {
+            StreamRequest::ContinuouslyStreamTransactions(request) => {
+                if let Some(target) = &request.target {
+                    return AdvertisedData::contains_range(
+                        next_request_version,
+                        target.ledger_info().version(),
+                        advertised_ranges,
+                    );
+                }
+            }
+            StreamRequest::ContinuouslyStreamTransactionOutputs(request) => {
+                if let Some(target) = &request.target {
+                    return AdvertisedData::contains_range(
+                        next_request_version,
+                        target.ledger_info().version(),
+                        advertised_ranges,
+                    );
+                }
+            }
+            request => invalid_stream_request!(request),
+        };
+
+        // The stream has no target end. Verify we can satisfy the next version.
         AdvertisedData::contains_range(
             next_request_version,
             next_request_version,
@@ -583,7 +647,7 @@ impl DataStreamEngine for ContinuousTransactionStreamEngine {
     }
 
     fn is_stream_complete(&self) -> bool {
-        false // This stream type should never be complete!
+        self.stream_is_complete
     }
 
     fn transform_client_response_into_notification(
@@ -609,7 +673,7 @@ impl DataStreamEngine for ContinuousTransactionStreamEngine {
                                         target_ledger_info.ledger_info().version()
                                     )))
                             );
-                            self.target_ledger_info = Some(target_ledger_info.clone());
+                            self.current_target_ledger_info = Some(target_ledger_info.clone());
                         }
                         response_payload => {
                             // TODO(joshlind): notify the data client of the bad response
