@@ -261,9 +261,6 @@ impl<
             return Err(error);
         }
 
-        // TODO(joshlind): Start syncing to the sync target!
-        // How do we support this case??
-
         Ok(())
     }
 
@@ -317,7 +314,6 @@ impl<
         // Check the progress of any sync requests
         if self.consensus_notification_handler.active_sync_request() {
             debug!("There's an active sync request!");
-            // TODO(joshlind): handle the case where we're driving towards a sync request
 
             // Check if we've hit the sync request target or timed out
             if let Err(error) = self.check_sync_request_progress().await {
@@ -330,9 +326,16 @@ impl<
 
         // Check progress depending on if we're bootstrapping or continuously syncing
         if self.bootstrapper.is_bootstrapped() {
-            if let Err(error) = self.continuous_syncer.check_progress().await {
+            let sync_request_target = self
+                .consensus_notification_handler
+                .get_sync_request_target();
+            if let Err(error) = self
+                .continuous_syncer
+                .check_progress(sync_request_target)
+                .await
+            {
                 error!(
-                    "Error found when checking the bootstrapper progress: {:?}",
+                    "Error found when checking the continuous syncer progress: {:?}",
                     error
                 );
             }

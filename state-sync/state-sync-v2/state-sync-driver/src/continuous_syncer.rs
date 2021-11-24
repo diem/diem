@@ -70,33 +70,46 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
     }
 
     /// Checks if the continuous syncer is able to make progress
-    pub async fn check_progress(&mut self) -> Result<(), Error> {
+    pub async fn check_progress(
+        &mut self,
+        sync_request_target: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
         // Synchronize depending on the mode
         match self.driver_configuration.config.continuous_syncing_mode {
             ContinuousSyncingMode::ApplyTransactionOutputs => {
-                self.continuously_apply_transaction_outputs().await
+                self.continuously_apply_transaction_outputs(sync_request_target)
+                    .await
             }
             ContinuousSyncingMode::ExecuteTransactions => {
-                self.continuously_execute_transactions().await
+                self.continuously_execute_transactions(sync_request_target)
+                    .await
             }
         }
     }
 
     /// Attempts to make syncing progress by applying transaction outputs
-    async fn continuously_apply_transaction_outputs(&mut self) -> Result<(), Error> {
+    async fn continuously_apply_transaction_outputs(
+        &mut self,
+        sync_request_target: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
         if self.active_data_stream.is_some() {
             self.process_transaction_outputs_with_proof().await
         } else {
-            self.fetch_transaction_outputs_with_proofs().await
+            self.fetch_transaction_outputs_with_proofs(sync_request_target)
+                .await
         }
     }
 
     /// Attempts to make syncing progress by executing transactions
-    async fn continuously_execute_transactions(&mut self) -> Result<(), Error> {
+    async fn continuously_execute_transactions(
+        &mut self,
+        sync_request_target: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
         if self.active_data_stream.is_some() {
             self.process_transactions_with_proofs().await
         } else {
-            self.fetch_transactions_with_proofs().await
+            self.fetch_transactions_with_proofs(sync_request_target)
+                .await
         }
     }
 
@@ -110,7 +123,10 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
     }
 
     /// Fetches all transactions starting at the current synced version
-    async fn fetch_transactions_with_proofs(&mut self) -> Result<(), Error> {
+    async fn fetch_transactions_with_proofs(
+        &mut self,
+        sync_request_target: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
         let (highest_synced_version, highest_synced_epoch) =
             self.get_highest_synced_version_and_epoch()?;
 
@@ -124,7 +140,7 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
                 next_transaction_version,
                 highest_synced_epoch,
                 false,
-                None,
+                sync_request_target,
             )
             .await?;
         self.active_data_stream = Some(transaction_stream);
@@ -133,7 +149,10 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
     }
 
     /// Fetches all transaction outputs starting at the current synced version
-    async fn fetch_transaction_outputs_with_proofs(&mut self) -> Result<(), Error> {
+    async fn fetch_transaction_outputs_with_proofs(
+        &mut self,
+        sync_request_target: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
         let (highest_synced_version, highest_synced_epoch) =
             self.get_highest_synced_version_and_epoch()?;
 
@@ -146,7 +165,7 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
             .continuously_stream_transaction_outputs(
                 next_output_version,
                 highest_synced_epoch,
-                None,
+                sync_request_target,
             )
             .await?;
         self.active_data_stream = Some(output_stream);

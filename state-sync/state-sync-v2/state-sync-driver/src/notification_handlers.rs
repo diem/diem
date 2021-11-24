@@ -10,7 +10,7 @@ use consensus_notifications::{
     ConsensusCommitNotification, ConsensusNotification, ConsensusNotificationListener,
     ConsensusSyncNotification,
 };
-use diem_types::transaction::Transaction;
+use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::Transaction};
 use futures::{
     channel::{mpsc, oneshot},
     stream::FusedStream,
@@ -147,6 +147,13 @@ impl ConsensusNotificationHandler {
         self.sync_request = Some(consensus_sync_request);
 
         Ok(())
+    }
+
+    /// Returns the active sync request that consensus is waiting on
+    pub fn get_sync_request_target(&self) -> Option<LedgerInfoWithSignatures> {
+        self.sync_request
+            .as_ref()
+            .map(|sync_request| sync_request.consensus_sync_notification.target.clone())
     }
 
     /// Returns true iff there is a sync request currently blocking consensus
