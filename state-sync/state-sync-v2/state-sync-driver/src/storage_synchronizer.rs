@@ -4,9 +4,13 @@
 use crate::error::Error;
 use diem_infallible::RwLock;
 use diem_types::{
+    account_state_blob::AccountStatesChunkWithProof,
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
-    transaction::{default_protocol::TransactionListWithProof, Version},
+    transaction::{
+        default_protocol::{TransactionListWithProof, TransactionOutputListWithProof},
+        Version,
+    },
 };
 use executor_types::{ChunkExecutor, ExecutedTrees};
 use std::sync::Arc;
@@ -24,15 +28,41 @@ pub struct StorageStateSummary {
 /// Synchronizes the storage of the node by verifying and storing new data
 /// (e.g., transactions and outputs).
 pub trait StorageSynchronizerInterface {
-    /// Returns the latest storage summary
-    fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error>;
+    /// Applies and commits a batch of transaction outputs to storage.
+    ///
+    /// Note: this assumes that the ledger infos have already been verified.
+    fn apply_and_commit_transaction_outputs(
+        &mut self,
+        output_list_with_proof: TransactionOutputListWithProof,
+        target_ledger_info: LedgerInfoWithSignatures,
+        end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error>;
 
-    /// Executes and commit a batch of transactions
+    /// Executes and commits a batch of transactions to storage.
+    ///
+    /// Note: this assumes that the ledger infos have already been verified.
     fn execute_and_commit_transactions(
         &mut self,
         transaction_list_with_proof: TransactionListWithProof,
-        verified_target_li: LedgerInfoWithSignatures,
-        intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
+        target_ledger_info: LedgerInfoWithSignatures,
+        end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error>;
+
+    /// Returns the latest storage summary
+    fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error>;
+
+    /// Saves the given account states to storage
+    fn save_account_states(
+        &mut self,
+        account_states_with_proof: AccountStatesChunkWithProof,
+    ) -> Result<(), Error>;
+
+    /// Saves the given epoch ending ledger infos to storage.
+    ///
+    /// Note: this assumes that the ledger infos have already been verified.
+    fn save_epoch_ending_ledger_infos(
+        &mut self,
+        epoch_ending_ledger_infos: Vec<LedgerInfoWithSignatures>,
     ) -> Result<(), Error>;
 }
 
@@ -113,6 +143,24 @@ impl StorageSynchronizer {
 }
 
 impl StorageSynchronizerInterface for StorageSynchronizer {
+    fn apply_and_commit_transaction_outputs(
+        &mut self,
+        _output_list_with_proof: TransactionOutputListWithProof,
+        _target_ledger_info: LedgerInfoWithSignatures,
+        _end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
+        unimplemented!("Applying transaction outputs to storage is not currently supported!")
+    }
+
+    fn execute_and_commit_transactions(
+        &mut self,
+        _transaction_list_with_proof: TransactionListWithProof,
+        _target_ledger_info: LedgerInfoWithSignatures,
+        _end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
+        unimplemented!("Executing transactions is not currently supported!");
+    }
+
     fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
         if let Some(cached_storage_summary) = &self.cached_storage_summary {
             Ok(cached_storage_summary.clone())
@@ -121,12 +169,17 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
         }
     }
 
-    fn execute_and_commit_transactions(
+    fn save_account_states(
         &mut self,
-        _transaction_list_with_proof: TransactionListWithProof,
-        _verified_target_li: LedgerInfoWithSignatures,
-        _intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
+        account_states_with_proof: AccountStatesChunkWithProof,
     ) -> Result<(), Error> {
-        unimplemented!();
+        unimplemented!("Saving account states to storage is not currently supported!")
+    }
+
+    fn save_epoch_ending_ledger_infos(
+        &mut self,
+        epoch_ending_ledger_infos: Vec<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
+        unimplemented!("Saving epoch ending ledger infos to storage is not currently supported!")
     }
 }
