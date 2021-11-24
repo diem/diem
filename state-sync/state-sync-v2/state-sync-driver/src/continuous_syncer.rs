@@ -120,7 +120,12 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         })?;
         let transaction_stream = self
             .streaming_service_client
-            .continuously_stream_transactions(next_transaction_version, highest_synced_epoch, false)
+            .continuously_stream_transactions(
+                next_transaction_version,
+                highest_synced_epoch,
+                false,
+                None,
+            )
             .await?;
         self.active_data_stream = Some(transaction_stream);
 
@@ -138,7 +143,11 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         })?;
         let output_stream = self
             .streaming_service_client
-            .continuously_stream_transaction_outputs(next_output_version, highest_synced_epoch)
+            .continuously_stream_transaction_outputs(
+                next_output_version,
+                highest_synced_epoch,
+                None,
+            )
             .await?;
         self.active_data_stream = Some(output_stream);
 

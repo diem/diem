@@ -400,7 +400,7 @@ impl ContinuousTransactionStreamEngine {
     fn get_target_ledger_info(&self) -> &LedgerInfoWithSignatures {
         self.current_target_ledger_info
             .as_ref()
-            .expect("No target ledger info found!")
+            .expect("No current target ledger info found!")
     }
 
     fn create_data_notification(
