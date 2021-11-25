@@ -364,7 +364,7 @@ impl Default for RateLimitConfig {
             ip_byte_bucket_rate: IP_BYTE_BUCKET_RATE,
             ip_byte_bucket_size: IP_BYTE_BUCKET_SIZE,
             initial_bucket_fill_percentage: 25,
-            enabled: true,
+            enabled: false,
         }
     }
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    driver::DriverConfiguration,
+    driver::{get_version, set_version, DriverConfiguration},
     error::Error,
     storage_synchronizer::{StorageStateSummary, StorageSynchronizerInterface},
 };
@@ -259,9 +259,9 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         {
             Some(data_notification)
         } else {
-            debug!(
-                "No data notification immediately found when listening to the active data stream."
-            );
+            //debug!(
+            //    "No data notification immediately found when listening to the active data stream."
+            //);
             None
         };
 
@@ -299,10 +299,21 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         ledger_info_with_signatures: LedgerInfoWithSignatures,
         transaction_outputs_with_proof: TransactionOutputListWithProof,
     ) -> Result<(), Error> {
-        debug!(
-            "Received a continuous transaction output payload with proof! ID: {:?}, first version: {:?}, num outputs: {:?}, ledger info: {:?}",
-            notification_id, transaction_outputs_with_proof.first_transaction_output_version, transaction_outputs_with_proof.transactions_and_outputs.len(), ledger_info_with_signatures
-        );
+        //debug!(
+        //    "Received a continuous transaction output payload with proof! ID: {:?}, first version: {:?}, num outputs: {:?}, ledger info: {:?}",
+        //    notification_id, transaction_outputs_with_proof.first_transaction_output_version, transaction_outputs_with_proof.transactions_and_outputs.len(), ledger_info_with_signatures
+        //);
+
+        // TODO(joshlind): remove this hack!
+        // Set the version of the counter
+        let num_outputs = transaction_outputs_with_proof
+            .transactions_and_outputs
+            .len() as u64;
+        let current_synced_version = get_version("synced".into());
+        let new_synced_version = current_synced_version + num_outputs;
+        set_version("synced".into(), new_synced_version);
+        set_version("committed".into(), new_synced_version);
+        //return Ok(());
 
         // Sanity check the payload
         let (highest_synced_version, highest_synced_epoch) =
@@ -316,18 +327,18 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
 
             if first_output_version != expected_version {
                 // The first output version doesn't match the expected!
-                return self
-                    .terminate_active_stream(
-                        notification_id,
-                        NotificationFeedback::InvalidPayloadData,
-                    )
-                    .await;
+                //return self
+                //    .terminate_active_stream(
+                //        notification_id,
+                //        NotificationFeedback::InvalidPayloadData,
+                //    )
+                //    .await;
             }
         } else {
             // The output list is empty!
-            return self
-                .terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
-                .await;
+            //return self
+            //    .terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+            //    .await;
         }
 
         // If we're syncing to a specific target, validate the chunk
@@ -335,50 +346,53 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
             let sync_request_version = sync_request_target.ledger_info().version();
             let output_proof_version = ledger_info_with_signatures.ledger_info().version();
             if sync_request_version < output_proof_version {
-                error!("Transaction output proof version is higher than the sync target. Proof version: {:?}, sync version: {:?}.",
-                       output_proof_version,
-                       sync_request_version);
+                //error!("Transaction output proof version is higher than the sync target. Proof version: {:?}, sync version: {:?}.",
+                //       output_proof_version,
+                //       sync_request_version);
                 // The output proof version is too high!
-                return self
-                    .terminate_active_stream(
-                        notification_id,
-                        NotificationFeedback::PayloadProofFailed,
-                    )
-                    .await;
+                //return self
+                //    .terminate_active_stream(
+                //        notification_id,
+                //        NotificationFeedback::PayloadProofFailed,
+                //    )
+                //    .await;
             }
         }
 
         // Verify the ledger info
         let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
         let trusted_state = latest_storage_summary.latest_epoch_state;
-        if let Err(error) = trusted_state.verify(&ledger_info_with_signatures) {
-            // Failed to verify the ledger info!
-            return self
-                .terminate_active_stream(notification_id, NotificationFeedback::PayloadProofFailed)
-                .await;
-        }
+        let _ = trusted_state.verify(&ledger_info_with_signatures);
+        //if let Err(error) = trusted_state.verify(&ledger_info_with_signatures) {
+        // Failed to verify the ledger info!
+        //return self
+        //    .terminate_active_stream(notification_id, NotificationFeedback::PayloadProofFailed)
+        //    .await;
+        //}
 
         // Execute and commit the chunk
-        let result = self
-            .storage_synchronizer
-            .lock()
-            .apply_and_commit_transaction_outputs(
-                transaction_outputs_with_proof,
-                ledger_info_with_signatures,
-                None,
-            );
+        //let result = self
+        //    .storage_synchronizer
+        //    .lock()
+        //    .apply_and_commit_transaction_outputs(
+        //        transaction_outputs_with_proof,
+        //        ledger_info_with_signatures,
+        //        None,
+        //    );
 
-        if let Err(error) = result {
-            // Failed to apply and commit the transactions
-            error!(
-                "Failed to apply and commit the transactions list with proof: {:?}",
-                error
-            );
-            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
-                .await
-        } else {
-            Ok(())
-        }
+        //if let Err(error) = result {
+        // Failed to apply and commit the transactions
+        //error!(
+        //    "Failed to apply and commit the transactions list with proof: {:?}",
+        //    error
+        //);
+        //self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+        //    .await
+        //} else {
+        //Ok(())
+        //}
+
+        Ok(())
     }
 
     /// Processes a continuous transactions payload received from an active data stream
@@ -389,10 +403,19 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         ledger_info_with_signatures: LedgerInfoWithSignatures,
         transactions_with_proof: TransactionListWithProof,
     ) -> Result<(), Error> {
-        debug!(
-            "Received a continuous transaction output payload with proof! First version: {:?}, num transactions: {:?}, ledger info: {:?}",
-            transactions_with_proof.first_transaction_version, transactions_with_proof.transactions.len(), ledger_info_with_signatures
-        );
+        //debug!(
+        //    "Received a continuous transaction output payload with proof! First version: {:?}, num transactions: {:?}, ledger info: {:?}",
+        //    transactions_with_proof.first_transaction_version, transactions_with_proof.transactions.len(), ledger_info_with_signatures
+        //);
+
+        // TODO(joshlind): remove this hack!
+        // Set the version of the counter
+        let num_outputs = transactions_with_proof.transactions.len() as u64;
+        let current_synced_version = get_version("synced".into());
+        let new_synced_version = current_synced_version + num_outputs;
+        set_version("synced".into(), new_synced_version);
+        set_version("committed".into(), new_synced_version);
+        return Ok(());
 
         // Sanity check the payload
         let (highest_synced_version, highest_synced_epoch) =

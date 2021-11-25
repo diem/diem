@@ -42,6 +42,10 @@ pub fn set_version(version_type: String, version: u64) {
         .set(version as i64)
 }
 
+pub fn get_version(version_type: String) -> u64 {
+    VERSION.with_label_values(&[&version_type]).get() as u64
+}
+
 /// The configuration of the state sync driver
 #[derive(Clone)]
 pub struct DriverConfiguration {
@@ -313,7 +317,7 @@ impl<
 
     /// Periodically checks that state sync is making progress
     async fn check_progress(&mut self) {
-        debug!("Checking progress of the state sync driver!");
+        //debug!("Checking progress of the state sync driver!");
 
         // If consensus is executing, there's nothing to do.
         if self.check_if_consensus_executing() {

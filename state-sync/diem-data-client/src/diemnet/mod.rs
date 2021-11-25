@@ -410,7 +410,7 @@ impl DataSummaryPoller {
                 }
             };
 
-            debug!("Polling peer ({:?}) to update the data summary!", peer);
+            //debug!("Polling peer ({:?}) to update the data summary!", peer);
 
             let result: Result<StorageServerSummary> = self
                 .data_client
@@ -432,10 +432,10 @@ impl DataSummaryPoller {
                 }
             };
 
-            debug!(
-                "Received response from peer ({:?}) when polled: {:?}",
-                peer, storage_summary
-            );
+            //debug!(
+            //    "Received response from peer ({:?}) when polled: {:?}",
+            //    peer, storage_summary
+            //);
 
             self.data_client.update_summary(peer, storage_summary);
             self.data_client.update_global_summary_cache();

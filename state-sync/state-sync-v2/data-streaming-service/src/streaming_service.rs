@@ -230,10 +230,10 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStreamingService<T> {
                     &metrics::CHECK_STREAM_PROGRESS_ERROR,
                     error.get_label().into(),
                 );
-                error!(LogSchema::new(LogEntry::CheckStreamProgress)
-                    .stream_id(*data_stream_id)
-                    .event(LogEvent::Error)
-                    .error(&error));
+                //error!(LogSchema::new(LogEntry::CheckStreamProgress)
+                //    .stream_id(*data_stream_id)
+                //    .event(LogEvent::Error)
+                //    .error(&error));
             }
         }
     }

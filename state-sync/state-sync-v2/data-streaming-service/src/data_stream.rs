@@ -443,8 +443,8 @@ impl<T: DiemDataClient + Send + Clone + 'static> DataStream<T> {
                     .stream_id(self.data_stream_id)
                     .event(LogEvent::Success)
                     .message(&format!(
-                        "Sent a single stream notification! Notification ID: {:?}, notification: {:?}",
-                        notification_id, data_notification
+                        "Sent a single stream notification! Notification ID: {:?}",
+                        notification_id,
                     )))
             );
             self.send_data_notification(data_notification)?;
