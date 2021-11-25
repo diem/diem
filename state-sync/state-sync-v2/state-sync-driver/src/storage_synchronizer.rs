@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::error::Error;
+use crate::{driver::set_version, error::Error};
 use diem_infallible::RwLock;
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
@@ -163,6 +163,8 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
         target_ledger_info: LedgerInfoWithSignatures,
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error> {
+        let num_transactions = transaction_list_with_proof.transactions.len() as u64;
+
         // TODO(joshlind): return the events!
         let _events = self
             .chunk_executor
@@ -174,6 +176,17 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
             .map_err(|error| {
                 Error::UnexpectedError(format!("Execute and commit chunk failed: {}", error))
             })?;
+
+        // TODO(joshlind): remove this hack!
+        // Set the version of the counter
+        let current_synced_version = self
+            .cached_storage_summary
+            .as_ref()
+            .unwrap()
+            .latest_synced_version;
+        let new_synced_version = current_synced_version + num_transactions;
+        set_version("synced".into(), new_synced_version);
+        set_version("committed".into(), new_synced_version);
 
         self.invalidate_cached_storage_summary();
         Ok(())
