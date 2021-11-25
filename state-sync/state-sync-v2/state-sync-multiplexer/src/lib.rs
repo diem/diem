@@ -66,7 +66,8 @@ impl StateSyncMultiplexer {
         let state_sync_v2_enabled = node_config
             .state_sync
             .state_sync_driver
-            .activate_state_sync_v2 && node_config.base.role == RoleType::FullNode;
+            .activate_state_sync_v2
+            && node_config.base.role == RoleType::FullNode;
         if state_sync_v2_enabled {
             // Start the state sync v2 driver
             state_sync_v2 = Some(DriverFactory::create_and_spawn_driver(

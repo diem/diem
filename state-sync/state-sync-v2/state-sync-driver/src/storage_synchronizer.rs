@@ -150,11 +150,37 @@ impl StorageSynchronizer {
 impl StorageSynchronizerInterface for StorageSynchronizer {
     fn apply_and_commit_transaction_outputs(
         &mut self,
-        _output_list_with_proof: TransactionOutputListWithProof,
-        _target_ledger_info: LedgerInfoWithSignatures,
-        _end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+        output_list_with_proof: TransactionOutputListWithProof,
+        target_ledger_info: LedgerInfoWithSignatures,
+        end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error> {
-        unimplemented!("Applying transaction outputs to storage is not currently supported!")
+        let num_outputs = output_list_with_proof.transactions_and_outputs.len() as u64;
+
+        // TODO(joshlind): return the events!
+        let _events = self
+            .chunk_executor
+            .apply_and_commit_chunk(
+                output_list_with_proof,
+                target_ledger_info,
+                end_of_epoch_ledger_info,
+            )
+            .map_err(|error| {
+                Error::UnexpectedError(format!("Apply and commit chunk failed: {}", error))
+            })?;
+
+        // TODO(joshlind): remove this hack!
+        // Set the version of the counter
+        let current_synced_version = self
+            .cached_storage_summary
+            .as_ref()
+            .unwrap()
+            .latest_synced_version;
+        let new_synced_version = current_synced_version + num_outputs;
+        set_version("synced".into(), new_synced_version);
+        set_version("committed".into(), new_synced_version);
+
+        self.invalidate_cached_storage_summary();
+        Ok(())
     }
 
     fn execute_and_commit_transactions(

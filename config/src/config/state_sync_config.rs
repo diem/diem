@@ -86,8 +86,8 @@ impl Default for StateSyncDriverConfig {
     fn default() -> Self {
         Self {
             activate_state_sync_v2: true, // TODO(joshlind): update me, when v2 works
-            bootstrapping_mode: BootstrappingMode::ExecuteTransactionsFromGenesis,
-            continuous_syncing_mode: ContinuousSyncingMode::ExecuteTransactions,
+            bootstrapping_mode: BootstrappingMode::ApplyTransactionOutputsFromGenesis,
+            continuous_syncing_mode: ContinuousSyncingMode::ApplyTransactionOutputs,
             progress_check_interval_ms: 500,
         }
     }

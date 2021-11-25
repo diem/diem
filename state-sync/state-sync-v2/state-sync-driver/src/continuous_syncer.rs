@@ -299,13 +299,86 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         ledger_info_with_signatures: LedgerInfoWithSignatures,
         transaction_outputs_with_proof: TransactionOutputListWithProof,
     ) -> Result<(), Error> {
-        // TODO(joshlind): process the transaction list with proof!
         debug!(
             "Received a continuous transaction output payload with proof! ID: {:?}, first version: {:?}, num outputs: {:?}, ledger info: {:?}",
             notification_id, transaction_outputs_with_proof.first_transaction_output_version, transaction_outputs_with_proof.transactions_and_outputs.len(), ledger_info_with_signatures
         );
 
-        Ok(())
+        // Sanity check the payload
+        let (highest_synced_version, highest_synced_epoch) =
+            self.get_highest_synced_version_and_epoch()?;
+        if let Some(first_output_version) =
+            transaction_outputs_with_proof.first_transaction_output_version
+        {
+            let expected_version = highest_synced_version
+                .checked_add(1)
+                .ok_or_else(|| Error::IntegerOverflow("Expected version has overflown!".into()))?;
+
+            if first_output_version != expected_version {
+                // The first output version doesn't match the expected!
+                return self
+                    .terminate_active_stream(
+                        notification_id,
+                        NotificationFeedback::InvalidPayloadData,
+                    )
+                    .await;
+            }
+        } else {
+            // The output list is empty!
+            return self
+                .terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await;
+        }
+
+        // If we're syncing to a specific target, validate the chunk
+        if let Some(sync_request_target) = sync_request_target {
+            let sync_request_version = sync_request_target.ledger_info().version();
+            let output_proof_version = ledger_info_with_signatures.ledger_info().version();
+            if sync_request_version < output_proof_version {
+                error!("Transaction output proof version is higher than the sync target. Proof version: {:?}, sync version: {:?}.",
+                       output_proof_version,
+                       sync_request_version);
+                // The output proof version is too high!
+                return self
+                    .terminate_active_stream(
+                        notification_id,
+                        NotificationFeedback::PayloadProofFailed,
+                    )
+                    .await;
+            }
+        }
+
+        // Verify the ledger info
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let trusted_state = latest_storage_summary.latest_epoch_state;
+        if let Err(error) = trusted_state.verify(&ledger_info_with_signatures) {
+            // Failed to verify the ledger info!
+            return self
+                .terminate_active_stream(notification_id, NotificationFeedback::PayloadProofFailed)
+                .await;
+        }
+
+        // Execute and commit the chunk
+        let result = self
+            .storage_synchronizer
+            .lock()
+            .apply_and_commit_transaction_outputs(
+                transaction_outputs_with_proof,
+                ledger_info_with_signatures,
+                None,
+            );
+
+        if let Err(error) = result {
+            // Failed to apply and commit the transactions
+            error!(
+                "Failed to apply and commit the transactions list with proof: {:?}",
+                error
+            );
+            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await
+        } else {
+            Ok(())
+        }
     }
 
     /// Processes a continuous transactions payload received from an active data stream
