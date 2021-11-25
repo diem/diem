@@ -17,6 +17,7 @@ use diem_infallible::Mutex;
 use diem_logger::*;
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
+    epoch_change::Verifier,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{
         default_protocol::{TransactionListWithProof, TransactionOutputListWithProof},
@@ -93,7 +94,8 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         sync_request_target: Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error> {
         if self.active_data_stream.is_some() {
-            self.process_transaction_outputs_with_proof().await
+            self.process_continuous_transaction_outputs_with_proof(sync_request_target)
+                .await
         } else {
             self.fetch_transaction_outputs_with_proofs(sync_request_target)
                 .await
@@ -106,7 +108,8 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         sync_request_target: Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error> {
         if self.active_data_stream.is_some() {
-            self.process_transactions_with_proofs().await
+            self.process_continuous_transactions_with_proofs(sync_request_target)
+                .await
         } else {
             self.fetch_transactions_with_proofs(sync_request_target)
                 .await
@@ -173,7 +176,10 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         Ok(())
     }
 
-    async fn process_transactions_with_proofs(&mut self) -> Result<(), Error> {
+    async fn process_continuous_transactions_with_proofs(
+        &mut self,
+        sync_request_target: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
         loop {
             let data_notification = self.get_data_notification().await?;
             if data_notification.is_none() {
@@ -188,6 +194,7 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
                     transactions_with_proof,
                 ) => {
                     self.process_continuous_transactions_payload(
+                        sync_request_target.as_ref(),
                         data_notification.notification_id,
                         ledger_info_with_sigs,
                         transactions_with_proof,
@@ -203,7 +210,10 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         }
     }
 
-    async fn process_transaction_outputs_with_proof(&mut self) -> Result<(), Error> {
+    async fn process_continuous_transaction_outputs_with_proof(
+        &mut self,
+        sync_request_target: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
         loop {
             let data_notification = self.get_data_notification().await?;
             if data_notification.is_none() {
@@ -218,6 +228,7 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
                     transaction_outputs_with_proof,
                 ) => {
                     self.process_continuous_transaction_outputs_payload(
+                        sync_request_target.as_ref(),
                         data_notification.notification_id,
                         ledger_info_with_sigs,
                         transaction_outputs_with_proof,
@@ -283,6 +294,7 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
     /// Processes a continuous transaction outputs payload received from an active data stream
     async fn process_continuous_transaction_outputs_payload(
         &mut self,
+        sync_request_target: Option<&LedgerInfoWithSignatures>,
         notification_id: NotificationId,
         ledger_info_with_signatures: LedgerInfoWithSignatures,
         transaction_outputs_with_proof: TransactionOutputListWithProof,
@@ -299,17 +311,89 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
     /// Processes a continuous transactions payload received from an active data stream
     async fn process_continuous_transactions_payload(
         &mut self,
+        sync_request_target: Option<&LedgerInfoWithSignatures>,
         notification_id: NotificationId,
         ledger_info_with_signatures: LedgerInfoWithSignatures,
         transactions_with_proof: TransactionListWithProof,
     ) -> Result<(), Error> {
-        // TODO(joshlind): process the transaction list with proof!
         debug!(
             "Received a continuous transaction output payload with proof! First version: {:?}, num transactions: {:?}, ledger info: {:?}",
             transactions_with_proof.first_transaction_version, transactions_with_proof.transactions.len(), ledger_info_with_signatures
         );
 
-        Ok(())
+        // Sanity check the payload
+        let (highest_synced_version, highest_synced_epoch) =
+            self.get_highest_synced_version_and_epoch()?;
+        if let Some(first_transaction_version) = transactions_with_proof.first_transaction_version {
+            let expected_version = highest_synced_version
+                .checked_add(1)
+                .ok_or_else(|| Error::IntegerOverflow("Expected version has overflown!".into()))?;
+
+            if first_transaction_version != expected_version {
+                // The first transaction version doesn't match the expected!
+                return self
+                    .terminate_active_stream(
+                        notification_id,
+                        NotificationFeedback::InvalidPayloadData,
+                    )
+                    .await;
+            }
+        } else {
+            // The transaction list is empty!
+            return self
+                .terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await;
+        }
+
+        // If we're syncing to a specific target, validate the chunk
+        if let Some(sync_request_target) = sync_request_target {
+            let sync_request_version = sync_request_target.ledger_info().version();
+            let transaction_proof_version = ledger_info_with_signatures.ledger_info().version();
+            if sync_request_version < transaction_proof_version {
+                error!("Transaction proof version is higher than the sync target. Proof version: {:?}, sync version: {:?}.",
+                               transaction_proof_version,
+                               sync_request_version);
+                // The transaction proof version is too high!
+                return self
+                    .terminate_active_stream(
+                        notification_id,
+                        NotificationFeedback::PayloadProofFailed,
+                    )
+                    .await;
+            }
+        }
+
+        // Verify the ledger info
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let trusted_state = latest_storage_summary.latest_epoch_state;
+        if let Err(error) = trusted_state.verify(&ledger_info_with_signatures) {
+            // Failed to verify the ledger info!
+            return self
+                .terminate_active_stream(notification_id, NotificationFeedback::PayloadProofFailed)
+                .await;
+        }
+
+        // Execute and commit the chunk
+        let result = self
+            .storage_synchronizer
+            .lock()
+            .execute_and_commit_transactions(
+                transactions_with_proof,
+                ledger_info_with_signatures,
+                None,
+            );
+
+        if let Err(error) = result {
+            // Failed to execute and commit the transactions
+            error!(
+                "Failed to execute and commit the transactions list with proof: {:?}",
+                error
+            );
+            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await
+        } else {
+            Ok(())
+        }
     }
 
     /// Terminates the currently active stream with the provided feedback

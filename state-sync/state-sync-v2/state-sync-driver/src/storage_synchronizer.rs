@@ -146,6 +146,7 @@ impl StorageSynchronizer {
     }
 }
 
+// TODO(joshlind): make these return events and reconfigs!
 impl StorageSynchronizerInterface for StorageSynchronizer {
     fn apply_and_commit_transaction_outputs(
         &mut self,
@@ -158,11 +159,24 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
 
     fn execute_and_commit_transactions(
         &mut self,
-        _transaction_list_with_proof: TransactionListWithProof,
-        _target_ledger_info: LedgerInfoWithSignatures,
-        _end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+        transaction_list_with_proof: TransactionListWithProof,
+        target_ledger_info: LedgerInfoWithSignatures,
+        end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error> {
-        unimplemented!("Executing transactions is not currently supported!");
+        // TODO(joshlind): return the events!
+        let _events = self
+            .chunk_executor
+            .execute_and_commit_chunk(
+                transaction_list_with_proof,
+                target_ledger_info,
+                end_of_epoch_ledger_info,
+            )
+            .map_err(|error| {
+                Error::UnexpectedError(format!("Execute and commit chunk failed: {}", error))
+            })?;
+
+        self.invalidate_cached_storage_summary();
+        Ok(())
     }
 
     fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
