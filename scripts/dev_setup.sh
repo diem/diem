@@ -25,7 +25,7 @@ KUBECTL_VERSION=1.18.6
 TERRAFORM_VERSION=0.12.26
 HELM_VERSION=3.2.4
 VAULT_VERSION=1.5.0
-Z3_VERSION=4.8.9
+Z3_VERSION=4.8.13
 CVC4_VERSION=aac53f51
 CVC5_VERSION=0.0.3
 DOTNET_VERSION=5.0
@@ -470,6 +470,14 @@ function install_boogie {
 
 function install_z3 {
   echo "Installing Z3"
+  "${PRE_COMMAND[@]}" apt-get upgrade -y libstdc++6
+  "${PRE_COMMAND[@]}" apt-get upgrade -y libc6
+  ls /usr/lib/x86_64-linux-gnu/libstdc++.so* -al
+  ls /usr/lib/x86_64-linux-gnu/libm.so* -al
+  # strings /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.25 | grep GLIBC
+  # strings /usr/lib/x86_64-linux-gnu/libm.so | grep GLIBC
+  # strings /usr/lib/x86_64-linux-gnu/libstdc++.so.6 | grep GLIBC
+  # strings /usr/lib/x86_64-linux-gnu/libm.so.6 | grep GLIBC
   if command -v /usr/local/bin/z3 &>/dev/null; then
     echo "z3 already exists at /usr/local/bin/z3"
     echo "but this install will go to ${INSTALL_DIR}/z3."
@@ -480,9 +488,9 @@ function install_z3 {
      return
   fi
   if [[ "$(uname)" == "Linux" ]]; then
-    Z3_PKG="z3-$Z3_VERSION-x64-ubuntu-16.04"
+    Z3_PKG="z3-$Z3_VERSION-x64-glibc-2.31"
   elif [[ "$(uname)" == "Darwin" ]]; then
-    Z3_PKG="z3-$Z3_VERSION-x64-osx-10.14.6"
+    Z3_PKG="z3-$Z3_VERSION-x64-osx-10.16"
   else
     echo "Z3 support not configured for this platform (uname=$(uname))"
     return
