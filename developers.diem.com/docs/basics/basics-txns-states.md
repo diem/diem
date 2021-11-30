@@ -17,7 +17,7 @@ When a Diem Blockchain participant submits a transaction, they are requesting th
 
 A [signed transaction](../reference/glossary#transaction) on the blockchain contains the following information:
 
-- **Signature**: The sender uses a digital signature to verify that they signed the transacßtion.
+- **Signature**: The sender uses a digital signature to verify that they signed the transaction.
 - **Sender address**: The sender's [account address](../reference/glossary#account-address).
 - **Sender public key**: The public authentication key that corresponds to the private authentication key used to sign the transaction.
 - **Program**: The program comprises:
