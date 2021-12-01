@@ -1,0 +1,60 @@
+error[E03012]: unbound macro
+  ┌─ tests/move_check/macros/vector_macros_invalid.move:5:9
+  │
+5 │         foreach_mut!(v, |x| *x = *x + 1)
+  │         ^^^^^^^^^^^ Macro name need to be proceeded by module name (current restriction)
+
+error[E03012]: unbound macro
+  ┌─ tests/move_check/macros/vector_macros_invalid.move:9:9
+  │
+9 │         0x1::Vector::foreach_mut!(v, |x| *x = *x + 1)
+  │         ^^^ Macro cannot be invoked with numeric module address
+
+error[E03012]: unbound macro
+  ┌─ tests/move_check/macros/vector_macros_invalid.move:9:9
+  │
+9 │         0x1::Vector::foreach_mut!(v, |x| *x = *x + 1)
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Unbound macro '0x1::Vector::foreach_mut'
+
+error[E03012]: unbound macro
+   ┌─ tests/move_check/macros/vector_macros_invalid.move:13:9
+   │
+13 │         Vector::foreachx!(v, |x| *x = *x + 1)
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Unbound macro 'Std::Vector::foreachx'
+
+error[E13001]: invalid macro argument
+   ┌─ tests/move_check/macros/vector_macros_invalid.move:17:9
+   │
+17 │         Vector::foreach_mut!(v)
+   │         ^^^^^^^^^^^^^^^^^^^^^^^ Expanding macro 'Std::Vector::foreach_mut': expected two arguments
+
+error[E03012]: unbound macro
+   ┌─ tests/move_check/macros/vector_macros_invalid.move:21:9
+   │
+21 │         foreach_mut!(v, v)
+   │         ^^^^^^^^^^^ Macro name need to be proceeded by module name (current restriction)
+
+error[E03003]: unbound module member
+   ┌─ tests/move_check/macros/vector_macros_invalid.move:25:9
+   │
+25 │         Vector::foreach_mut!(|x| *x = *x + 1, |x| *x = *x + 1)
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid module access. Unbound function 'length' in module 'Std::Vector'
+
+error[E01011]: syntax item restricted to macro arguments
+   ┌─ tests/move_check/macros/vector_macros_invalid.move:25:30
+   │
+25 │         Vector::foreach_mut!(|x| *x = *x + 1, |x| *x = *x + 1)
+   │                              ^^^^^^^^^^^^^^^ Misplaced lambda expression
+
+error[E13001]: invalid macro argument
+   ┌─ tests/move_check/macros/vector_macros_invalid.move:29:33
+   │
+29 │         Vector::foreach_mut!(v, |x, y| *x = *y + 1)
+   │                                 ^^^^^^^^^^^^^^^^^^ Expanding macro 'Std::Vector::foreach_mut': lambda must have exactly one argument
+
+error[E03003]: unbound module member
+   ┌─ tests/move_check/macros/vector_macros_invalid.move:33:9
+   │
+33 │         Vector::foreach_mut!(v, |x| *x = *x + 1)
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid module access. Unbound function 'length' in module 'Std::Vector'
+

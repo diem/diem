@@ -975,17 +975,19 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             use E::ModuleAccess_ as EA;
             use N::BuiltinFunction_ as BF;
             assert!(tys_opt.is_none(), "ICE macros do not have type arguments");
-            let nes = call_args(context, rhs);
             match ma_ {
                 EA::Name(n) if n.value.as_str() == BF::ASSERT_MACRO => {
+                    let nes = call_args(context, rhs);
                     NE::Builtin(sp(mloc, BF::Assert(true)), nes)
                 }
                 ma_ => {
-                    context.env.add_diag(diag!(
-                        NameResolution::UnboundMacro,
-                        (mloc, format!("Unbound macro '{}'", ma_)),
-                    ));
-                    NE::UnresolvedError
+                    let expanded = context.env.expand_macro(eloc, &sp(mloc, ma_), rhs.value);
+                    // Continue with translating the expanded macro. Notice this recursion
+                    // is necessary to allow macros to call each other.
+                    // TODO: recursive macros currently can lead to non-termination via
+                    //   this step. This appears ok since those macros are hardcoded into the
+                    //   compiler, but we may want to detect this beforehand anyway.
+                    exp_(context, expanded).value
                 }
             }
         }
@@ -1047,8 +1049,15 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             assert!(context.env.has_diags());
             NE::UnresolvedError
         }
+        EE::Lambda(..) => {
+            context.env.add_diag(diag!(
+                Syntax::MacroArgumentRestricted,
+                (eloc, "Misplaced lambda expression"),
+            ));
+            NE::UnresolvedError
+        }
         // `Name` matches name variants only allowed in specs (we handle the allowed ones above)
-        EE::Index(..) | EE::Lambda(..) | EE::Quant(..) | EE::Name(_, Some(_)) => {
+        EE::Index(..) | EE::Quant(..) | EE::Name(_, Some(_)) => {
             panic!("ICE unexpected specification construct")
         }
     };

@@ -4,6 +4,7 @@
 use crate::{
     command_line as cli,
     diagnostics::{codes::Severity, Diagnostic, Diagnostics},
+    macros::{r#macro::MacroRegistry, vector_macros},
 };
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::*;
@@ -338,22 +339,27 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 // Compilation Env
 //**************************************************************************************************
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+//#[derive(Clone, Debug, Eq, PartialEq)] DNS
+#[derive(Debug)]
 pub struct CompilationEnv {
     flags: Flags,
     diags: Diagnostics,
     named_address_mapping: BTreeMap<Symbol, NumericalAddress>,
+    pub(crate) macro_registry: MacroRegistry,
     // TODO(tzakian): Remove the global counter and use this counter instead
     // pub counter: u64,
 }
 
 impl CompilationEnv {
     pub fn new(flags: Flags, named_address_mapping: BTreeMap<Symbol, NumericalAddress>) -> Self {
-        Self {
+        let mut env = Self {
             flags,
             diags: Diagnostics::new(),
             named_address_mapping,
-        }
+            macro_registry: MacroRegistry::default(),
+        };
+        vector_macros::register_macros(&mut env);
+        env
     }
 
     pub fn add_diag(&mut self, diag: Diagnostic) {

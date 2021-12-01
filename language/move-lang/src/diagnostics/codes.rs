@@ -112,6 +112,8 @@ codes!(
         InvalidLValue: { msg: "invalid assignment", severity: NonblockingError },
         SpecContextRestricted:
             { msg: "syntax item restricted to spec contexts", severity: BlockingError },
+        MacroArgumentRestricted:
+            { msg: "syntax item restricted to macro arguments", severity: BlockingError },
     ],
     // errors for any rules around declaration items
     Declarations: [
@@ -213,7 +215,7 @@ codes!(
         Assignment: { msg: "unused assignment", severity: Warning },
         TrailingSemi: { msg: "unnecessary trailing semicolon", severity: Warning },
         DeadCode: { msg: "dead or unreachable code", severity: Warning },
-        StructTypeParam: { msg: "unused struct type parameter", severity: Warning }
+        StructTypeParam: { msg: "unused struct type parameter", severity: Warning },
     ],
     Attributes: [
         Duplicate: { msg: "invalid duplicate attribute", severity: NonblockingError },
@@ -229,6 +231,9 @@ codes!(
         BytecodeGeneration: { msg: "BYTECODE GENERATION FAILED", severity: Bug },
         BytecodeVerification: { msg: "BYTECODE VERIFICATION FAILED", severity: Bug },
     ],
+    CompilerMacro: [
+        InvalidArgument: { msg: "invalid macro argument", severity: BlockingError },
+    ]
 );
 
 //**************************************************************************************************

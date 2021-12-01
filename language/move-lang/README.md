@@ -129,6 +129,10 @@ move-lang                                     # Main crate
 │   │   ├── mod.rs                            # Module for Naming step
 │   │   └── translate.rs                      # Expansion ~> Naming
 |   |
+|   |-- macros                                # Provides compiler macro definitions and expansions.
+|   |   |-- macro.rs                          # Representation of macros and helpers for writing them.
+|   |   |-- vector_macros.rs                  # Compiler macro definitions for vectors.
+|   |
 │   ├── typing                                # Type checks the program. The checking is bidirectional in that it infers types while also checking them
 │   |   ├── ast.rs                            # The target AST for Typing
 │   |   ├── mod.rs                            # Module for Typing step

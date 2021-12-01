@@ -396,7 +396,7 @@ pub enum Exp_ {
     While(Box<Exp>, Box<Exp>),
     Loop(Box<Exp>),
     Block(Sequence),
-    Lambda(LValueList, Box<Exp>), // spec only
+    Lambda(LValueList, Box<Exp>), // spec and macro only
     Quant(
         QuantKind,
         LValueWithRangeList,

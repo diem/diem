@@ -1,6 +1,0 @@
-error[E01010]: syntax item restricted to spec contexts
-  ┌─ tests/move_check/parser/spec_parsing_lambda_fail.move:3:15
-  │
-3 │       let _ = |y| x + y;
-  │               ^^^^^^^^^ lambda expression only allowed in specifications
-
