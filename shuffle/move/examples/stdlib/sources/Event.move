@@ -3,6 +3,7 @@
 /// of `EventHandle`s it generates. An `EventHandle` is used to count the number of
 /// events emitted to a handle and emit events to the event store.
 module Std::Event {
+    use Std::BCS;
     use Std::GUID::{Self, GUID};
 
     /// Wrapper for a GUID for layout compatibility with legacy EventHandle id's
@@ -44,7 +45,7 @@ module Std::Event {
 
     /// Emit an event with payload `msg` by using `handle_ref`'s key and counter.
     public fun emit_event<T: drop + store>(handle_ref: &mut EventHandle<T>, msg: T) {
-        write_to_event_store<T>(GUID::to_bytes(&handle_ref.guid.guid), handle_ref.counter, msg);
+        write_to_event_store<T>(BCS::to_bytes(&handle_ref.guid.guid), handle_ref.counter, msg);
         handle_ref.counter = handle_ref.counter + 1;
     }
 
@@ -53,9 +54,8 @@ module Std::Event {
         &handle_ref.guid.guid
     }
 
-    /// Native procedure that writes to the actual event stream in Event store
-    /// This will replace the "native" portion of EmitEvent bytecode
-    native fun write_to_event_store<T: drop + store>(guid_bytes: vector<u8>, count: u64, msg: T);
+    /// Log `msg` as the `count`th event associated with the event stream identified by `guid`
+    native fun write_to_event_store<T: drop + store>(guid: vector<u8>, count: u64, msg: T);
 
     /// Destroy a unique handle.
     public fun destroy_handle<T: drop + store>(handle: EventHandle<T>) {

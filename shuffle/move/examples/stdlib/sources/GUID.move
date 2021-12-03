@@ -1,8 +1,6 @@
 /// A module for generating globally unique identifiers
 module Std::GUID {
-    use Std::BCS;
     use Std::Signer;
-    use Std::Vector;
 
     /// A generator for new GUIDs.
     struct Generator has key {
@@ -23,9 +21,32 @@ module Std::GUID {
         addr: address
     }
 
+    /// A capability to create a privileged identifier on behalf of the given address
+    struct CreateCapability has key, store, drop {
+        addr: address
+    }
+
+    /// GUID generator must be published ahead of first usage of `create_with_capability` function.
+    const EGUID_GENERATOR_NOT_PUBLISHED: u64 = 0;
+
+    /// Generates a capability to create the privileged GUID on behalf of the signer
+    // (also makes sure that the Generator is published under the signer account)
+    public fun gen_create_capability(account: &signer): CreateCapability {
+        let addr = Signer::address_of(account);
+        if (!exists<Generator>(addr)) {
+            move_to(account, Generator { counter: 0 })
+        };
+        CreateCapability { addr }
+    }
+
     /// Create a non-privileged id from `addr` and `creation_num`
     public fun create_id(addr: address, creation_num: u64): ID {
         ID { creation_num, addr }
+    }
+
+    public fun create_with_capability(addr: address, _cap: &CreateCapability): GUID acquires Generator {
+        assert!(exists<Generator>(addr), EGUID_GENERATOR_NOT_PUBLISHED);
+        create_impl(addr)
     }
 
     /// Create and return a new GUID. Creates a `Generator` under `account`
@@ -35,11 +56,19 @@ module Std::GUID {
         if (!exists<Generator>(addr)) {
             move_to(account, Generator { counter: 0 })
         };
+        create_impl(addr)
+    }
 
+    fun create_impl(addr: address): GUID acquires Generator {
         let generator = borrow_global_mut<Generator>(addr);
         let creation_num = generator.counter;
         generator.counter = creation_num + 1;
         GUID { id: ID { creation_num, addr } }
+    }
+
+    /// Publish a Generator resource under `account`
+    public fun publish_generator(account: &signer) {
+        move_to(account, Generator { counter: 0 })
     }
 
     /// Get the non-privileged ID associated with a GUID
@@ -65,21 +94,6 @@ module Std::GUID {
     /// Return the creation number associated with the GUID::ID
     public fun id_creation_num(id: &ID): u64 {
         id.creation_num
-    }
-
-    /// Convert this GUID::ID to a vector of bytes by concatenating its
-    /// creation number and creator address
-    public fun id_to_bytes(id: &ID): vector<u8> {
-        let creation_num_bytes = BCS::to_bytes(&id.creation_num);
-        let creator_bytes = BCS::to_bytes(&id.addr);
-        Vector::append(&mut creation_num_bytes, creator_bytes);
-        creation_num_bytes
-    }
-
-    /// Convert this GUID to a vector of bytes by concatenating its
-    /// creation number and creator address
-    public fun to_bytes(guid: &GUID): vector<u8> {
-        id_to_bytes(&guid.id)
     }
 
     /// Return true if the GUID's ID is `id`
