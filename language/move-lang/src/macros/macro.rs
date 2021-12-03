@@ -278,6 +278,11 @@ impl<'a> ExpansionBuilder<'a> {
         sp(self.loc, Exp_::Name(self.local_access(name), None))
     }
 
+    /// Borrows a reference.
+    pub fn borrow_ref(&self, is_mut: bool, e: Exp) -> Exp {
+        sp(self.loc, Exp_::Borrow(is_mut, Box::new(e)))
+    }
+
     /// Calls a function.
     pub fn call(&self, fun: MemberName, args: Vec<Exp>) -> Exp {
         sp(

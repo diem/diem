@@ -7,6 +7,7 @@ use crate::{
     parser::ast::BinOp_,
     shared::CompilationEnv,
 };
+use std::borrow::Borrow;
 
 pub fn register_macros(env: &mut CompilationEnv) {
     env.register_macro(
@@ -20,7 +21,7 @@ pub fn register_macros(env: &mut CompilationEnv) {
         "Vector",
         "foreach_mut",
         Box::new(ForeachProcessor { mutable: true }),
-    )
+    );
 }
 
 struct ForeachProcessor {
