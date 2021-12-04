@@ -1,15 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::error::Error;
+use crate::{error::Error, storage_synchronizer::StorageStateSummary};
 use data_streaming_service::{
     data_notification::{DataNotification, DataPayload, NotificationId},
     data_stream::DataStreamListener,
     streaming_client::{DataStreamingClient, NotificationFeedback, StreamingServiceClient},
 };
+use diem_infallible::Mutex;
 use diem_logger::prelude::*;
+use diem_types::contract_event::ContractEvent;
+use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use futures::StreamExt;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::time::timeout;
 
 // TODO(joshlind): make this configurable
@@ -58,22 +61,39 @@ pub async fn handle_end_of_stream_or_invalid_payload(
     streaming_service_client: &mut StreamingServiceClient,
     data_notification: DataNotification,
 ) -> Result<(), Error> {
-    match data_notification.data_payload {
-        DataPayload::EndOfStream => {
-            terminate_stream_with_feedback(
-                streaming_service_client,
-                data_notification.notification_id,
-                NotificationFeedback::EndOfStream,
-            )
-            .await
-        }
-        _ => {
-            terminate_stream_with_feedback(
-                streaming_service_client,
-                data_notification.notification_id,
-                NotificationFeedback::EndOfStream,
-            )
-            .await
-        }
+    // Terminate the stream with the appropriate feedback
+    let notification_feedback = match data_notification.data_payload {
+        DataPayload::EndOfStream => NotificationFeedback::EndOfStream,
+        _ => NotificationFeedback::InvalidPayloadData,
+    };
+    terminate_stream_with_feedback(
+        streaming_service_client,
+        data_notification.notification_id,
+        notification_feedback,
+    )
+    .await?;
+
+    // Return an error if the payload was invalid
+    if matches!(data_notification.data_payload, DataPayload::EndOfStream) {
+        Ok(())
+    } else {
+        Err(Error::InvalidPayload(
+            "Received an invalid payload type!".into(),
+        ))
     }
+}
+
+/// Notifies the given event subscription service of committed events
+pub async fn notify_committed_events(
+    latest_storage_summary: StorageStateSummary,
+    event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
+    committed_events: Vec<ContractEvent>,
+) -> Result<(), Error> {
+    event_subscription_service
+        .lock()
+        .notify_events(
+            latest_storage_summary.latest_synced_version,
+            committed_events,
+        )
+        .map_err(|error| error.into())
 }

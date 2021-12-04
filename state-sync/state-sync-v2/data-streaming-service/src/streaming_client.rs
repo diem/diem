@@ -48,24 +48,22 @@ pub trait DataStreamingClient {
     ) -> Result<DataStreamListener, Error>;
 
     /// Fetches all transaction outputs with proofs from `start_version` to
-    /// `end_version` (inclusive), where the proof versions can be up to the
-    /// specified `max_proof_version` (inclusive).
+    /// `end_version` (inclusive) at the specified `proof_version`.
     async fn get_all_transaction_outputs(
         &self,
         start_version: Version,
         end_version: Version,
-        max_proof_version: Version,
+        proof_version: Version,
     ) -> Result<DataStreamListener, Error>;
 
     /// Fetches all transactions with proofs from `start_version` to
-    /// `end_version` (inclusive), where the proof versions can be up to the
-    /// specified `max_proof_version` (inclusive). If `include_events` is true,
-    /// events are also included in the proofs.
+    /// `end_version` (inclusive) at the specified `proof_version`. If
+    /// `include_events` is true, events are also included in the proofs.
     async fn get_all_transactions(
         &self,
         start_version: Version,
         end_version: Version,
-        max_proof_version: Version,
+        proof_version: Version,
         include_events: bool,
     ) -> Result<DataStreamListener, Error>;
 
@@ -172,7 +170,7 @@ pub struct GetAllEpochEndingLedgerInfosRequest {
 pub struct GetAllTransactionsRequest {
     pub start_version: Version,
     pub end_version: Version,
-    pub max_proof_version: Version,
+    pub proof_version: Version,
     pub include_events: bool,
 }
 
@@ -181,7 +179,7 @@ pub struct GetAllTransactionsRequest {
 pub struct GetAllTransactionOutputsRequest {
     pub start_version: Version,
     pub end_version: Version,
-    pub max_proof_version: Version,
+    pub proof_version: Version,
 }
 
 /// A client request for continuously streaming transactions with proofs
@@ -296,13 +294,13 @@ impl DataStreamingClient for StreamingServiceClient {
         &self,
         start_version: u64,
         end_version: u64,
-        max_proof_version: u64,
+        proof_version: u64,
     ) -> Result<DataStreamListener, Error> {
         let client_request =
             StreamRequest::GetAllTransactionOutputs(GetAllTransactionOutputsRequest {
                 start_version,
                 end_version,
-                max_proof_version,
+                proof_version,
             });
         self.send_request_and_await_response(client_request).await
     }
@@ -311,13 +309,13 @@ impl DataStreamingClient for StreamingServiceClient {
         &self,
         start_version: u64,
         end_version: u64,
-        max_proof_version: u64,
+        proof_version: u64,
         include_events: bool,
     ) -> Result<DataStreamListener, Error> {
         let client_request = StreamRequest::GetAllTransactions(GetAllTransactionsRequest {
             start_version,
             end_version,
-            max_proof_version,
+            proof_version,
             include_events,
         });
         self.send_request_and_await_response(client_request).await

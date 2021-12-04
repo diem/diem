@@ -744,7 +744,7 @@ async fn get_transaction_outputs_with_proof<T: DiemDataClient + Send + Clone + '
     request: TransactionOutputsWithProofRequest,
 ) -> Result<Response<ResponsePayload>, diem_data_client::Error> {
     let client_response = diem_data_client.get_transaction_outputs_with_proof(
-        request.max_proof_version,
+        request.proof_version,
         request.start_version,
         request.end_version,
     );
@@ -758,7 +758,7 @@ async fn get_transactions_with_proof<T: DiemDataClient + Send + Clone + 'static>
     request: TransactionsWithProofRequest,
 ) -> Result<Response<ResponsePayload>, diem_data_client::Error> {
     let client_response = diem_data_client.get_transactions_with_proof(
-        request.max_proof_version,
+        request.proof_version,
         request.start_version,
         request.end_version,
         request.include_events,

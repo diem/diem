@@ -1175,7 +1175,7 @@ fn create_data_client_request(
                     DataClientRequest::TransactionsWithProof(TransactionsWithProofRequest {
                         start_version: start_index,
                         end_version: end_index,
-                        max_proof_version: target_ledger_info_version,
+                        proof_version: target_ledger_info_version,
                         include_events: request.include_events,
                     })
                 }
@@ -1184,7 +1184,7 @@ fn create_data_client_request(
                         TransactionOutputsWithProofRequest {
                             start_version: start_index,
                             end_version: end_index,
-                            max_proof_version: target_ledger_info_version,
+                            proof_version: target_ledger_info_version,
                         },
                     )
                 }
@@ -1202,7 +1202,7 @@ fn create_data_client_request(
                 DataClientRequest::TransactionsWithProof(TransactionsWithProofRequest {
                     start_version: start_index,
                     end_version: end_index,
-                    max_proof_version: request.max_proof_version,
+                    proof_version: request.proof_version,
                     include_events: request.include_events,
                 })
             }
@@ -1210,7 +1210,7 @@ fn create_data_client_request(
                 DataClientRequest::TransactionOutputsWithProof(TransactionOutputsWithProofRequest {
                     start_version: start_index,
                     end_version: end_index,
-                    max_proof_version: request.max_proof_version,
+                    proof_version: request.proof_version,
                 })
             }
             request => invalid_stream_request!(request),

@@ -85,7 +85,7 @@ pub struct NumberOfAccountsRequest {
 pub struct TransactionsWithProofRequest {
     pub start_version: Version,
     pub end_version: Version,
-    pub max_proof_version: Version,
+    pub proof_version: Version,
     pub include_events: bool,
 }
 
@@ -94,7 +94,7 @@ pub struct TransactionsWithProofRequest {
 pub struct TransactionOutputsWithProofRequest {
     pub start_version: Version,
     pub end_version: Version,
-    pub max_proof_version: Version,
+    pub proof_version: Version,
 }
 
 /// A pending client response where data has been requested from the

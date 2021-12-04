@@ -6,7 +6,7 @@ use crate::{
     storage_synchronizer::StorageSynchronizerInterface, utils,
 };
 use data_streaming_service::{
-    data_notification::{DataPayload, NotificationId},
+    data_notification::{DataNotification, DataPayload, NotificationId},
     data_stream::DataStreamListener,
     streaming_client::{DataStreamingClient, NotificationFeedback, StreamingServiceClient},
 };
@@ -21,7 +21,7 @@ use diem_types::{
         Version,
     },
 };
-use event_notifications::{EventNotificationSender, EventSubscriptionService};
+use event_notifications::EventSubscriptionService;
 use std::sync::Arc;
 
 /// A simple component that manages the continuous syncing of the node
@@ -159,12 +159,9 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
                     .await?;
                 }
                 _ => {
-                    self.active_data_stream = None;
-                    return utils::handle_end_of_stream_or_invalid_payload(
-                        &mut self.streaming_service_client,
-                        data_notification,
-                    )
-                    .await;
+                    return self
+                        .handle_end_of_stream_or_invalid_payload(data_notification)
+                        .await;
                 }
             }
         }
@@ -213,12 +210,14 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
                             None,
                         )
                 } else {
-                    return self
-                        .terminate_active_stream(
-                            notification_id,
-                            NotificationFeedback::PayloadTypeIsIncorrect,
-                        )
-                        .await;
+                    self.terminate_active_stream(
+                        notification_id,
+                        NotificationFeedback::PayloadTypeIsIncorrect,
+                    )
+                    .await?;
+                    return Err(Error::InvalidPayload(
+                        "Did not receive transaction outputs with proof!".into(),
+                    ));
                 }
             }
             SyncingMode::ExecuteTransactions => {
@@ -231,12 +230,14 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
                             None,
                         )
                 } else {
-                    return self
-                        .terminate_active_stream(
-                            notification_id,
-                            NotificationFeedback::PayloadTypeIsIncorrect,
-                        )
-                        .await;
+                    self.terminate_active_stream(
+                        notification_id,
+                        NotificationFeedback::PayloadTypeIsIncorrect,
+                    )
+                    .await?;
+                    return Err(Error::InvalidPayload(
+                        "Did not receive transactions with proof!".into(),
+                    ));
                 }
             }
         };
@@ -263,13 +264,12 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
             Ok(committed_events) => {
                 let latest_storage_summary =
                     self.storage_synchronizer.lock().get_storage_summary()?;
-                self.event_subscription_service
-                    .lock()
-                    .notify_events(
-                        latest_storage_summary.latest_synced_version,
-                        committed_events,
-                    )
-                    .map_err(|error| error.into())
+                utils::notify_committed_events(
+                    latest_storage_summary,
+                    self.event_subscription_service.clone(),
+                    committed_events,
+                )
+                .await
             }
             Err(error) => {
                 self.terminate_active_stream(
@@ -361,6 +361,21 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         } else {
             Ok(())
         }
+    }
+
+    /// Handles the end of stream notification or an invalid payload by terminating
+    /// the stream appropriately.
+    pub async fn handle_end_of_stream_or_invalid_payload(
+        &mut self,
+        data_notification: DataNotification,
+    ) -> Result<(), Error> {
+        self.active_data_stream = None;
+
+        utils::handle_end_of_stream_or_invalid_payload(
+            &mut self.streaming_service_client,
+            data_notification,
+        )
+        .await
     }
 
     /// Terminates the currently active stream with the provided feedback

@@ -342,7 +342,7 @@ fn create_transaction_stream(
     let stream_request = StreamRequest::GetAllTransactions(GetAllTransactionsRequest {
         start_version,
         end_version,
-        max_proof_version: end_version,
+        proof_version: end_version,
         include_events: false,
     });
     create_data_stream(streaming_service_config, stream_request)

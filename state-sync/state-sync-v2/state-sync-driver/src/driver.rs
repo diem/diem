@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    bootstrapper::Bootstrapper,
     continuous_syncer::ContinuousSyncer,
     driver_client::{ClientNotificationListener, DriverNotification},
     error::Error,
@@ -51,6 +52,9 @@ impl DriverConfiguration {
 
 /// The state sync driver that drives synchronization progress
 pub struct StateSyncDriver<D, M, S> {
+    // The component that manages the initial bootstrapping of the node
+    bootstrapper: Bootstrapper<S>,
+
     // The listener for client notifications
     client_notification_listener: ClientNotificationListener,
 
@@ -94,6 +98,12 @@ impl<
     ) -> Self {
         let event_subscription_service = Arc::new(Mutex::new(event_subscription_service));
         let storage_synchronizer = Arc::new(Mutex::new(storage_synchronizer));
+        let bootstrapper = Bootstrapper::new(
+            driver_configuration.clone(),
+            event_subscription_service.clone(),
+            streaming_service_client.clone(),
+            storage_synchronizer.clone(),
+        );
         let continuous_syncer = ContinuousSyncer::new(
             driver_configuration.clone(),
             event_subscription_service.clone(),
@@ -102,6 +112,7 @@ impl<
         );
 
         Self {
+            bootstrapper,
             client_notification_listener,
             continuous_syncer,
             consensus_notification_handler,
@@ -139,6 +150,45 @@ impl<
     async fn handle_consensus_notification(&mut self, notification: ConsensusNotification) {
         debug!("Received a consensus notification: {:?}", notification);
 
+        // Verify the notification: full nodes shouldn't receive notifications
+        // and consensus should only send notifications after bootstrapping!
+        let result = if self.driver_configuration.role == RoleType::FullNode {
+            Err(Error::FullNodeConsensusNotification(format!(
+                "Received a consensus notification: {:?}",
+                notification
+            )))
+        } else if !self.bootstrapper.is_bootstrapped() {
+            Err(Error::BootstrapNotComplete(format!(
+                "Consensus shouldn't be running! Unable to process notification: {:?}",
+                notification
+            )))
+        } else {
+            Ok(())
+        };
+
+        // Respond to consensus with any verification errors and then return
+        if let Err(error) = result {
+            match notification {
+                ConsensusNotification::NotifyCommit(commit_notification) => {
+                    let _ = self
+                        .consensus_notification_handler
+                        .respond_to_commit_notification(commit_notification, Err(error.clone()))
+                        .await;
+                }
+                ConsensusNotification::SyncToTarget(sync_notification) => {
+                    let _ = self
+                        .consensus_notification_handler
+                        .respond_to_sync_notification(sync_notification, Err(error.clone()))
+                        .await;
+                }
+            }
+            error!(
+                "Error encountered when handling the consensus notification: {:?}",
+                error
+            );
+            return;
+        }
+
         // Handle the notification
         let result = match notification {
             ConsensusNotification::NotifyCommit(commit_notification) => {
@@ -165,17 +215,6 @@ impl<
         &mut self,
         commit_notification: ConsensusCommitNotification,
     ) -> Result<(), Error> {
-        // Full nodes shouldn't receive commit notifications
-        if self.driver_configuration.role == RoleType::FullNode {
-            let error = Err(Error::FullNodeConsensusNotification(
-                "Received a commit notification!".into(),
-            ));
-            self.consensus_notification_handler
-                .respond_to_commit_notification(commit_notification, error.clone())
-                .await?;
-            return error;
-        }
-
         // Respond to consensus successfully
         let committed_transactions = commit_notification.transactions.clone();
         let reconfiguration_events = commit_notification.reconfiguration_events.clone();
@@ -212,19 +251,6 @@ impl<
         &mut self,
         sync_notification: ConsensusSyncNotification,
     ) -> Result<(), Error> {
-        // Full nodes don't support sync requests
-        if self.driver_configuration.role == RoleType::FullNode {
-            let error = Err(Error::FullNodeConsensusNotification(
-                "Received a sync request!".into(),
-            ));
-            self.consensus_notification_handler
-                .respond_to_sync_notification(sync_notification, error.clone())
-                .await?;
-            return error;
-        }
-
-        // TODO(joshlind): Consensus should only send sync requests after bootstrapping!
-
         // Initialize a new sync request
         let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
         self.consensus_notification_handler
@@ -238,9 +264,11 @@ impl<
 
         // TODO(joshlind): refactor this if the client only supports one notification type!
         // Extract the bootstrap notifier channel
-        let DriverNotification::NotifyOnceBootstrapped(_notifier_channel) = notification;
+        let DriverNotification::NotifyOnceBootstrapped(notifier_channel) = notification;
 
-        // TODO(joshlind): Subscribe the bootstrap notifier channel
+        // Subscribe the bootstrap notifier channel
+        self.bootstrapper
+            .subscribe_to_bootstrap_notifications(notifier_channel);
     }
 
     /// Checks if the node has successfully reached the sync target
@@ -253,8 +281,8 @@ impl<
 
     /// Returns true iff consensus is currently executing
     fn check_if_consensus_executing(&self) -> bool {
-        // TODO(joshlind): also check that we've bootstrapped
         self.driver_configuration.role == RoleType::Validator
+            && self.bootstrapper.is_bootstrapped()
             && !self.consensus_notification_handler.active_sync_request()
     }
 
@@ -286,20 +314,26 @@ impl<
             }
         }
 
-        // TODO(joshlind): check progress depending on if we're bootstrapping or
-        // continuously syncing. Right now we've just hard coded syncing...
-        let consensus_sync_request = self
-            .consensus_notification_handler
-            .get_consensus_sync_request();
-        if let Err(error) = self
-            .continuous_syncer
-            .drive_progress(consensus_sync_request)
-            .await
-        {
+        // Check progress depending on if we're bootstrapping or continuously syncing
+        if self.bootstrapper.is_bootstrapped() {
+            let consensus_sync_request = self
+                .consensus_notification_handler
+                .get_consensus_sync_request();
+            if let Err(error) = self
+                .continuous_syncer
+                .drive_progress(consensus_sync_request)
+                .await
+            {
+                error!(
+                    "Error found when driving progress of the continuous syncer: {:?}",
+                    error
+                );
+            }
+        } else if let Err(error) = self.bootstrapper.drive_progress(&global_data_summary).await {
             error!(
-                "Error found when driving progress of the continuous syncer: {:?}",
+                "Error found when checking the bootstrapper progress: {:?}",
                 error
             );
-        }
+        };
     }
 }

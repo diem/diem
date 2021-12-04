@@ -69,7 +69,7 @@ impl StateSyncMultiplexer {
         node_config: &NodeConfig,
         waypoint: Waypoint,
         mut event_subscription_service: EventSubscriptionService,
-        _diem_data_client: DiemNetDataClient,
+        diem_data_client: DiemNetDataClient,
         streaming_service_client: StreamingServiceClient,
     ) -> Self {
         // Notify subscribers of the initial on-chain config values
@@ -106,6 +106,7 @@ impl StateSyncMultiplexer {
                 mempool_notifier,
                 consensus_listener,
                 event_subscription_service,
+                diem_data_client,
                 streaming_service_client,
             ));
         } else {

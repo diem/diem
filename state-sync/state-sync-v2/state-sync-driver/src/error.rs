@@ -24,6 +24,8 @@ pub enum Error {
     FullNodeConsensusNotification(String),
     #[error("An integer overflow has occurred: {0}")]
     IntegerOverflow(String),
+    #[error("An invalid payload was received: {0}")]
+    InvalidPayload(String),
     #[error("Failed to notify mempool of the new commit: {0}")]
     NotifyMempoolError(String),
     #[error("Received an old sync request for version {0}, but our committed version is: {1}")]

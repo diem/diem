@@ -138,10 +138,18 @@ impl ConsensusNotificationHandler {
 
             // Check if we've synced beyond the target
             if latest_committed_version > sync_target_version {
-                return Err(Error::SyncedBeyondTarget(
-                    latest_committed_version,
-                    sync_target_version,
-                ));
+                // Remove the sync request and notify consensus that we've synced beyond the target
+                let error =
+                    Error::SyncedBeyondTarget(latest_committed_version, sync_target_version);
+                let consensus_sync_request = self.get_consensus_sync_request().lock().take();
+                if let Some(consensus_sync_request) = consensus_sync_request {
+                    self.respond_to_sync_notification(
+                        consensus_sync_request.consensus_sync_notification,
+                        Err(error.clone()),
+                    )
+                    .await?;
+                }
+                return Err(error);
             }
 
             // Check if we've hit the target

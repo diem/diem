@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod bootstrapper;
 mod continuous_syncer;
 mod driver;
 mod driver_client;
