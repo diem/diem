@@ -4,9 +4,14 @@
 use crate::error::Error;
 use diem_infallible::RwLock;
 use diem_types::{
+    account_state_blob::AccountStatesChunkWithProof,
+    contract_event::ContractEvent,
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
-    transaction::{default_protocol::TransactionListWithProof, Version},
+    transaction::{
+        default_protocol::{TransactionListWithProof, TransactionOutputListWithProof},
+        Version,
+    },
 };
 use executor_types::{ChunkExecutor, ExecutedTrees};
 use std::sync::Arc;
@@ -24,15 +29,33 @@ pub struct StorageStateSummary {
 /// Synchronizes the storage of the node by verifying and storing new data
 /// (e.g., transactions and outputs).
 pub trait StorageSynchronizerInterface {
-    /// Returns the latest storage summary
-    fn get_storage_summary(&self) -> Result<StorageStateSummary, Error>;
+    /// Applies and commits a batch of transaction outputs to storage.
+    ///
+    /// Note: this assumes that the ledger infos have already been verified.
+    fn apply_and_commit_transaction_outputs(
+        &mut self,
+        output_list_with_proof: TransactionOutputListWithProof,
+        target_ledger_info: LedgerInfoWithSignatures,
+        end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<Vec<ContractEvent>, Error>;
 
-    /// Executes and commit a batch of transactions
+    /// Executes and commits a batch of transactions to storage.
+    ///
+    /// Note: this assumes that the ledger infos have already been verified.
     fn execute_and_commit_transactions(
         &mut self,
         transaction_list_with_proof: TransactionListWithProof,
-        verified_target_li: LedgerInfoWithSignatures,
-        intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
+        target_ledger_info: LedgerInfoWithSignatures,
+        end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<Vec<ContractEvent>, Error>;
+
+    /// Returns the latest storage summary
+    fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error>;
+
+    /// Saves the given account states to storage
+    fn save_account_states(
+        &mut self,
+        account_states_with_proof: AccountStatesChunkWithProof,
     ) -> Result<(), Error>;
 }
 
@@ -40,6 +63,10 @@ pub trait StorageSynchronizerInterface {
 pub struct StorageSynchronizer {
     chunk_executor: Box<dyn ChunkExecutor>,
     storage: Arc<RwLock<DbReaderWriter>>,
+
+    // We cache the latest storage summary to prevent unnecessary reads to the
+    // database. This should be updated after each database write.
+    cached_storage_summary: Option<StorageStateSummary>,
 }
 
 impl StorageSynchronizer {
@@ -50,12 +77,15 @@ impl StorageSynchronizer {
         Self {
             chunk_executor,
             storage,
+            cached_storage_summary: None,
         }
     }
-}
 
-impl StorageSynchronizerInterface for StorageSynchronizer {
-    fn get_storage_summary(&self) -> Result<StorageStateSummary, Error> {
+    fn invalidate_cached_storage_summary(&mut self) {
+        self.cached_storage_summary = None;
+    }
+
+    fn refresh_cached_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
         // Fetch the startup info from storage
         let startup_info = self
             .storage
@@ -96,21 +126,74 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
         let (latest_synced_version, _) = latest_transaction_info
             .ok_or_else(|| Error::StorageError("Latest transaction info is missing!".into()))?;
 
-        // Return the state summary
-        Ok(StorageStateSummary {
+        // Create the storage summary and save it in the cache
+        let storage_state_summary = StorageStateSummary {
             latest_epoch_state,
             latest_executed_trees,
             latest_ledger_info,
             latest_synced_version,
-        })
+        };
+        self.cached_storage_summary = Some(storage_state_summary.clone());
+
+        Ok(storage_state_summary)
+    }
+}
+
+impl StorageSynchronizerInterface for StorageSynchronizer {
+    fn apply_and_commit_transaction_outputs(
+        &mut self,
+        output_list_with_proof: TransactionOutputListWithProof,
+        target_ledger_info: LedgerInfoWithSignatures,
+        end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<Vec<ContractEvent>, Error> {
+        let committed_events = self
+            .chunk_executor
+            .apply_and_commit_chunk(
+                output_list_with_proof,
+                target_ledger_info,
+                end_of_epoch_ledger_info,
+            )
+            .map_err(|error| {
+                Error::UnexpectedError(format!("Apply and commit chunk failed: {}", error))
+            })?;
+        self.invalidate_cached_storage_summary();
+
+        Ok(committed_events)
     }
 
     fn execute_and_commit_transactions(
         &mut self,
-        _transaction_list_with_proof: TransactionListWithProof,
-        _verified_target_li: LedgerInfoWithSignatures,
-        _intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
+        transaction_list_with_proof: TransactionListWithProof,
+        target_ledger_info: LedgerInfoWithSignatures,
+        end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<Vec<ContractEvent>, Error> {
+        let committed_events = self
+            .chunk_executor
+            .execute_and_commit_chunk(
+                transaction_list_with_proof,
+                target_ledger_info,
+                end_of_epoch_ledger_info,
+            )
+            .map_err(|error| {
+                Error::UnexpectedError(format!("Execute and commit chunk failed: {}", error))
+            })?;
+        self.invalidate_cached_storage_summary();
+
+        Ok(committed_events)
+    }
+
+    fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
+        if let Some(cached_storage_summary) = &self.cached_storage_summary {
+            Ok(cached_storage_summary.clone())
+        } else {
+            self.refresh_cached_storage_summary()
+        }
+    }
+
+    fn save_account_states(
+        &mut self,
+        _account_states_with_proof: AccountStatesChunkWithProof,
     ) -> Result<(), Error> {
-        unimplemented!();
+        unimplemented!("Saving account states to storage is not currently supported!")
     }
 }

@@ -3,15 +3,14 @@
 
 use crate::{
     driver::{DriverConfiguration, StateSyncDriver},
-    driver_client::{DriverClient, DriverNotification},
-    notification_handlers::{
-        BootstrapNotificationHandler, ConsensusNotificationHandler, MempoolNotificationHandler,
-    },
+    driver_client::{ClientNotificationListener, DriverClient, DriverNotification},
+    notification_handlers::{ConsensusNotificationHandler, MempoolNotificationHandler},
     storage_synchronizer::StorageSynchronizer,
 };
 use consensus_notifications::ConsensusNotificationListener;
 use data_streaming_service::streaming_client::StreamingServiceClient;
 use diem_config::config::NodeConfig;
+use diem_data_client::diemnet::DiemNetDataClient;
 use diem_infallible::RwLock;
 use diem_types::waypoint::Waypoint;
 use event_notifications::EventSubscriptionService;
@@ -24,8 +23,8 @@ use tokio::runtime::{Builder, Runtime};
 
 /// Creates a new state sync driver and client
 pub struct DriverFactory {
-    driver_runtime: Option<Runtime>,
-    notification_sender: mpsc::UnboundedSender<DriverNotification>,
+    _driver_runtime: Option<Runtime>,
+    client_notification_sender: mpsc::UnboundedSender<DriverNotification>,
 }
 
 impl DriverFactory {
@@ -39,18 +38,23 @@ impl DriverFactory {
         mempool_notification_sender: M,
         consensus_listener: ConsensusNotificationListener,
         event_subscription_service: EventSubscriptionService,
+        diem_data_client: DiemNetDataClient,
         streaming_service_client: StreamingServiceClient,
     ) -> Self {
         // Create the notification handlers
-        let (notification_sender, notification_receiver) = mpsc::unbounded();
-        let bootstrap_notification_handler =
-            BootstrapNotificationHandler::new(notification_receiver);
+        let (client_notification_sender, client_notification_receiver) = mpsc::unbounded();
+        let client_notification_listener =
+            ClientNotificationListener::new(client_notification_receiver);
         let consensus_notification_handler = ConsensusNotificationHandler::new(consensus_listener);
         let mempool_notification_handler =
             MempoolNotificationHandler::new(mempool_notification_sender);
 
         // Create the driver configuration
-        let driver_configuration = DriverConfiguration::new(node_config.base.role, waypoint);
+        let driver_configuration = DriverConfiguration::new(
+            node_config.state_sync.state_sync_driver,
+            node_config.base.role,
+            waypoint,
+        );
 
         // Create a storage synchronizer
         let storage_synchronizer =
@@ -58,12 +62,13 @@ impl DriverFactory {
 
         // Create the driver
         let state_sync_driver = StateSyncDriver::new(
-            bootstrap_notification_handler,
+            client_notification_listener,
             consensus_notification_handler,
             driver_configuration,
             event_subscription_service,
             mempool_notification_handler,
             storage_synchronizer,
+            diem_data_client,
             streaming_service_client,
         );
 
@@ -84,13 +89,13 @@ impl DriverFactory {
         };
 
         Self {
-            driver_runtime,
-            notification_sender,
+            _driver_runtime: driver_runtime,
+            client_notification_sender,
         }
     }
 
     /// Returns a new client that can be used to communicate with the driver
     pub fn create_driver_client(&self) -> DriverClient {
-        DriverClient::new(self.notification_sender.clone())
+        DriverClient::new(self.client_notification_sender.clone())
     }
 }

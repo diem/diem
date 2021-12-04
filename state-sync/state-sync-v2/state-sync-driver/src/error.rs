@@ -8,10 +8,16 @@ use thiserror::Error;
 
 #[derive(Clone, Debug, Deserialize, Error, PartialEq, Serialize)]
 pub enum Error {
+    #[error("State sync has already finished bootstrapping! Error: {0}")]
+    AlreadyBootstrapped(String),
+    #[error("Advertised data error: {0}")]
+    AdvertisedDataError(String),
     #[error("State sync has not yet finished bootstrapping! Error: {0}")]
     BootstrapNotComplete(String),
     #[error("Failed to send callback: {0}")]
     CallbackSendFailed(String),
+    #[error("Timed-out waiting for a notification from the data stream. Timeout: {0}")]
+    DataStreamNotificationTimeout(String),
     #[error("Error encountered in the event subscription service: {0}")]
     EventNotificationError(String),
     #[error("A consensus notification was sent to a full node: {0}")]
@@ -28,18 +34,32 @@ pub enum Error {
     StorageError(String),
     #[error("Synced beyond the target version. Committed version: {0}, target version: {1}")]
     SyncedBeyondTarget(Version, Version),
+    #[error("Verification error: {0}")]
+    VerificationError(String),
     #[error("Unexpected error: {0}")]
     UnexpectedError(String),
-}
-
-impl From<SendError> for Error {
-    fn from(error: SendError) -> Self {
-        Error::UnexpectedError(error.to_string())
-    }
 }
 
 impl From<Canceled> for Error {
     fn from(canceled: Canceled) -> Self {
         Error::SenderDroppedError(canceled.to_string())
+    }
+}
+
+impl From<data_streaming_service::error::Error> for Error {
+    fn from(error: data_streaming_service::error::Error) -> Self {
+        Error::UnexpectedError(error.to_string())
+    }
+}
+
+impl From<event_notifications::Error> for Error {
+    fn from(error: event_notifications::Error) -> Self {
+        Error::EventNotificationError(error.to_string())
+    }
+}
+
+impl From<SendError> for Error {
+    fn from(error: SendError) -> Self {
+        Error::UnexpectedError(error.to_string())
     }
 }

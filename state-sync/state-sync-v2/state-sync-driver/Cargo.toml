@@ -19,7 +19,9 @@ tokio-stream = "0.1.4"
 consensus-notifications = { path = "../../inter-component/consensus-notifications" }
 data-streaming-service = { path = "../data-streaming-service" }
 diem-config = { path = "../../../config" }
+diem-data-client = { path = "../../diem-data-client" }
 diem-infallible = { path = "../../../crates/diem-infallible" }
+diem-logger = { path = "../../../crates/diem-logger" }
 diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 event-notifications = { path = "../../inter-component/event-notifications" }
@@ -35,6 +37,9 @@ channel = { path = "../../../crates/channel" }
 diemdb = { path = "../../../storage/diemdb" }
 diem-crypto = { path = "../../../crates/diem-crypto" }
 diem-temppath = { path = "../../../crates/diem-temppath" }
+diem-time-service = { path = "../../../crates/diem-time-service", features = ["async", "testing"] }
 diem-vm = { path = "../../../diem-move/diem-vm" }
 executor-test-helpers = { path = "../../../execution/executor-test-helpers" }
+network = { path = "../../../network", features = ["fuzzing"] }
+storage-service-client = { path = "../../storage-service/client" }
 vm-genesis = { path = "../../../diem-move/vm-genesis", features = ["fuzzing"] }

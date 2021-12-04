@@ -211,6 +211,7 @@ pub struct TerminateStreamRequest {
 /// The feedback for a given notification.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum NotificationFeedback {
+    EmptyPayloadData,
     EndOfStream,
     InvalidPayloadData,
     PayloadProofFailed,
@@ -221,6 +222,7 @@ impl NotificationFeedback {
     /// Returns a summary label for the notification feedback
     pub fn get_label(&self) -> &'static str {
         match self {
+            Self::EmptyPayloadData => "empty_payload_data",
             Self::EndOfStream => "end_of_stream",
             Self::InvalidPayloadData => "invalid_payload_data",
             Self::PayloadProofFailed => "payload_proof_failed",
