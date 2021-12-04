@@ -8,6 +8,7 @@ use crate::{
         assert_balance, create_and_fund_account, diem_swarm_utils::insert_waypoint, transfer_coins,
     },
 };
+use diem_config::config::NodeConfig;
 use diem_types::{
     account_address::AccountAddress,
     epoch_change::EpochChangeProof,
@@ -340,5 +341,64 @@ fn test_state_sync_multichunk_epoch() {
         .unwrap();
     swarm
         .wait_for_all_nodes_to_catchup(Instant::now() + Duration::from_secs(60))
+        .unwrap();
+}
+
+#[test]
+fn test_state_sync_v2_fullnode() {
+    // Create a validator swarm of 1 validator node
+    let mut swarm = new_local_swarm(1);
+
+    // Create a fullnode config with state sync v2 enabled
+    let mut vfn_config = NodeConfig::default_for_validator_full_node();
+    vfn_config.state_sync.state_sync_driver.enable_state_sync_v2 = true;
+
+    // Create the fullnode running state sync v2
+    let validator_peer_id = swarm.validators().next().unwrap().peer_id();
+    let vfn_peer_id = swarm
+        .add_validator_fullnode(
+            &swarm.versions().max().unwrap(),
+            vfn_config,
+            validator_peer_id,
+        )
+        .unwrap();
+
+    // Start the validator and fullnode (make sure they boot up)
+    swarm
+        .validator_mut(validator_peer_id)
+        .unwrap()
+        .wait_until_healthy(Instant::now() + Duration::from_secs(10))
+        .unwrap();
+    for fullnode in swarm.full_nodes_mut() {
+        fullnode
+            .wait_until_healthy(Instant::now() + Duration::from_secs(10))
+            .unwrap();
+    }
+
+    // Stop the fullnode
+    swarm.fullnode_mut(vfn_peer_id).unwrap().stop();
+
+    // Execute a number of transactions on the validator
+    let validator_client = swarm
+        .validator(validator_peer_id)
+        .unwrap()
+        .json_rpc_client();
+    let transaction_factory = swarm.chain_info().transaction_factory();
+    let mut account_0 = create_and_fund_account(&mut swarm, 1000);
+    let account_1 = create_and_fund_account(&mut swarm, 1000);
+    for _ in 0..10 {
+        transfer_coins(
+            &validator_client,
+            &transaction_factory,
+            &mut account_0,
+            &account_1,
+            1,
+        );
+    }
+
+    // Restart the fullnode and verify it can sync
+    swarm.fullnode_mut(vfn_peer_id).unwrap().restart().unwrap();
+    swarm
+        .wait_for_all_nodes_to_catchup(Instant::now() + Duration::from_secs(10))
         .unwrap();
 }
