@@ -149,7 +149,6 @@ codes!(
         UnboundVariable: { msg: "unbound variable", severity: BlockingError },
         UnboundField: { msg: "unbound field", severity: BlockingError },
         ReservedName: { msg: "invalid use of reserved name", severity: BlockingError },
-        UnboundMacro: { msg: "unbound macro", severity: BlockingError },
     ],
     // errors for typing rules. mostly typing/translate
     TypeSafety: [
@@ -181,6 +180,8 @@ codes!(
                 (NOTE: this may become an error in the future)",
             severity: Warning
         },
+        InvalidCallTarget: { msg: "invalid call target", severity: BlockingError },
+        InvalidFunctionType: { msg: "invalid function type", severity: BlockingError },
     ],
     // errors for ability rules. mostly typing/translate
     AbilitySafety: [
@@ -229,6 +230,7 @@ codes!(
     Bug: [
         BytecodeGeneration: { msg: "BYTECODE GENERATION FAILED", severity: Bug },
         BytecodeVerification: { msg: "BYTECODE VERIFICATION FAILED", severity: Bug },
+        Unimplemented: { msg: "Not yet implemented", severity: BlockingError },
     ],
 );
 

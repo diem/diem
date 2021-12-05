@@ -418,6 +418,7 @@ impl BaseType_ {
                 )
                 .unwrap()
             }
+            Fun => panic!("ICE unexpected function type"),
         };
         let n = sp(loc, TypeName_::Builtin(sp(loc, b_)));
         sp(loc, BaseType_::Apply(kind, n, ty_args))

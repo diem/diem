@@ -776,6 +776,9 @@ fn base_type(context: &mut Context, sp!(_, bt_): H::BaseType) -> IR::Type {
         B::Unreachable | B::UnresolvedError => {
             panic!("ICE should not have reached compilation if there are errors")
         }
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Fun))), _) => {
+            panic!("ICE should not have reached compilation if there are function types")
+        }
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Address))), _) => IRT::Address,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Signer))), _) => IRT::Signer,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U8))), _) => IRT::U8,

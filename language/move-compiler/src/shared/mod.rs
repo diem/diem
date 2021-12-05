@@ -368,6 +368,10 @@ impl CompilationEnv {
         !self.diags.is_empty()
     }
 
+    pub fn has_blocking_diags(&self) -> bool {
+        self.diags.max_severity().unwrap_or(Severity::MIN) >= Severity::BlockingError
+    }
+
     pub fn count_diags(&self) -> usize {
         self.diags.len()
     }

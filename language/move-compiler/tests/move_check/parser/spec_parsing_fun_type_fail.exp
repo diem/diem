@@ -1,6 +1,6 @@
-error[E01010]: syntax item restricted to spec contexts
+error[E04024]: invalid function type
   ┌─ tests/move_check/parser/spec_parsing_fun_type_fail.move:2:29
   │
 2 │     fun fun_type_in_prog(p: |u64|u64) {
-  │                             ^^^^^^^^ `|_|_` function type only allowed in specifications
+  │                             ^^^^^^^^ function type only allowed for macro arguments
 

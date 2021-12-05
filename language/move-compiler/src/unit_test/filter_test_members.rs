@@ -255,6 +255,7 @@ fn insert_test_poison(context: &mut Context, mloc: Loc, members: &mut Vec<P::Mod
         visibility: P::Visibility::Internal,
         acquires: vec![],
         signature,
+        is_macro: false,
         name: P::FunctionName(sp(mloc, "unit_test_poison".into())),
         body: sp(
             mloc,

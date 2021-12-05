@@ -186,6 +186,7 @@ pub struct SpecId(usize);
 pub struct Function {
     pub attributes: Attributes,
     pub loc: Loc,
+    pub is_macro: bool,
     pub visibility: Visibility,
     pub signature: FunctionSignature,
     pub acquires: Vec<ModuleAccess>,
@@ -396,7 +397,7 @@ pub enum Exp_ {
     While(Box<Exp>, Box<Exp>),
     Loop(Box<Exp>),
     Block(Sequence),
-    Lambda(LValueList, Box<Exp>), // spec only
+    Lambda(LValueList, Box<Exp>),
     Quant(
         QuantKind,
         LValueWithRangeList,
@@ -622,6 +623,10 @@ impl AbilitySet {
 
     pub fn collection(loc: Loc) -> Self {
         Self::from_abilities_(loc, Self::COLLECTION.to_vec()).unwrap()
+    }
+
+    pub fn functions() -> Self {
+        Self::empty()
     }
 }
 
@@ -1141,6 +1146,7 @@ impl AstDebug for (FunctionName, &Function) {
             Function {
                 attributes,
                 loc: _loc,
+                is_macro,
                 visibility,
                 signature,
                 acquires,
@@ -1153,7 +1159,11 @@ impl AstDebug for (FunctionName, &Function) {
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
-        w.write(&format!("fun {}", name));
+        if *is_macro {
+            w.write(&format!("macro {}", name));
+        } else {
+            w.write(&format!("fun {}", name));
+        }
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -1230,9 +1240,9 @@ impl AstDebug for Type_ {
                 s.ast_debug(w)
             }
             Type_::Fun(args, result) => {
-                w.write("(");
+                w.write("|");
                 w.comma(args, |w, ty| ty.ast_debug(w));
-                w.write("):");
+                w.write("|");
                 result.ast_debug(w);
             }
             Type_::UnresolvedError => w.write("_|_"),
@@ -1430,9 +1440,9 @@ impl AstDebug for Exp_ {
             }
             E::Block(seq) => w.block(|w| seq.ast_debug(w)),
             E::Lambda(sp!(_, bs), e) => {
-                w.write("fun ");
+                w.write("|");
                 bs.ast_debug(w);
-                w.write(" ");
+                w.write("|");
                 e.ast_debug(w);
             }
             E::Quant(kind, sp!(_, rs), trs, c_opt, e) => {

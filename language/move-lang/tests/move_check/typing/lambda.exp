@@ -1,0 +1,93 @@
+error[E04017]: too many arguments
+   ┌─ tests/move_check/typing/lambda.move:21:13
+   │
+21 │             action(XVector::borrow(v, i), i); // expected to have wrong argument count
+   │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │             │     │
+   │             │     Found 2 argument(s) here
+   │             Invalid call of 'action'. The call expected 1 argument(s) but got 2
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/lambda.move:29:13
+   │
+26 │     public macro wrong_local_call_arg_type<T>(v: &vector<T>, action: |&T|) {
+   │                                                                       -- Expected: '&T'
+   ·
+29 │             action(i); // expected to have wrong argument type
+   │             ^^^^^^^^^ Invalid call of 'action'. Invalid argument type
+   ·
+69 │     public fun length<T>(v: &vector<T>): u64 { abort(1) }
+   │                                          --- Given: 'u64'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/lambda.move:37:19
+   │
+34 │     public macro wrong_local_call_result_type<T>(v: &vector<T>, action: |&T|) {
+   │                                                                         ---- Found: '()'. It is not compatible with the other type.
+   ·
+37 │             i = i + action(XVector::borrow(v, i)); // expected to have wrong result type
+   │                   ^ Incompatible arguments to '+'
+   ·
+69 │     public fun length<T>(v: &vector<T>): u64 { abort(1) }
+   │                                          --- Found: 'u64'. It is not compatible with the other type.
+
+error[E04023]: invalid call target
+   ┌─ tests/move_check/typing/lambda.move:42:9
+   │
+42 │         x(1)
+   │         ^ Expected a function type but found 'u64'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/lambda.move:48:9
+   │
+ 4 │     public macro foreach<T>(v: &vector<T>, action: |&T|) { // expected to be not implemented
+   │                                                     -- Expected: '&{integer}'
+   ·
+48 │         foreach!(&v, |e| sum = sum + e) // expected
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │             │
+   │         │             Given: integer
+   │         Invalid call of '0x8675309::M::foreach'. Invalid argument for parameter 'action'
+
+error[E04007]: incompatible types
+   ┌─ tests/move_check/typing/lambda.move:54:9
+   │
+ 4 │     public macro foreach<T>(v: &vector<T>, action: |&T|) { // expected to be not implemented
+   │                                                    ---- Expected: '()'
+   ·
+54 │         foreach!(&v, |e| { sum = sum + *e; *e }) // expected
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │         │                                  │
+   │         │                                  Given: integer
+   │         Invalid call of '0x8675309::M::foreach'. Invalid argument for parameter 'action'
+
+error[E04024]: invalid function type
+   ┌─ tests/move_check/typing/lambda.move:58:18
+   │
+58 │         let _x = |i| i + 1; // expected
+   │                  ^^^^^^^^^ function type only allowed for macro arguments
+
+error[E04024]: invalid function type
+   ┌─ tests/move_check/typing/lambda.move:62:12
+   │
+62 │         f: |u64|u64, // expected
+   │            ^^^^^^^^ function type only allowed for macro arguments
+
+error[E04024]: invalid function type
+   ┌─ tests/move_check/typing/lambda.move:65:39
+   │
+65 │     public fun fun_arg_not_allowed(x: |u64|) {} // expected
+   │                                       ^^^^^ function type only allowed for macro arguments
+
+error[E03004]: unbound type
+   ┌─ tests/move_check/typing/lambda.move:70:34
+   │
+70 │     public fun borrow(v: &vector<T>, i: u64): &T { abort(1) }
+   │                                  ^ Unbound type 'T' in current scope
+
+error[E03004]: unbound type
+   ┌─ tests/move_check/typing/lambda.move:70:48
+   │
+70 │     public fun borrow(v: &vector<T>, i: u64): &T { abort(1) }
+   │                                                ^ Unbound type 'T' in current scope
+

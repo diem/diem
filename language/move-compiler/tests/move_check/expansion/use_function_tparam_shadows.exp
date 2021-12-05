@@ -4,9 +4,9 @@ warning[W09001]: unused alias
 7 │     use 0x2::X::foo;
   │                 ^^^ Unused 'use' of alias 'foo'. Consider removing it
 
-error[E03005]: unbound unscoped name
+error[E03009]: unbound variable
    ┌─ tests/move_check/expansion/use_function_tparam_shadows.move:10:9
    │
 10 │         foo()
-   │         ^^^ Unbound function 'foo' in current scope
+   │         ^^^ Invalid function usage. Unbound variable 'foo'
 

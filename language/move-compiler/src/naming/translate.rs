@@ -477,12 +477,14 @@ fn friend(context: &mut Context, mident: ModuleIdent, friend: E::Friend) -> Opti
 
 fn function(context: &mut Context, _name: FunctionName, f: E::Function) -> N::Function {
     let attributes = f.attributes;
+    let is_macro = f.is_macro;
     let visibility = f.visibility;
     let signature = function_signature(context, f.signature);
     let acquires = function_acquires(context, f.acquires);
     let body = function_body(context, f.body);
     N::Function {
         attributes,
+        is_macro,
         visibility,
         signature,
         acquires,
@@ -742,7 +744,7 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
             Some(RT::BuiltinType) => {
                 let bn_ = N::BuiltinTypeName_::resolve(&n.value).unwrap();
                 let name_f = || format!("{}", &bn_);
-                let arity = bn_.tparam_constraints(loc).len();
+                let arity = bn_.tparam_constraints(loc, tys.len()).len();
                 let tys = types(context, tys);
                 let tys = check_type_argument_arity(context, loc, name_f, tys, arity);
                 NT::builtin_(sp(loc, bn_), tys)
@@ -759,6 +761,11 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
                 }
             }
         },
+        ET::Fun(args, result) => {
+            let mut args = types(context, args);
+            args.push(type_(context, *result));
+            NT::builtin_(sp(loc, N::BuiltinTypeName_::Fun), args)
+        }
         ET::Apply(sp!(nloc, EN::ModuleAccess(m, n)), tys) => {
             match context.resolve_module_type(nloc, &m, &n) {
                 None => {
@@ -774,7 +781,6 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
                 }
             }
         }
-        ET::Fun(_, _) => panic!("ICE only allowed in spec context"),
     };
     sp(loc, ty_)
 }
@@ -889,7 +895,16 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::While(eb, el) => NE::While(exp(context, *eb), exp(context, *el)),
         EE::Loop(el) => NE::Loop(exp(context, *el)),
         EE::Block(seq) => NE::Block(sequence(context, seq)),
-
+        EE::Lambda(args, body) => {
+            let bind_opt = bind_list(context, args);
+            match bind_opt {
+                None => {
+                    assert!(context.env.has_diags());
+                    N::Exp_::UnresolvedError
+                }
+                Some(bind) => NE::Lambda(bind, Box::new(exp_(context, *body))),
+            }
+        }
         EE::Assign(a, e) => {
             let na_opt = assign_list(context, a);
             let ne = exp(context, *e);
@@ -971,25 +986,18 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::Cast(e, t) => NE::Cast(exp(context, *e), type_(context, t)),
         EE::Annotate(e, t) => NE::Annotate(exp(context, *e), type_(context, t)),
 
-        EE::Call(sp!(mloc, ma_), true, tys_opt, rhs) => {
-            use E::ModuleAccess_ as EA;
+        EE::Call(sp!(mloc, E::ModuleAccess_::Name(n)), true, tys_opt, rhs)
+            if n.value.as_str() == N::BuiltinFunction_::ASSERT_MACRO =>
+        {
             use N::BuiltinFunction_ as BF;
-            assert!(tys_opt.is_none(), "ICE macros do not have type arguments");
+            assert!(
+                tys_opt.is_none(),
+                "ICE builtin macros do not have type arguments"
+            );
             let nes = call_args(context, rhs);
-            match ma_ {
-                EA::Name(n) if n.value.as_str() == BF::ASSERT_MACRO => {
-                    NE::Builtin(sp(mloc, BF::Assert(true)), nes)
-                }
-                ma_ => {
-                    context.env.add_diag(diag!(
-                        NameResolution::UnboundMacro,
-                        (mloc, format!("Unbound macro '{}'", ma_)),
-                    ));
-                    NE::UnresolvedError
-                }
-            }
+            NE::Builtin(sp(mloc, BF::Assert(true)), nes)
         }
-        EE::Call(sp!(mloc, ma_), false, tys_opt, rhs) => {
+        EE::Call(sp!(mloc, ma_), is_macro, tys_opt, rhs) => {
             use E::ModuleAccess_ as EA;
             let ty_args = tys_opt.map(|tys| types(context, tys));
             let nes = call_args(context, rhs);
@@ -1004,19 +1012,13 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                     }
                 }
 
-                EA::Name(n) => {
-                    context.env.add_diag(diag!(
-                        NameResolution::UnboundUnscopedName,
-                        (n.loc, format!("Unbound function '{}' in current scope", n)),
-                    ));
-                    NE::UnresolvedError
-                }
+                EA::Name(n) => NE::LocalCall(Var(n), nes),
                 EA::ModuleAccess(m, n) => match context.resolve_module_function(mloc, &m, &n) {
                     None => {
                         assert!(context.env.has_diags());
                         NE::UnresolvedError
                     }
-                    Some(_) => NE::ModuleCall(m, FunctionName(n), ty_args, nes),
+                    Some(_) => NE::ModuleCall(m, FunctionName(n), is_macro, ty_args, nes),
                 },
             }
         }
@@ -1047,8 +1049,8 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             assert!(context.env.has_diags());
             NE::UnresolvedError
         }
-        // `Name` matches name variants only allowed in specs (we handle the allowed ones above)
-        EE::Index(..) | EE::Lambda(..) | EE::Quant(..) | EE::Name(_, Some(_)) => {
+        // Matches variants only allowed in specs (we handle the allowed ones above)
+        EE::Index(..) | EE::Quant(..) | EE::Name(_, Some(_)) => {
             panic!("ICE unexpected specification construct")
         }
     };

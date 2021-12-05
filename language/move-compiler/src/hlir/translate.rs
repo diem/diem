@@ -250,6 +250,7 @@ fn script(context: &mut Context, tscript: T::Script) -> H::Script {
 //**************************************************************************************************
 
 fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Function {
+    assert!(!f.is_macro, "ICE unexpected macro definition");
     assert!(context.has_empty_locals());
     assert!(context.tmp_counter == 0);
     let attributes = f.attributes;
@@ -1140,11 +1141,13 @@ fn exp_impl(
             let T::ModuleCall {
                 module,
                 name,
+                is_macro,
                 type_arguments,
                 arguments,
                 parameter_types,
                 acquires,
             } = *call;
+            assert!(!is_macro, "ICE unexpanded macro call");
             let expected_type = H::Type_::from_vec(eloc, single_types(context, parameter_types));
             let htys = base_types(context, type_arguments);
             let harg = exp(context, result, Some(&expected_type), *arguments);
@@ -1157,6 +1160,7 @@ fn exp_impl(
             };
             HE::ModuleCall(Box::new(call))
         }
+        TE::LocalCall(..) => panic!("ICE unexpected local call"),
         TE::Builtin(bf, targ) => builtin(context, result, eloc, *bf, targ),
         TE::Vector(vec_loc, n, tty, targ) => {
             let ty = Box::new(base_type(context, *tty));
@@ -1320,6 +1324,7 @@ fn exp_impl(
                 .collect();
             HE::Spec(u, used_locals)
         }
+        TE::Lambda(..) => panic!("ICE unexpected lambda"),
         TE::UnresolvedError => {
             assert!(context.env.has_diags());
             HE::UnresolvedError
@@ -1657,7 +1662,7 @@ fn freeze_single(sp!(sloc, s): H::SingleType) -> H::SingleType {
 fn bind_for_short_circuit(e: &T::Exp) -> bool {
     use T::UnannotatedExp_ as TE;
     match &e.exp.value {
-        TE::Use(_) => panic!("ICE should have been expanded"),
+        TE::Use(_) | TE::LocalCall(..) => panic!("ICE should have been expanded"),
         TE::Value(_)
         | TE::Constant(_, _)
         | TE::Move { .. }
@@ -1692,7 +1697,8 @@ fn bind_for_short_circuit(e: &T::Exp) -> bool {
         | TE::Vector(_, _, _, _)
         | TE::BorrowLocal(_, _)
         | TE::ExpList(_)
-        | TE::Cast(_, _) => panic!("ICE unexpected exp in short circuit check: {:?}", e),
+        | TE::Cast(_, _)
+        | TE::Lambda(..) => panic!("ICE unexpected exp in short circuit check: {:?}", e),
     }
 }
 

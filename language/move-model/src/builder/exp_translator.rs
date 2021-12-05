@@ -549,6 +549,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         U128 => Type::new_prim(PrimitiveType::U128),
                         Vector => Type::Vector(Box::new(self.translate_hlir_base_type(&args[0]))),
                         Bool => Type::new_prim(PrimitiveType::Bool),
+                        Fun => Type::Fun(
+                            self.translate_hlir_base_types(&args[0..args.len() - 1]),
+                            Box::new(self.translate_hlir_base_type(&args[args.len() - 1])),
+                        ),
                     },
                     ModuleType(m, n) => {
                         let addr_bytes = self.parent.parent.resolve_address(&loc, &m.value.address);

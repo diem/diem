@@ -4,7 +4,7 @@
 use super::core::{self, Context, Subst};
 use crate::{
     diag,
-    naming::ast::{self as N, Type, TypeName_, Type_},
+    naming::ast::{self as N, BuiltinTypeName_, Type, TypeName_, Type_},
     parser::ast::{Ability_, StructName},
     typing::ast as T,
 };
@@ -110,6 +110,9 @@ fn exp(
 
             exp(context, annotated_acquires, seen, &call.arguments);
         }
+        E::LocalCall(_, args) => {
+            exp(context, annotated_acquires, seen, args);
+        }
         E::Builtin(b, args) => {
             builtin_function(context, annotated_acquires, seen, &e.exp.loc, b);
             exp(context, annotated_acquires, seen, args);
@@ -127,6 +130,7 @@ fn exp(
         }
         E::Loop { body: eloop, .. } => exp(context, annotated_acquires, seen, eloop),
         E::Block(seq) => sequence(context, annotated_acquires, seen, seq),
+        E::Lambda(_, body) => exp(context, annotated_acquires, seen, body.as_ref()),
         E::Assign(_, _, er) => {
             exp(context, annotated_acquires, seen, er);
         }
@@ -272,14 +276,7 @@ where
             assert!(context.env.has_diags());
             return None;
         }
-        T::Apply(Some(abilities), sp!(_, TN::Multiple(_)), _)
-        | T::Apply(Some(abilities), sp!(_, TN::Builtin(_)), _) => {
-            // Key ability is checked by constraints
-            assert!(!abilities.has_ability_(Ability_::Key));
-            assert!(context.env.has_diags());
-            return None;
-        }
-        T::Param(_) => {
+        T::Param(_) | T::Apply(_, sp!(_, TN::Builtin(sp!(_, BuiltinTypeName_::Fun))), _) => {
             let ty_debug = core::error_format(global_type, &Subst::empty());
             let tmsg = format!(
                 "Expected a struct type. Global storage operations are restricted to struct types \
@@ -294,7 +291,13 @@ where
             ));
             return None;
         }
-
+        T::Apply(Some(abilities), sp!(_, TN::Multiple(_)), _)
+        | T::Apply(Some(abilities), sp!(_, TN::Builtin(_)), _) => {
+            // Key ability is checked by constraints
+            assert!(!abilities.has_ability_(Ability_::Key));
+            assert!(context.env.has_diags());
+            return None;
+        }
         T::Apply(Some(_), sp!(_, TN::ModuleType(m, s)), _args) => (*m, s),
     };
 

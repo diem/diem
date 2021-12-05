@@ -79,6 +79,7 @@ pub enum Tok {
     Friend,
     NumSign,
     AtSign,
+    Macro,
 }
 
 impl fmt::Display for Tok {
@@ -133,6 +134,7 @@ impl fmt::Display for Tok {
             Invariant => "invariant",
             Let => "let",
             Loop => "loop",
+            Macro => "macro",
             Module => "module",
             Move => "move",
             Native => "native",
@@ -622,6 +624,7 @@ fn get_name_token(name: &str) -> Tok {
         "invariant" => Tok::Invariant,
         "let" => Tok::Let,
         "loop" => Tok::Loop,
+        "macro" => Tok::Macro,
         "module" => Tok::Module,
         "move" => Tok::Move,
         "native" => Tok::Native,
