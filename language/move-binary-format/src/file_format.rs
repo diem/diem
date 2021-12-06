@@ -45,7 +45,10 @@ use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use ref_cast::RefCast;
-use std::ops::BitOr;
+use std::{
+    hash::{Hash, Hasher},
+    ops::BitOr,
+};
 use variant_count::VariantCount;
 
 /// Generic index into one of the tables in the binary format.
@@ -1932,6 +1935,22 @@ impl CompiledModule {
     /// Returns the code key of `self`
     pub fn self_id(&self) -> ModuleId {
         self.module_id_for_handle(self.self_handle())
+    }
+}
+
+impl Into<Vec<u8>> for &CompiledModule {
+    fn into(self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        self.serialize(&mut bytes)
+            .expect("serializing well-formed module should never fail");
+        bytes
+    }
+}
+
+impl Hash for CompiledModule {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let bytes: Vec<u8> = self.into();
+        bytes.hash(state)
     }
 }
 
