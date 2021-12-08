@@ -18,6 +18,8 @@ module DiemFramework::Roles {
     friend DiemFramework::ValidatorOperatorConfigTests;
     #[test_only]
     friend DiemFramework::ValidatorConfigTests;
+    #[test_only]
+    friend DiemFramework::AccountLimitsTests;
 
     /// A `RoleId` resource was in an unexpected state
     const EROLE_ID: u64 = 0;
