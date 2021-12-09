@@ -56,6 +56,7 @@ module 0x1::NFTTests {
             b"nintendo.com",
             10,
             Option::none(),
+            Option::none(),
         );
         // Add all 10 tokens to creator's own account
         NFTGallery::add_to_gallery<Game>(creator_addr, token1);
@@ -70,6 +71,7 @@ module 0x1::NFTTests {
             Game { name: b"ChromeDino", edition: 2015 },
             b"google.com",
             233,
+            Option::none(),
             Option::none(),
         );
         NFTGallery::add_to_gallery<Game>(creator_addr, token2);
@@ -89,6 +91,7 @@ module 0x1::NFTTests {
             b"nintendo.com",
             1,
             Option::none(),
+            Option::none(),
         );
 
         let pikachu = NFT::create<Pokemon>(
@@ -97,6 +100,7 @@ module 0x1::NFTTests {
             b"nintendo.com",
             10,
             Option::some(NFT::id(&collection)),
+            Option::none(),
         );
         let charmander = NFT::create<Pokemon>(
             &creator,
@@ -104,6 +108,7 @@ module 0x1::NFTTests {
             b"nintendo.com",
             10,
             Option::some(NFT::id(&collection)),
+            Option::none(),
         );
         let pikachu_token = NFT::extract_token<Pokemon>(&pikachu);
         assert!(NFT::parent(&pikachu_token) == &Option::some(NFT::id(&collection)), ECOLLECTION_FAILED);

@@ -12,6 +12,7 @@
 -  [Function `index_of_token`](#0x1_NFTGallery_index_of_token)
 -  [Function `has_token`](#0x1_NFTGallery_has_token)
 -  [Function `get_token_balance`](#0x1_NFTGallery_get_token_balance)
+-  [Function `transfer`](#0x1_NFTGallery_transfer)
 -  [Function `transfer_token_between_galleries`](#0x1_NFTGallery_transfer_token_between_galleries)
 -  [Function `publish_gallery`](#0x1_NFTGallery_publish_gallery)
 
@@ -279,6 +280,59 @@ Returns whether the owner has a token with given id.
 
 </details>
 
+<a name="0x1_NFTGallery_transfer"></a>
+
+## Function `transfer`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="NFTGallery.md#0x1_NFTGallery_transfer">transfer</a>&lt;TokenType: store&gt;(account: &signer, <b>to</b>: <b>address</b>, amount: u64, token_id: &<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="NFTGallery.md#0x1_NFTGallery_transfer">transfer</a>&lt;TokenType: store&gt;(account: &signer, <b>to</b>: <b>address</b>, amount: u64, token_id: &<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>) <b>acquires</b> <a href="NFTGallery.md#0x1_NFTGallery">NFTGallery</a> {
+    <b>let</b> owner = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+
+    <b>assert</b>!(amount &gt; 0, <a href="NFTGallery.md#0x1_NFTGallery_EINVALID_AMOUNT_OF_TRANSFER">EINVALID_AMOUNT_OF_TRANSFER</a>);
+
+    // Remove <a href="NFT.md#0x1_NFT">NFT</a> from `owner`'s gallery
+    <b>let</b> token = <a href="NFTGallery.md#0x1_NFTGallery_remove_from_gallery">remove_from_gallery</a>&lt;TokenType&gt;(owner, token_id);
+
+    <b>assert</b>!(amount &lt;= <a href="NFT.md#0x1_NFT_balance">NFT::balance</a>(&token), <a href="NFTGallery.md#0x1_NFTGallery_EINVALID_AMOUNT_OF_TRANSFER">EINVALID_AMOUNT_OF_TRANSFER</a>);
+
+    <b>if</b> (amount == <a href="NFT.md#0x1_NFT_balance">NFT::balance</a>(&token)) {
+        // Owner does not have any token left, so add token <b>to</b> `<b>to</b>`'s gallery.
+        <a href="NFTGallery.md#0x1_NFTGallery_add_to_gallery">add_to_gallery</a>&lt;TokenType&gt;(<b>to</b>, token);
+    } <b>else</b> {
+        // Split owner's token into two
+        <b>let</b> (owner_token, to_token) = <a href="NFT.md#0x1_NFT_split">NFT::split</a>&lt;TokenType&gt;(token, amount);
+
+        // Add tokens <b>to</b> owner's gallery.
+        <a href="NFTGallery.md#0x1_NFTGallery_add_to_gallery">add_to_gallery</a>&lt;TokenType&gt;(owner, owner_token);
+
+        // Add tokens <b>to</b> `<b>to</b>`'s gallery
+        <a href="NFTGallery.md#0x1_NFTGallery_add_to_gallery">add_to_gallery</a>&lt;TokenType&gt;(<b>to</b>, to_token);
+    };
+
+    // Emit transfer event
+    <a href="NFT.md#0x1_NFT_emit_transfer_event">NFT::emit_transfer_event</a>(
+        token_id,
+        account,
+        <b>to</b>,
+        amount,
+    );
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_NFTGallery_transfer_token_between_galleries"></a>
 
 ## Function `transfer_token_between_galleries`
@@ -304,37 +358,7 @@ approved operator of the owner.
     creator: <b>address</b>,
     creation_num: u64
 ) <b>acquires</b> <a href="NFTGallery.md#0x1_NFTGallery">NFTGallery</a> {
-    <b>let</b> owner = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(&account);
-
-    <b>assert</b>!(amount &gt; 0, <a href="NFTGallery.md#0x1_NFTGallery_EINVALID_AMOUNT_OF_TRANSFER">EINVALID_AMOUNT_OF_TRANSFER</a>);
-
-    // Remove <a href="NFT.md#0x1_NFT">NFT</a> from `owner`'s gallery
-    <b>let</b> id = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_create_id">GUID::create_id</a>(creator, creation_num);
-    <b>let</b> token = <a href="NFTGallery.md#0x1_NFTGallery_remove_from_gallery">remove_from_gallery</a>&lt;TokenType&gt;(owner, &id);
-
-    <b>assert</b>!(amount &lt;= <a href="NFT.md#0x1_NFT_balance">NFT::balance</a>(&token), <a href="NFTGallery.md#0x1_NFTGallery_EINVALID_AMOUNT_OF_TRANSFER">EINVALID_AMOUNT_OF_TRANSFER</a>);
-
-    <b>if</b> (amount == <a href="NFT.md#0x1_NFT_balance">NFT::balance</a>(&token)) {
-        // Owner does not have any token left, so add token <b>to</b> `<b>to</b>`'s gallery.
-        <a href="NFTGallery.md#0x1_NFTGallery_add_to_gallery">add_to_gallery</a>&lt;TokenType&gt;(<b>to</b>, token);
-    } <b>else</b> {
-        // Split owner's token into two
-        <b>let</b> (owner_token, to_token) = <a href="NFT.md#0x1_NFT_split">NFT::split</a>&lt;TokenType&gt;(token, amount);
-
-        // Add tokens <b>to</b> owner's gallery.
-        <a href="NFTGallery.md#0x1_NFTGallery_add_to_gallery">add_to_gallery</a>&lt;TokenType&gt;(owner, owner_token);
-
-        // Add tokens <b>to</b> `<b>to</b>`'s gallery
-        <a href="NFTGallery.md#0x1_NFTGallery_add_to_gallery">add_to_gallery</a>&lt;TokenType&gt;(<b>to</b>, to_token);
-    };
-
-    // Emit transfer event
-    <a href="NFT.md#0x1_NFT_emit_transfer_event">NFT::emit_transfer_event</a>(
-        &id,
-        &account,
-        <b>to</b>,
-        amount,
-    );
+    <a href="NFTGallery.md#0x1_NFTGallery_transfer">transfer</a>&lt;TokenType&gt;(&account, <b>to</b>, amount, &<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_create_id">GUID::create_id</a>(creator, creation_num));
 }
 </code></pre>
 

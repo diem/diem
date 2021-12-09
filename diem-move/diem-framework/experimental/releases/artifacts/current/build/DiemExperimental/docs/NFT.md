@@ -18,6 +18,7 @@
 -  [Function `balance`](#0x1_NFT_balance)
 -  [Function `metadata`](#0x1_NFT_metadata)
 -  [Function `parent`](#0x1_NFT_parent)
+-  [Function `royalty_rate`](#0x1_NFT_royalty_rate)
 -  [Function `supply`](#0x1_NFT_supply)
 -  [Function `extract_token`](#0x1_NFT_extract_token)
 -  [Function `restore_token`](#0x1_NFT_restore_token)
@@ -35,6 +36,7 @@
 
 <pre><code><b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Event.md#0x1_Event">0x1::Event</a>;
+<b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
 <b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID">0x1::GUID</a>;
 <b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option">0x1::Option</a>;
 <b>use</b> <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer">0x1::Signer</a>;
@@ -91,6 +93,12 @@ For each token_id, there is only one TokenData.
 </dt>
 <dd>
  Parent NFT id
+</dd>
+<dt>
+<code>royalty_rate: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_Option">Option::Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>&gt;</code>
+</dt>
+<dd>
+ Percentage of sales going back to the creator
 </dd>
 </dl>
 
@@ -575,6 +583,36 @@ Returns ID of collection associated with token
 
 </details>
 
+<a name="0x1_NFT_royalty_rate"></a>
+
+## Function `royalty_rate`
+
+Returns the royalty rate of token with <code>id</code> on the chain.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="NFT.md#0x1_NFT_royalty_rate">royalty_rate</a>&lt;TokenType: store&gt;(id: &<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>): <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_Option">Option::Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="NFT.md#0x1_NFT_royalty_rate">royalty_rate</a>&lt;TokenType: store&gt;(id: &<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>): <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option">Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>&gt; <b>acquires</b> <a href="NFT.md#0x1_NFT_TokenDataCollection">TokenDataCollection</a> {
+    <b>let</b> owner_addr = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_id_creator_address">GUID::id_creator_address</a>(id);
+    <b>let</b> tokens = &<b>borrow_global</b>&lt;<a href="NFT.md#0x1_NFT_TokenDataCollection">TokenDataCollection</a>&lt;TokenType&gt;&gt;(owner_addr).tokens;
+    <b>let</b> index_opt = <a href="NFT.md#0x1_NFT_index_of_token">index_of_token</a>&lt;TokenType&gt;(tokens, id);
+    <b>assert</b>!(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_is_some">Option::is_some</a>(&index_opt), <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="NFT.md#0x1_NFT_EWRONG_TOKEN_ID">EWRONG_TOKEN_ID</a>));
+    <b>let</b> index = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_extract">Option::extract</a>(&<b>mut</b> index_opt);
+    *&<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tokens, index).royalty_rate
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_NFT_supply"></a>
 
 ## Function `supply`
@@ -821,7 +859,8 @@ Only the entity, which can create an object of <code>TokenType</code>, will be a
         metadata,
         content_uri,
         amount,
-        parent_id
+        parent_id,
+        <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_none">Option::none</a>()
     )
 }
 </code></pre>
@@ -837,7 +876,7 @@ Only the entity, which can create an object of <code>TokenType</code>, will be a
 Create a<code> <a href="NFT.md#0x1_NFT_TokenData">TokenData</a>&lt;TokenType&gt;</code> that wraps <code>metadata</code> and with balance of <code>amount</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="NFT.md#0x1_NFT_create">create</a>&lt;TokenType: store&gt;(account: &signer, metadata: TokenType, content_uri: vector&lt;u8&gt;, amount: u64, parent_id: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_Option">Option::Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>&gt;): <a href="NFT.md#0x1_NFT_Token">NFT::Token</a>&lt;TokenType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="NFT.md#0x1_NFT_create">create</a>&lt;TokenType: store&gt;(account: &signer, metadata: TokenType, content_uri: vector&lt;u8&gt;, amount: u64, parent_id: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_Option">Option::Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>&gt;, royalty_rate: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_Option">Option::Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>&gt;): <a href="NFT.md#0x1_NFT_Token">NFT::Token</a>&lt;TokenType&gt;
 </code></pre>
 
 
@@ -847,7 +886,8 @@ Create a<code> <a href="NFT.md#0x1_NFT_TokenData">TokenData</a>&lt;TokenType&gt;
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="NFT.md#0x1_NFT_create">create</a>&lt;TokenType: store&gt;(
-    account: &signer, metadata: TokenType, content_uri: vector&lt;u8&gt;, amount: u64, parent_id: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option">Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>&gt;
+    account: &signer, metadata: TokenType, content_uri: vector&lt;u8&gt;,
+    amount: u64, parent_id: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option">Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>&gt;, royalty_rate: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option">Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>&gt;
 ): <a href="NFT.md#0x1_NFT_Token">Token</a>&lt;TokenType&gt; <b>acquires</b> <a href="NFT.md#0x1_NFT_Admin">Admin</a>, <a href="NFT.md#0x1_NFT_TokenDataCollection">TokenDataCollection</a> {
     <b>let</b> guid = <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_create">GUID::create</a>(account);
     <b>if</b> (!<b>exists</b>&lt;<a href="NFT.md#0x1_NFT_TokenDataCollection">TokenDataCollection</a>&lt;TokenType&gt;&gt;(<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account))) {
@@ -859,7 +899,8 @@ Create a<code> <a href="NFT.md#0x1_NFT_TokenData">TokenData</a>&lt;TokenType&gt;
         metadata,
         content_uri,
         amount,
-        parent_id
+        parent_id,
+        royalty_rate,
     )
 }
 </code></pre>
@@ -874,7 +915,7 @@ Create a<code> <a href="NFT.md#0x1_NFT_TokenData">TokenData</a>&lt;TokenType&gt;
 
 
 
-<pre><code><b>fun</b> <a href="NFT.md#0x1_NFT_create_impl">create_impl</a>&lt;TokenType: store&gt;(addr: <b>address</b>, guid: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_GUID">GUID::GUID</a>, metadata: TokenType, content_uri: vector&lt;u8&gt;, amount: u64, parent_id: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_Option">Option::Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>&gt;): <a href="NFT.md#0x1_NFT_Token">NFT::Token</a>&lt;TokenType&gt;
+<pre><code><b>fun</b> <a href="NFT.md#0x1_NFT_create_impl">create_impl</a>&lt;TokenType: store&gt;(addr: <b>address</b>, guid: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_GUID">GUID::GUID</a>, metadata: TokenType, content_uri: vector&lt;u8&gt;, amount: u64, parent_id: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_Option">Option::Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>&gt;, royalty_rate: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_Option">Option::Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>&gt;): <a href="NFT.md#0x1_NFT_Token">NFT::Token</a>&lt;TokenType&gt;
 </code></pre>
 
 
@@ -889,7 +930,8 @@ Create a<code> <a href="NFT.md#0x1_NFT_TokenData">TokenData</a>&lt;TokenType&gt;
     metadata: TokenType,
     content_uri: vector&lt;u8&gt;,
     amount: u64,
-    parent_id: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option">Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>&gt;
+    parent_id: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option">Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/GUID.md#0x1_GUID_ID">GUID::ID</a>&gt;,
+    royalty_rate: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option">Option</a>&lt;<a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>&gt;,
 ): <a href="NFT.md#0x1_NFT_Token">Token</a>&lt;TokenType&gt; <b>acquires</b> <a href="NFT.md#0x1_NFT_Admin">Admin</a>, <a href="NFT.md#0x1_NFT_TokenDataCollection">TokenDataCollection</a> {
     // If there is a parent, ensure it <b>has</b> the same creator
     // TODO: Do we just say the owner <b>has</b> the ability instead?
@@ -910,7 +952,14 @@ Create a<code> <a href="NFT.md#0x1_NFT_TokenData">TokenData</a>&lt;TokenType&gt;
     <b>let</b> token_data_collection = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="NFT.md#0x1_NFT_TokenDataCollection">TokenDataCollection</a>&lt;TokenType&gt;&gt;(addr).tokens;
     <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_push_back">Vector::push_back</a>(
         token_data_collection,
-        <a href="NFT.md#0x1_NFT_TokenData">TokenData</a> { metadata: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_some">Option::some</a>(metadata), token_id: guid, content_uri, supply: amount, parent_id }
+        <a href="NFT.md#0x1_NFT_TokenData">TokenData</a> {
+            metadata: <a href="../../../../../../../experimental/releases/artifacts/current/build/MoveStdlib/docs/Option.md#0x1_Option_some">Option::some</a>(metadata),
+            token_id: guid,
+            content_uri,
+            supply: amount,
+            parent_id,
+            royalty_rate
+        }
     );
     <a href="NFT.md#0x1_NFT_Token">Token</a> { id, balance: amount }
 }

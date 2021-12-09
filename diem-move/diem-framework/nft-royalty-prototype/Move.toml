@@ -1,0 +1,12 @@
+[package]
+name = "NFTSale"
+version = "0.0.0"
+
+[addresses]
+Sender = "_"
+
+[dependencies]
+DiemExperimental = { local = "../experimental"}
+
+[dev-addresses]
+Sender = "0x1"

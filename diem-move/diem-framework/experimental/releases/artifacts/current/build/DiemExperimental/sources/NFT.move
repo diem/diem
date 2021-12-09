@@ -2,6 +2,7 @@ address 0x1 {
     module NFT {
         use Std::Errors;
         use Std::Event;
+        use Std::FixedPoint32::FixedPoint32;
         use Std::GUID;
         use Std::Option::{Self, Option};
         use Std::Signer;
@@ -18,7 +19,9 @@ address 0x1 {
             content_uri: vector<u8>,
             supply: u64,
             /// Parent NFT id
-            parent_id: Option<GUID::ID>
+            parent_id: Option<GUID::ID>,
+            /// Percentage of sales going back to the creator
+            royalty_rate: Option<FixedPoint32>
         }
 
         /// A hot potato wrapper for the token's metadata. Since this wrapper has no `key` or `store`
@@ -102,6 +105,16 @@ address 0x1 {
         /// Returns ID of collection associated with token
         public fun parent<TokenType: store>(wrapper: &TokenDataWrapper<TokenType>): &Option<GUID::ID> {
             &wrapper.parent_id
+        }
+
+        /// Returns the royalty rate of token with `id` on the chain.
+        public fun royalty_rate<TokenType: store>(id: &GUID::ID): Option<FixedPoint32> acquires TokenDataCollection {
+            let owner_addr = GUID::id_creator_address(id);
+            let tokens = &borrow_global<TokenDataCollection<TokenType>>(owner_addr).tokens;
+            let index_opt = index_of_token<TokenType>(tokens, id);
+            assert!(Option::is_some(&index_opt), Errors::invalid_argument(EWRONG_TOKEN_ID));
+            let index = Option::extract(&mut index_opt);
+            *&Vector::borrow(tokens, index).royalty_rate
         }
 
         /// Returns the supply of tokens with `id` on the chain.
@@ -195,13 +208,15 @@ address 0x1 {
                 metadata,
                 content_uri,
                 amount,
-                parent_id
+                parent_id,
+                Option::none()
             )
         }
 
         /// Create a` TokenData<TokenType>` that wraps `metadata` and with balance of `amount`
         public fun create<TokenType: store>(
-            account: &signer, metadata: TokenType, content_uri: vector<u8>, amount: u64, parent_id: Option<GUID::ID>
+            account: &signer, metadata: TokenType, content_uri: vector<u8>,
+            amount: u64, parent_id: Option<GUID::ID>, royalty_rate: Option<FixedPoint32>
         ): Token<TokenType> acquires Admin, TokenDataCollection {
             let guid = GUID::create(account);
             if (!exists<TokenDataCollection<TokenType>>(Signer::address_of(account))) {
@@ -213,7 +228,8 @@ address 0x1 {
                 metadata,
                 content_uri,
                 amount,
-                parent_id
+                parent_id,
+                royalty_rate,
             )
         }
 
@@ -223,7 +239,8 @@ address 0x1 {
             metadata: TokenType,
             content_uri: vector<u8>,
             amount: u64,
-            parent_id: Option<GUID::ID>
+            parent_id: Option<GUID::ID>,
+            royalty_rate: Option<FixedPoint32>,
         ): Token<TokenType> acquires Admin, TokenDataCollection {
             // If there is a parent, ensure it has the same creator
             // TODO: Do we just say the owner has the ability instead?
@@ -244,7 +261,14 @@ address 0x1 {
             let token_data_collection = &mut borrow_global_mut<TokenDataCollection<TokenType>>(addr).tokens;
             Vector::push_back(
                 token_data_collection,
-                TokenData { metadata: Option::some(metadata), token_id: guid, content_uri, supply: amount, parent_id }
+                TokenData {
+                    metadata: Option::some(metadata),
+                    token_id: guid,
+                    content_uri,
+                    supply: amount,
+                    parent_id,
+                    royalty_rate
+                }
             );
             Token { id, balance: amount }
         }

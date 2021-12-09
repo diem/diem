@@ -77,23 +77,13 @@ module 0x1::NFTGallery {
         }
     }
 
-    /// Transfer `amount` of token with id `GUID::id(creator, creation_num)` from `owner`'s
-    /// balance to `to`'s balance. This operation has to be done by either the owner or an
-    /// approved operator of the owner.
-    public(script) fun transfer_token_between_galleries<TokenType: store>(
-        account: signer,
-        to: address,
-        amount: u64,
-        creator: address,
-        creation_num: u64
-    ) acquires NFTGallery {
-        let owner = Signer::address_of(&account);
+    public fun transfer<TokenType: store>(account: &signer, to: address, amount: u64, token_id: &GUID::ID) acquires NFTGallery {
+        let owner = Signer::address_of(account);
 
         assert!(amount > 0, EINVALID_AMOUNT_OF_TRANSFER);
 
         // Remove NFT from `owner`'s gallery
-        let id = GUID::create_id(creator, creation_num);
-        let token = remove_from_gallery<TokenType>(owner, &id);
+        let token = remove_from_gallery<TokenType>(owner, token_id);
 
         assert!(amount <= NFT::balance(&token), EINVALID_AMOUNT_OF_TRANSFER);
 
@@ -113,11 +103,24 @@ module 0x1::NFTGallery {
 
         // Emit transfer event
         NFT::emit_transfer_event(
-            &id,
-            &account,
+            token_id,
+            account,
             to,
             amount,
         );
+    }
+
+    /// Transfer `amount` of token with id `GUID::id(creator, creation_num)` from `owner`'s
+    /// balance to `to`'s balance. This operation has to be done by either the owner or an
+    /// approved operator of the owner.
+    public(script) fun transfer_token_between_galleries<TokenType: store>(
+        account: signer,
+        to: address,
+        amount: u64,
+        creator: address,
+        creation_num: u64
+    ) acquires NFTGallery {
+        transfer<TokenType>(&account, to, amount, &GUID::create_id(creator, creation_num));
     }
 
     public fun publish_gallery<TokenType: store>(account: &signer) {
