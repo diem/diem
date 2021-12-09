@@ -41,8 +41,7 @@ pub type EvalResult<T> = ::std::result::Result<T, BigInt>;
 // Constants
 //**************************************************************************************************
 
-const DIEM_CORE_ADDR: AccountAddress =
-    AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+const DIEM_CORE_ADDR: AccountAddress = AccountAddress::ONE;
 
 //**************************************************************************************************
 // Evaluation context

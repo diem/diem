@@ -13,9 +13,8 @@ use std::fmt::{Display, Formatter};
 pub const CODE_TAG: u8 = 0;
 pub const RESOURCE_TAG: u8 = 1;
 
-pub const CORE_CODE_ADDRESS: AccountAddress = AccountAddress::new([
-    0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8,
-]);
+/// Hex address: 0x1
+pub const CORE_CODE_ADDRESS: AccountAddress = AccountAddress::ONE;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub enum TypeTag {

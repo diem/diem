@@ -113,6 +113,14 @@ impl AsShortHexStr for [u8; 16] {
     }
 }
 
+impl AsShortHexStr for [u8; 20] {
+    fn short_str(&self) -> ShortHexStr {
+        const_assert!(20 >= ShortHexStr::SOURCE_LENGTH);
+        ShortHexStr::try_from_bytes(self)
+            .expect("This can never fail since 20 >= ShortHexStr::SOURCE_LENGTH")
+    }
+}
+
 impl AsShortHexStr for [u8; 32] {
     fn short_str(&self) -> ShortHexStr {
         const_assert!(32 >= ShortHexStr::SOURCE_LENGTH);

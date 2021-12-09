@@ -17,6 +17,7 @@ petgraph = "0.5.1"
 walkdir = "2.3.1"
 tempfile = "3.2.0"
 once_cell = "1.7.2"
+num-bigint = "0.4.0"
 
 move-binary-format = { path = "../move-binary-format" }
 move-core-types = { path = "../move-core/types" }

@@ -4843,6 +4843,7 @@ dependencies = [
  "move-ir-types",
  "move-stdlib",
  "move-symbol-pool",
+ "num-bigint 0.4.0",
  "once_cell",
  "petgraph 0.5.1",
  "regex",

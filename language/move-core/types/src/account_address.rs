@@ -17,10 +17,20 @@ impl AccountAddress {
     }
 
     /// The number of bytes in an address.
-    pub const LENGTH: usize = 16;
+    /// Default to 16 bytes, can be set to 20 bytes with address20 feature.
+    pub const LENGTH: usize = if cfg!(feature = "address20") { 20 } else { 16 };
 
     /// Hex address: 0x0
     pub const ZERO: Self = Self([0u8; Self::LENGTH]);
+
+    /// Hex address: 0x1
+    pub const ONE: Self = Self::get_hex_address_one();
+
+    const fn get_hex_address_one() -> Self {
+        let mut addr = [0u8; AccountAddress::LENGTH];
+        addr[AccountAddress::LENGTH - 1] = 1u8;
+        Self(addr)
+    }
 
     pub fn random() -> Self {
         let mut rng = OsRng;

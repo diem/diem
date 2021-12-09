@@ -13,6 +13,7 @@ use bytecode_interpreter_crypto::{
 use move_binary_format::errors::Location;
 use move_core_types::{
     account_address::AccountAddress,
+    language_storage::CORE_CODE_ADDRESS,
     vm_status::{sub_status, StatusCode},
 };
 use move_model::{
@@ -53,8 +54,7 @@ pub type ExecResult<T> = ::std::result::Result<T, AbortInfo>;
 // Constants
 //**************************************************************************************************
 
-const DIEM_CORE_ADDR: AccountAddress =
-    AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+const DIEM_CORE_ADDR: AccountAddress = CORE_CODE_ADDRESS;
 
 // TODO(mengxu): these constants are defined in values_impl.rs which are currently not exposed.
 const INDEX_OUT_OF_BOUNDS: u64 = sub_status::NFE_VECTOR_ERROR_BASE + 1;

@@ -30,5 +30,6 @@ regex = "1.4.3"
 serde_json = "1.0.64"
 
 [features]
+address20 = []
 default = []
 fuzzing = ["proptest", "proptest-derive"]

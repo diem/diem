@@ -8,6 +8,7 @@ use crate::{
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
+use num_bigint::BigUint;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
     collections::BTreeMap,
@@ -61,6 +62,25 @@ pub fn parse_u128(s: &str) -> Result<(u128, NumberFormat), ParseIntError> {
     Ok((u128::from_str_radix(txt, base as u32)?, base))
 }
 
+// Parse an address from a decimal or hex encoding
+pub fn parse_address(s: &str) -> Option<([u8; AccountAddress::LENGTH], NumberFormat)> {
+    let (txt, base) = determine_num_text_and_base(s);
+    let parsed = BigUint::parse_bytes(
+        txt.as_bytes(),
+        match base {
+            NumberFormat::Hex => 16,
+            NumberFormat::Decimal => 10,
+        },
+    )?;
+    let bytes = parsed.to_bytes_be();
+    if bytes.len() > AccountAddress::LENGTH {
+        return None;
+    }
+    let mut result = [0u8; AccountAddress::LENGTH];
+    result[(AccountAddress::LENGTH - bytes.len())..].clone_from_slice(&bytes);
+    Some((result, base))
+}
+
 //**************************************************************************************************
 // Address
 //**************************************************************************************************
@@ -78,9 +98,7 @@ pub struct NumericalAddress {
 impl NumericalAddress {
     // bytes used for errors when an address is not known but is needed
     pub const DEFAULT_ERROR_ADDRESS: Self = NumericalAddress {
-        bytes: AccountAddress::new([
-            0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8,
-        ]),
+        bytes: AccountAddress::ONE,
         format: NumberFormat::Hex,
     };
 
@@ -100,22 +118,22 @@ impl NumericalAddress {
     }
 
     pub fn parse_str(s: &str) -> Result<NumericalAddress, String> {
-        let (n, format) = match parse_u128(s) {
-            Ok(res) => res,
-            Err(_) => {
-                // TODO the kind of error is in an unstable nightly API
-                // But currently the only way this should fail is if the number is too long
-                return Err(
+        match parse_address(s) {
+            Some((n, format)) => Ok(NumericalAddress {
+                bytes: AccountAddress::new(n),
+                format,
+            }),
+            None =>
+            // TODO the kind of error is in an unstable nightly API
+            // But currently the only way this should fail is if the number is too long
+            {
+                Err(format!(
                     "Invalid address literal. The numeric value is too large. The maximum size is \
-                     16 bytes"
-                        .to_owned(),
-                );
+                     {} bytes",
+                    AccountAddress::LENGTH
+                ))
             }
-        };
-        Ok(NumericalAddress {
-            bytes: AccountAddress::new(n.to_be_bytes()),
-            format,
-        })
+        }
     }
 }
 
@@ -129,7 +147,7 @@ impl fmt::Display for NumericalAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.format {
             NumberFormat::Decimal => {
-                let n = u128::from_be_bytes(self.bytes.into_bytes());
+                let n = BigUint::from_bytes_be(self.bytes.as_ref());
                 write!(f, "{}", n)
             }
             NumberFormat::Hex => write!(f, "{:#X}", self),

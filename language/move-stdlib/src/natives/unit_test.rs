@@ -12,6 +12,13 @@ use std::collections::VecDeque;
 
 use move_core_types::account_address::AccountAddress;
 
+fn to_le_bytes(i: u64) -> [u8; AccountAddress::LENGTH] {
+    let bytes = i.to_le_bytes();
+    let mut result = [0u8; AccountAddress::LENGTH];
+    result[..bytes.len()].clone_from_slice(bytes.as_ref());
+    result
+}
+
 pub fn native_create_signers_for_testing(
     _context: &mut NativeContext,
     ty_args: Vec<Type>,
@@ -22,7 +29,7 @@ pub fn native_create_signers_for_testing(
 
     let num_signers = pop_arg!(args, u64);
     let signers = Value::vector_for_testing_only(
-        (0..num_signers).map(|i| Value::signer(AccountAddress::new((i as u128).to_le_bytes()))),
+        (0..num_signers).map(|i| Value::signer(AccountAddress::new(to_le_bytes(i)))),
     );
 
     Ok(NativeResult::ok(ONE_GAS_UNIT, smallvec![signers]))
