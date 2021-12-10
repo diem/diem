@@ -1776,6 +1776,7 @@ mod tests {
         waypoint::Waypoint,
         PeerId,
     };
+    use executor_types::ChunkExecutorTrait;
     use futures::{channel::oneshot, executor::block_on};
     use mempool_notifications::MempoolNotifier;
     use netcore::transport::ConnectionOrigin;
@@ -2505,8 +2506,8 @@ mod tests {
         vec![waypoint_response, target_response, highest_response]
     }
 
-    fn verify_all_chunk_requests_are_invalid(
-        coordinator: &mut StateSyncCoordinator<ExecutorProxy, MempoolNotifier>,
+    fn verify_all_chunk_requests_are_invalid<C: ChunkExecutorTrait>(
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy<C>, MempoolNotifier>,
         peer_network_id: &PeerNetworkId,
         requests: &[StateSyncMessage],
     ) {
@@ -2520,8 +2521,8 @@ mod tests {
         }
     }
 
-    fn verify_all_chunk_responses_are_invalid(
-        coordinator: &mut StateSyncCoordinator<ExecutorProxy, MempoolNotifier>,
+    fn verify_all_chunk_responses_are_invalid<C: ChunkExecutorTrait>(
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy<C>, MempoolNotifier>,
         peer_network_id: &PeerNetworkId,
         responses: &[StateSyncMessage],
     ) {
@@ -2535,8 +2536,8 @@ mod tests {
         }
     }
 
-    fn verify_all_chunk_responses_are_the_wrong_type(
-        coordinator: &mut StateSyncCoordinator<ExecutorProxy, MempoolNotifier>,
+    fn verify_all_chunk_responses_are_the_wrong_type<C: ChunkExecutorTrait>(
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy<C>, MempoolNotifier>,
         peer_network_id: &PeerNetworkId,
         responses: &[StateSyncMessage],
     ) {
@@ -2550,8 +2551,8 @@ mod tests {
         }
     }
 
-    fn process_new_peer_event(
-        coordinator: &mut StateSyncCoordinator<ExecutorProxy, MempoolNotifier>,
+    fn process_new_peer_event<C: ChunkExecutorTrait>(
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy<C>, MempoolNotifier>,
         peer: &PeerNetworkId,
     ) {
         let connection_metadata = ConnectionMetadata::mock_with_role_and_origin(

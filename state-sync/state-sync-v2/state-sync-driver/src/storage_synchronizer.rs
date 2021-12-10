@@ -60,8 +60,8 @@ pub trait StorageSynchronizerInterface {
 }
 
 /// The implementation of the `StorageSynchronizerInterface` used by state sync
-pub struct StorageSynchronizer {
-    chunk_executor: Box<dyn ChunkExecutorTrait>,
+pub struct StorageSynchronizer<C> {
+    chunk_executor: Arc<C>,
     storage: Arc<RwLock<DbReaderWriter>>,
 
     // We cache the latest storage summary to prevent unnecessary reads to the
@@ -69,11 +69,8 @@ pub struct StorageSynchronizer {
     cached_storage_summary: Option<StorageStateSummary>,
 }
 
-impl StorageSynchronizer {
-    pub fn new(
-        chunk_executor: Box<dyn ChunkExecutorTrait>,
-        storage: Arc<RwLock<DbReaderWriter>>,
-    ) -> Self {
+impl<C: ChunkExecutorTrait> StorageSynchronizer<C> {
+    pub fn new(chunk_executor: Arc<C>, storage: Arc<RwLock<DbReaderWriter>>) -> Self {
         Self {
             chunk_executor,
             storage,
@@ -151,7 +148,7 @@ impl StorageSynchronizer {
     }
 }
 
-impl StorageSynchronizerInterface for StorageSynchronizer {
+impl<C: ChunkExecutorTrait> StorageSynchronizerInterface for StorageSynchronizer<C> {
     fn apply_and_commit_transaction_outputs(
         &mut self,
         output_list_with_proof: TransactionOutputListWithProof,

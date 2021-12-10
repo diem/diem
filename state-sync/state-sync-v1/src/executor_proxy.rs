@@ -53,27 +53,27 @@ pub trait ExecutorProxyTrait: Send {
     fn publish_event_notifications(&mut self, events: Vec<ContractEvent>) -> Result<(), Error>;
 }
 
-pub(crate) struct ExecutorProxy {
+pub(crate) struct ExecutorProxy<C> {
+    chunk_executor: Arc<C>,
     storage: Arc<dyn DbReader<DpnProto>>,
-    executor: Box<dyn ChunkExecutorTrait>,
     event_subscription_service: EventSubscriptionService,
 }
 
-impl ExecutorProxy {
+impl<C: ChunkExecutorTrait> ExecutorProxy<C> {
     pub(crate) fn new(
         storage: Arc<dyn DbReader<DpnProto>>,
-        executor: Box<dyn ChunkExecutorTrait>,
+        chunk_executor: Arc<C>,
         event_subscription_service: EventSubscriptionService,
     ) -> Self {
         Self {
+            chunk_executor,
             storage,
-            executor,
             event_subscription_service,
         }
     }
 }
 
-impl ExecutorProxyTrait for ExecutorProxy {
+impl<C: ChunkExecutorTrait> ExecutorProxyTrait for ExecutorProxy<C> {
     fn get_local_storage_state(&self) -> Result<SyncState, Error> {
         let storage_info = self.storage.get_startup_info().map_err(|error| {
             Error::UnexpectedError(format!(
@@ -107,7 +107,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         // track chunk execution time
         let timer = counters::EXECUTE_CHUNK_DURATION.start_timer();
         let events = self
-            .executor
+            .chunk_executor
             .execute_and_commit_chunk(
                 txn_list_with_proof,
                 &verified_target_li,
@@ -378,7 +378,7 @@ mod tests {
             .unwrap();
 
         // Create an executor proxy
-        let chunk_executor = Box::new(ChunkExecutor::<DiemVM>::new(db_rw).unwrap());
+        let chunk_executor = Arc::new(ChunkExecutor::<DiemVM>::new(db_rw).unwrap());
         let mut executor_proxy = ExecutorProxy::new(db, chunk_executor, event_subscription_service);
 
         // Publish a subscribed event
@@ -580,7 +580,7 @@ mod tests {
             .unwrap();
 
         // Create an executor
-        let chunk_executor = Box::new(ChunkExecutor::<DiemVM>::new(db_rw.clone()).unwrap());
+        let chunk_executor = Arc::new(ChunkExecutor::<DiemVM>::new(db_rw.clone()).unwrap());
         let mut executor_proxy = ExecutorProxy::new(db, chunk_executor, event_subscription_service);
 
         // Verify that the initial configs returned to the subscriber don't contain the unknown on-chain config
@@ -623,7 +623,7 @@ mod tests {
     ) -> (
         Vec<TestValidator>,
         Box<BlockExecutor<DpnProto, DiemVM>>,
-        ExecutorProxy,
+        ExecutorProxy<ChunkExecutor<DiemVM>>,
         ReconfigNotificationListener,
     ) {
         // Generate a genesis change set
@@ -663,7 +663,7 @@ mod tests {
 
         // Create the executors
         let block_executor = Box::new(BlockExecutor::<DpnProto, DiemVM>::new(db_rw.clone()));
-        let chunk_executor = Box::new(ChunkExecutor::<DiemVM>::new(db_rw).unwrap());
+        let chunk_executor = Arc::new(ChunkExecutor::<DiemVM>::new(db_rw).unwrap());
         let executor_proxy = ExecutorProxy::new(db, chunk_executor, event_subscription_service);
 
         (

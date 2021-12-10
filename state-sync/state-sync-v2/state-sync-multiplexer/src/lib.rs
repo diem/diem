@@ -21,6 +21,7 @@ use state_sync_v1::{
     bootstrapper::StateSyncBootstrapper,
     network::{StateSyncEvents, StateSyncSender},
 };
+use std::sync::Arc;
 use storage_interface::default_protocol::DbReaderWriter;
 use tokio::runtime::Runtime;
 
@@ -63,12 +64,12 @@ pub struct StateSyncMultiplexer {
 }
 
 impl StateSyncMultiplexer {
-    pub fn new<M: MempoolNotificationSender + 'static>(
+    pub fn new<C: ChunkExecutorTrait + 'static, M: MempoolNotificationSender + 'static>(
         network: Vec<(NetworkId, StateSyncSender, StateSyncEvents)>,
         mempool_notifier: M,
         consensus_listener: ConsensusNotificationListener,
         storage: DbReaderWriter,
-        executor: Box<dyn ChunkExecutorTrait>,
+        chunk_executor: Arc<C>,
         node_config: &NodeConfig,
         waypoint: Waypoint,
         mut event_subscription_service: EventSubscriptionService,
@@ -106,7 +107,7 @@ impl StateSyncMultiplexer {
                 node_config,
                 waypoint,
                 storage,
-                executor,
+                chunk_executor,
                 mempool_notifier,
                 consensus_listener,
                 event_subscription_service,
@@ -120,7 +121,7 @@ impl StateSyncMultiplexer {
                 mempool_notifier,
                 consensus_listener,
                 storage.reader,
-                executor,
+                chunk_executor,
                 node_config,
                 waypoint,
                 event_subscription_service,
@@ -234,7 +235,7 @@ mod tests {
             mempool_notifier,
             consensus_listener,
             db_rw.clone(),
-            Box::new(ChunkExecutor::<DiemVM>::new(db_rw).unwrap()),
+            Arc::new(ChunkExecutor::<DiemVM>::new(db_rw).unwrap()),
             &node_config,
             Waypoint::new_any(&LedgerInfo::new(BlockInfo::empty(), HashValue::random())),
             event_subscription_service,
