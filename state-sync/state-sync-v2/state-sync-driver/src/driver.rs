@@ -307,7 +307,7 @@ impl<
 
     /// Checks that state sync is making progress
     async fn drive_progress(&mut self) {
-        trace!("Checking progress of the state sync driver!");
+        //trace!("Checking progress of the state sync driver!");
 
         // If consensus is executing, there's nothing to do.
         if self.check_if_consensus_executing() {

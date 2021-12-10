@@ -85,6 +85,7 @@ pub struct DiemHandle {
 pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
     crash_handler::setup_panic_handler();
 
+    /*
     let mut logger = diem_logger::Logger::new();
     logger
         .channel_size(config.logger.chan_size)
@@ -95,7 +96,7 @@ pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
         logger.printer(Box::new(FileWriter::new(log_file)));
     }
     let logger = Some(logger.build());
-
+     */
     // Let's now log some important information, since the logger is set up
     info!(config = config, "Loaded DiemNode config");
 
@@ -110,7 +111,7 @@ pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
         warn!("failpoints is set in config, but the binary doesn't compile with this feature");
     }
 
-    let _node_handle = setup_environment(config, logger);
+    let _node_handle = setup_environment(config, None);
     let term = Arc::new(AtomicBool::new(false));
 
     while !term.load(Ordering::Acquire) {
