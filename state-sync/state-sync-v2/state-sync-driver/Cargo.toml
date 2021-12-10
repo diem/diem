@@ -17,6 +17,7 @@ thiserror = "1.0.24"
 tokio = { version = "1.8.1", features = ["full"] }
 tokio-stream = "0.1.4"
 
+channel = { path = "../../../crates/channel" }
 consensus-notifications = { path = "../../inter-component/consensus-notifications" }
 data-streaming-service = { path = "../data-streaming-service" }
 diem-config = { path = "../../../config" }
