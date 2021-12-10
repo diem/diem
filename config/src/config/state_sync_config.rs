@@ -88,9 +88,9 @@ pub struct StateSyncDriverConfig {
 impl Default for StateSyncDriverConfig {
     fn default() -> Self {
         Self {
-            bootstrapping_mode: BootstrappingMode::DownloadLatestAccountStates,
-            enable_state_sync_v2: false,
-            continuous_syncing_mode: ContinuousSyncingMode::ApplyTransactionOutputs,
+            bootstrapping_mode: BootstrappingMode::ExecuteTransactionsFromGenesis,
+            enable_state_sync_v2: true,
+            continuous_syncing_mode: ContinuousSyncingMode::ExecuteTransactions,
             progress_check_interval_ms: 500,
         }
     }

@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::error::Error;
+use crate::{driver::set_version, error::Error};
 use diem_infallible::RwLock;
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
@@ -137,6 +137,18 @@ impl StorageSynchronizer {
 
         Ok(storage_state_summary)
     }
+
+    /// Sets the metrics required for CT benchmarking
+    fn set_metrics(&self, num_transactions: u64) {
+        let current_synced_version = self
+            .cached_storage_summary
+            .as_ref()
+            .unwrap()
+            .latest_synced_version;
+        let new_synced_version = current_synced_version + num_transactions;
+        set_version("synced".into(), new_synced_version);
+        set_version("committed".into(), new_synced_version);
+    }
 }
 
 impl StorageSynchronizerInterface for StorageSynchronizer {
@@ -146,6 +158,7 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
         target_ledger_info: LedgerInfoWithSignatures,
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>, Error> {
+        let num_transactions = output_list_with_proof.transactions_and_outputs.len() as u64;
         let committed_events = self
             .chunk_executor
             .apply_and_commit_chunk(
@@ -156,6 +169,7 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
             .map_err(|error| {
                 Error::UnexpectedError(format!("Apply and commit chunk failed: {}", error))
             })?;
+        self.set_metrics(num_transactions);
         self.invalidate_cached_storage_summary();
 
         Ok(committed_events)
@@ -167,6 +181,7 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
         target_ledger_info: LedgerInfoWithSignatures,
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>, Error> {
+        let num_transactions = transaction_list_with_proof.transactions.len() as u64;
         let committed_events = self
             .chunk_executor
             .execute_and_commit_chunk(
@@ -177,6 +192,7 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
             .map_err(|error| {
                 Error::UnexpectedError(format!("Execute and commit chunk failed: {}", error))
             })?;
+        self.set_metrics(num_transactions);
         self.invalidate_cached_storage_summary();
 
         Ok(committed_events)

@@ -17,13 +17,30 @@ use diem_config::config::{RoleType, StateSyncDriverConfig};
 use diem_data_client::DiemDataClient;
 use diem_infallible::Mutex;
 use diem_logger::*;
+use diem_metrics::{register_int_gauge_vec, IntGaugeVec};
 use diem_types::waypoint::Waypoint;
 use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use futures::StreamExt;
 use mempool_notifications::MempoolNotificationSender;
+use once_cell::sync::Lazy;
 use std::sync::Arc;
 use tokio::time::{interval, Duration};
 use tokio_stream::wrappers::IntervalStream;
+
+pub static VERSION: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        "diem_state_sync_version",
+        "Version involved in state sync v2 progress",
+        &["type"]
+    )
+    .unwrap()
+});
+
+pub fn set_version(version_type: String, version: u64) {
+    VERSION
+        .with_label_values(&[&version_type])
+        .set(version as i64)
+}
 
 // TODO(joshlind): use structured logging!
 
