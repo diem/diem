@@ -13,7 +13,6 @@ use data_streaming_service::{
 use diem_config::config::ContinuousSyncingMode;
 use diem_infallible::Mutex;
 use diem_types::{
-    contract_event::ContractEvent,
     epoch_change::Verifier,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{
@@ -21,7 +20,6 @@ use diem_types::{
         Version,
     },
 };
-use event_notifications::EventSubscriptionService;
 use std::sync::Arc;
 
 /// A simple component that manages the continuous syncing of the node
@@ -31,9 +29,6 @@ pub struct ContinuousSyncer<S> {
 
     // The config of the state sync driver
     driver_configuration: DriverConfiguration,
-
-    // The event subscription service to notify listeners of on-chain events
-    event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
 
     // The client through which to stream data from the Diem network
     streaming_service_client: StreamingServiceClient,
@@ -45,14 +40,12 @@ pub struct ContinuousSyncer<S> {
 impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
     pub fn new(
         driver_configuration: DriverConfiguration,
-        event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
         streaming_service_client: StreamingServiceClient,
         storage_synchronizer: Arc<Mutex<S>>,
     ) -> Self {
         Self {
             active_data_stream: None,
             driver_configuration,
-            event_subscription_service,
             streaming_service_client,
             storage_synchronizer,
         }
@@ -199,16 +192,14 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         .await?;
 
         // Execute/apply and commit the transactions/outputs
-        let committed_events = match self.driver_configuration.config.continuous_syncing_mode {
+        match self.driver_configuration.config.continuous_syncing_mode {
             ContinuousSyncingMode::ApplyTransactionOutputs => {
                 if let Some(transaction_outputs_with_proof) = transaction_outputs_with_proof {
-                    self.storage_synchronizer
-                        .lock()
-                        .apply_and_commit_transaction_outputs(
-                            transaction_outputs_with_proof,
-                            ledger_info_with_signatures,
-                            None,
-                        )
+                    self.storage_synchronizer.lock().apply_transaction_outputs(
+                        transaction_outputs_with_proof,
+                        ledger_info_with_signatures,
+                        None,
+                    )?;
                 } else {
                     self.terminate_active_stream(
                         notification_id,
@@ -222,13 +213,11 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
             }
             ContinuousSyncingMode::ExecuteTransactions => {
                 if let Some(transaction_list_with_proof) = transaction_list_with_proof {
-                    self.storage_synchronizer
-                        .lock()
-                        .execute_and_commit_transactions(
-                            transaction_list_with_proof,
-                            ledger_info_with_signatures,
-                            None,
-                        )
+                    self.storage_synchronizer.lock().execute_transactions(
+                        transaction_list_with_proof,
+                        ledger_info_with_signatures,
+                        None,
+                    )?;
                 } else {
                     self.terminate_active_stream(
                         notification_id,
@@ -242,44 +231,12 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
             }
         };
 
-        // Notify the event subscription service of new events
-        self.notify_committed_events(notification_id, committed_events)
-            .await?;
-
         // Update the last commit timestamp for the sync request
         if let Some(sync_request) = consensus_sync_request.lock().as_mut() {
             sync_request.update_last_commit_timestamp()
         }
 
         Ok(())
-    }
-
-    /// Notifies the event subscription service of committed events
-    async fn notify_committed_events(
-        &mut self,
-        notification_id: NotificationId,
-        committed_events: Result<Vec<ContractEvent>, Error>,
-    ) -> Result<(), Error> {
-        match committed_events {
-            Ok(committed_events) => {
-                let latest_storage_summary =
-                    self.storage_synchronizer.lock().get_storage_summary()?;
-                utils::notify_committed_events(
-                    latest_storage_summary,
-                    self.event_subscription_service.clone(),
-                    committed_events,
-                )
-                .await
-            }
-            Err(error) => {
-                self.terminate_active_stream(
-                    notification_id,
-                    NotificationFeedback::InvalidPayloadData,
-                )
-                .await?;
-                Err(error)
-            }
-        }
     }
 
     /// Verifies the first payload version matches the version we wish to sync

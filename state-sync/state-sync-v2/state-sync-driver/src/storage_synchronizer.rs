@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{driver::set_version, error::Error};
-use diem_infallible::RwLock;
+use diem_infallible::{Mutex, RwLock};
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
     contract_event::ContractEvent,
@@ -14,8 +14,10 @@ use diem_types::{
     },
 };
 use executor_types::{ChunkExecutorTrait, ExecutedTrees};
+use futures::{channel::mpsc, SinkExt};
 use std::sync::Arc;
 use storage_interface::default_protocol::DbReaderWriter;
+use tokio::runtime::Runtime;
 
 /// A summary of the state of local storage at a specific snapshot (e.g., version)
 #[derive(Clone, Debug)]
@@ -29,25 +31,29 @@ pub struct StorageStateSummary {
 /// Synchronizes the storage of the node by verifying and storing new data
 /// (e.g., transactions and outputs).
 pub trait StorageSynchronizerInterface {
-    /// Applies and commits a batch of transaction outputs to storage.
+    /// Applies a batch of transaction outputs to storage.
     ///
     /// Note: this assumes that the ledger infos have already been verified.
-    fn apply_and_commit_transaction_outputs(
+    fn apply_transaction_outputs(
         &mut self,
         output_list_with_proof: TransactionOutputListWithProof,
         target_ledger_info: LedgerInfoWithSignatures,
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>, Error>;
 
-    /// Executes and commits a batch of transactions to storage.
+    /// Executes a batch of transactions to storage.
     ///
     /// Note: this assumes that the ledger infos have already been verified.
-    fn execute_and_commit_transactions(
+    fn execute_transactions(
         &mut self,
         transaction_list_with_proof: TransactionListWithProof,
         target_ledger_info: LedgerInfoWithSignatures,
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>, Error>;
+
+    /// Returns any events that have been committed since the last time this
+    /// method was called.
+    fn fetch_committed_events(&mut self) -> Result<Option<Vec<ContractEvent>>, Error>;
 
     /// Returns the latest storage summary
     fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error>;
@@ -62,24 +68,53 @@ pub trait StorageSynchronizerInterface {
 /// The implementation of the `StorageSynchronizerInterface` used by state sync
 pub struct StorageSynchronizer<C> {
     chunk_executor: Arc<C>,
+    committed_events_receiver: Arc<Mutex<mpsc::UnboundedReceiver<Vec<ContractEvent>>>>,
     storage: Arc<RwLock<DbReaderWriter>>,
 
     // We cache the latest storage summary to prevent unnecessary reads to the
     // database. This should be updated after each database write.
-    cached_storage_summary: Option<StorageStateSummary>,
+    cached_storage_summary: Arc<RwLock<Option<StorageStateSummary>>>,
 }
 
-impl<C: ChunkExecutorTrait> StorageSynchronizer<C> {
-    pub fn new(chunk_executor: Arc<C>, storage: Arc<RwLock<DbReaderWriter>>) -> Self {
+impl<C: ChunkExecutorTrait + 'static> StorageSynchronizer<C> {
+    pub fn new(
+        driver_runtime: Option<&Runtime>,
+        chunk_executor: Arc<C>,
+        storage: Arc<RwLock<DbReaderWriter>>,
+    ) -> Self {
+        // Create a new channel to send committed events
+        let (mut committed_events_sender, committed_events_receiver) = mpsc::unbounded();
+
+        // Spawn a thread that attempts to commit chunks continuously
+        let chunk_executor_clone = chunk_executor.clone();
+        driver_runtime
+            .expect("This should exist!")
+            .spawn(async move {
+                loop {
+                    match chunk_executor_clone.commit_chunk() {
+                        Ok(committed_events) => {
+                            if let Err(error) = committed_events_sender.send(committed_events).await
+                            {
+                                panic!("Failed to send committed events! Error: {:?}", error);
+                            }
+                        }
+                        Err(error) => {
+                            //panic!("Failed to commit pending chunk! Error: {:?}", error);
+                        }
+                    }
+                }
+            });
+
         Self {
             chunk_executor,
+            committed_events_receiver: Arc::new(Mutex::new(committed_events_receiver)),
             storage,
-            cached_storage_summary: None,
+            cached_storage_summary: Arc::new(RwLock::new(None)),
         }
     }
 
     fn invalidate_cached_storage_summary(&mut self) {
-        self.cached_storage_summary = None;
+        *self.cached_storage_summary.write() = None;
     }
 
     fn refresh_cached_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
@@ -130,7 +165,7 @@ impl<C: ChunkExecutorTrait> StorageSynchronizer<C> {
             latest_ledger_info,
             latest_synced_version,
         };
-        self.cached_storage_summary = Some(storage_state_summary.clone());
+        *self.cached_storage_summary.write() = Some(storage_state_summary.clone());
 
         Ok(storage_state_summary)
     }
@@ -139,6 +174,7 @@ impl<C: ChunkExecutorTrait> StorageSynchronizer<C> {
     fn set_metrics(&self, num_transactions: u64) {
         let current_synced_version = self
             .cached_storage_summary
+            .read()
             .as_ref()
             .unwrap()
             .latest_synced_version;
@@ -148,17 +184,16 @@ impl<C: ChunkExecutorTrait> StorageSynchronizer<C> {
     }
 }
 
-impl<C: ChunkExecutorTrait> StorageSynchronizerInterface for StorageSynchronizer<C> {
-    fn apply_and_commit_transaction_outputs(
+impl<C: ChunkExecutorTrait + 'static> StorageSynchronizerInterface for StorageSynchronizer<C> {
+    fn apply_transaction_outputs(
         &mut self,
         output_list_with_proof: TransactionOutputListWithProof,
         target_ledger_info: LedgerInfoWithSignatures,
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>, Error> {
         let num_transactions = output_list_with_proof.transactions_and_outputs.len() as u64;
-        let committed_events = self
-            .chunk_executor
-            .apply_and_commit_chunk(
+        self.chunk_executor
+            .apply_chunk(
                 output_list_with_proof,
                 &target_ledger_info,
                 end_of_epoch_ledger_info.as_ref(),
@@ -169,19 +204,18 @@ impl<C: ChunkExecutorTrait> StorageSynchronizerInterface for StorageSynchronizer
         self.set_metrics(num_transactions);
         self.invalidate_cached_storage_summary();
 
-        Ok(committed_events)
+        Ok(vec![])
     }
 
-    fn execute_and_commit_transactions(
+    fn execute_transactions(
         &mut self,
         transaction_list_with_proof: TransactionListWithProof,
         target_ledger_info: LedgerInfoWithSignatures,
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>, Error> {
         let num_transactions = transaction_list_with_proof.transactions.len() as u64;
-        let committed_events = self
-            .chunk_executor
-            .execute_and_commit_chunk(
+        self.chunk_executor
+            .execute_chunk(
                 transaction_list_with_proof,
                 &target_ledger_info,
                 end_of_epoch_ledger_info.as_ref(),
@@ -192,15 +226,23 @@ impl<C: ChunkExecutorTrait> StorageSynchronizerInterface for StorageSynchronizer
         self.set_metrics(num_transactions);
         self.invalidate_cached_storage_summary();
 
-        Ok(committed_events)
+        Ok(vec![])
+    }
+
+    fn fetch_committed_events(&mut self) -> Result<Option<Vec<ContractEvent>>, Error> {
+        if let Ok(Some(committed_events)) = self.committed_events_receiver.lock().try_next() {
+            Ok(Some(committed_events))
+        } else {
+            Ok(None)
+        }
     }
 
     fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
-        if let Some(cached_storage_summary) = &self.cached_storage_summary {
-            Ok(cached_storage_summary.clone())
-        } else {
-            self.refresh_cached_storage_summary()
+        if let Some(cached_storage_summary) = &*self.cached_storage_summary.read() {
+            return Ok(cached_storage_summary.clone());
         }
+
+        self.refresh_cached_storage_summary()
     }
 
     fn save_account_states(

@@ -59,9 +59,24 @@ impl DriverFactory {
             waypoint,
         );
 
+        // Create a new runtime for the driver (if required)
+        let driver_runtime = if create_runtime {
+            let driver_runtime = Builder::new_multi_thread()
+                .thread_name("state-sync-driver")
+                .enable_all()
+                .build()
+                .expect("Failed to create state sync v2 driver runtime!");
+            Some(driver_runtime)
+        } else {
+            None
+        };
+
         // Create a storage synchronizer
-        let storage_synchronizer =
-            StorageSynchronizer::new(chunk_executor, Arc::new(RwLock::new(storage)));
+        let storage_synchronizer = StorageSynchronizer::new(
+            driver_runtime.as_ref(),
+            chunk_executor,
+            Arc::new(RwLock::new(storage)),
+        );
 
         // Create the driver
         let state_sync_driver = StateSyncDriver::new(
@@ -76,20 +91,11 @@ impl DriverFactory {
         );
 
         // Spawn the driver
-        let driver_runtime = if create_runtime {
-            // Create a new runtime for the driver
-            let driver_runtime = Builder::new_multi_thread()
-                .thread_name("state-sync-driver")
-                .enable_all()
-                .build()
-                .expect("Failed to create state sync v2 driver runtime!");
+        if let Some(driver_runtime) = &driver_runtime {
             driver_runtime.spawn(state_sync_driver.start_driver());
-            Some(driver_runtime)
         } else {
-            // Spawn the driver on the current runtime
             tokio::spawn(state_sync_driver.start_driver());
-            None
-        };
+        }
 
         Self {
             _driver_runtime: driver_runtime,

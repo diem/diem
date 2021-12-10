@@ -17,7 +17,6 @@ use diem_data_client::GlobalDataSummary;
 use diem_infallible::Mutex;
 use diem_logger::*;
 use diem_types::{
-    contract_event::ContractEvent,
     epoch_change::Verifier,
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
@@ -27,7 +26,6 @@ use diem_types::{
     },
     waypoint::Waypoint,
 };
-use event_notifications::EventSubscriptionService;
 use futures::channel::oneshot;
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -243,9 +241,6 @@ pub struct Bootstrapper<S> {
     // The config of the state sync driver
     driver_configuration: DriverConfiguration,
 
-    // The event subscription service to notify listeners of on-chain events
-    event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
-
     // The client through which to stream data from the Diem network
     streaming_service_client: StreamingServiceClient,
 
@@ -259,7 +254,6 @@ pub struct Bootstrapper<S> {
 impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
     pub fn new(
         driver_configuration: DriverConfiguration,
-        event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
         streaming_service_client: StreamingServiceClient,
         storage_synchronizer: Arc<Mutex<S>>,
     ) -> Self {
@@ -276,7 +270,6 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
             bootstrap_notifier_channel: None,
             bootstrapped: false,
             driver_configuration,
-            event_subscription_service,
             streaming_service_client,
             storage_synchronizer,
             verified_epoch_states,
@@ -623,16 +616,14 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         let highest_known_ledger_info = self.get_highest_known_ledger_info()?;
 
         // Execute/apply and commit the transactions/outputs
-        let committed_events = match self.driver_configuration.config.bootstrapping_mode {
+        match self.driver_configuration.config.bootstrapping_mode {
             BootstrappingMode::ApplyTransactionOutputsFromGenesis => {
                 if let Some(transaction_outputs_with_proof) = transaction_outputs_with_proof {
-                    self.storage_synchronizer
-                        .lock()
-                        .apply_and_commit_transaction_outputs(
-                            transaction_outputs_with_proof,
-                            highest_known_ledger_info,
-                            end_of_epoch_ledger_info,
-                        )
+                    self.storage_synchronizer.lock().apply_transaction_outputs(
+                        transaction_outputs_with_proof,
+                        highest_known_ledger_info,
+                        end_of_epoch_ledger_info,
+                    )?;
                 } else {
                     self.terminate_active_stream(
                         notification_id,
@@ -646,13 +637,11 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
             }
             BootstrappingMode::ExecuteTransactionsFromGenesis => {
                 if let Some(transaction_list_with_proof) = transaction_list_with_proof {
-                    self.storage_synchronizer
-                        .lock()
-                        .execute_and_commit_transactions(
-                            transaction_list_with_proof,
-                            highest_known_ledger_info,
-                            end_of_epoch_ledger_info,
-                        )
+                    self.storage_synchronizer.lock().execute_transactions(
+                        transaction_list_with_proof,
+                        highest_known_ledger_info,
+                        end_of_epoch_ledger_info,
+                    )?;
                 } else {
                     self.terminate_active_stream(
                         notification_id,
@@ -669,9 +658,7 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
             }
         };
 
-        // Notify the event subscription service of new events
-        self.notify_committed_events(notification_id, committed_events)
-            .await
+        Ok(())
     }
 
     /// Verifies the first payload version matches the version we wish to sync
@@ -771,34 +758,6 @@ impl<S: StorageSynchronizerInterface> Bootstrapper<S> {
         Ok(self
             .verified_epoch_states
             .get_epoch_ending_ledger_info(payload_end_version))
-    }
-
-    /// Notifies the event subscription service of committed events
-    async fn notify_committed_events(
-        &mut self,
-        notification_id: NotificationId,
-        committed_events: Result<Vec<ContractEvent>, Error>,
-    ) -> Result<(), Error> {
-        match committed_events {
-            Ok(committed_events) => {
-                let latest_storage_summary =
-                    self.storage_synchronizer.lock().get_storage_summary()?;
-                utils::notify_committed_events(
-                    latest_storage_summary,
-                    self.event_subscription_service.clone(),
-                    committed_events,
-                )
-                .await
-            }
-            Err(error) => {
-                self.terminate_active_stream(
-                    notification_id,
-                    NotificationFeedback::InvalidPayloadData,
-                )
-                .await?;
-                Err(error)
-            }
-        }
     }
 
     /// Returns the highest synced version in storage

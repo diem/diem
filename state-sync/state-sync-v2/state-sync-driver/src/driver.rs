@@ -18,7 +18,7 @@ use diem_data_client::DiemDataClient;
 use diem_infallible::Mutex;
 use diem_logger::*;
 use diem_metrics::{register_int_gauge_vec, IntGaugeVec};
-use diem_types::waypoint::Waypoint;
+use diem_types::{contract_event::ContractEvent, waypoint::Waypoint};
 use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use futures::StreamExt;
 use mempool_notifications::MempoolNotificationSender;
@@ -117,13 +117,11 @@ impl<
         let storage_synchronizer = Arc::new(Mutex::new(storage_synchronizer));
         let bootstrapper = Bootstrapper::new(
             driver_configuration.clone(),
-            event_subscription_service.clone(),
             streaming_service_client.clone(),
             storage_synchronizer.clone(),
         );
         let continuous_syncer = ContinuousSyncer::new(
             driver_configuration.clone(),
-            event_subscription_service.clone(),
             streaming_service_client,
             storage_synchronizer.clone(),
         );
@@ -254,13 +252,7 @@ impl<
 
         // TODO(joshlind): can we get consensus to forward the events?
         // Publish the reconfiguration notifications
-        self.event_subscription_service
-            .lock()
-            .notify_events(
-                latest_storage_summary.latest_synced_version,
-                reconfiguration_events,
-            )
-            .map_err(|error| Error::EventNotificationError(format!("{:?}", error)))
+        self.notify_committed_events(reconfiguration_events)
     }
 
     /// Handles a consensus notification to sync to a specified target
@@ -309,6 +301,28 @@ impl<
     async fn drive_progress(&mut self) {
         //trace!("Checking progress of the state sync driver!");
 
+        // Check if there's any commits to process
+        let latest_storage_summary = self
+            .storage_synchronizer
+            .lock()
+            .get_storage_summary()
+            .unwrap();
+        while let Ok(Some(committed_events)) =
+            self.storage_synchronizer.lock().fetch_committed_events()
+        {
+            if let Err(error) = self
+                .event_subscription_service
+                .lock()
+                .notify_events(
+                    latest_storage_summary.latest_synced_version,
+                    committed_events,
+                )
+                .map_err(|error| Error::EventNotificationError(format!("{:?}", error)))
+            {
+                error!("Failed to notify event subscription service: {:?}", error);
+            }
+        }
+
         // If consensus is executing, there's nothing to do.
         if self.check_if_consensus_executing() {
             trace!("Consensus is executing. There's nothing to do.");
@@ -354,5 +368,20 @@ impl<
                 error
             );
         };
+    }
+
+    /// Notifies the event subscription service of committed events
+    fn notify_committed_events(
+        &mut self,
+        committed_events: Vec<ContractEvent>,
+    ) -> Result<(), Error> {
+        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        self.event_subscription_service
+            .lock()
+            .notify_events(
+                latest_storage_summary.latest_synced_version,
+                committed_events,
+            )
+            .map_err(|error| Error::EventNotificationError(format!("{:?}", error)))
     }
 }
