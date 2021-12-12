@@ -335,12 +335,12 @@ impl<
         // Check the progress of any sync requests
         if self.consensus_notification_handler.active_sync_request() {
             trace!("There's an active sync request!");
-            if let Err(error) = self.check_sync_request_progress().await {
-                error!(
-                    "Error found when checking the sync request progress: {:?}",
-                    error
-                );
-            }
+            //if let Err(error) = self.check_sync_request_progress().await {
+            //    error!(
+            //        "Error found when checking the sync request progress: {:?}",
+            //        error
+            //    );
+            //}
         }
 
         // Check progress depending on if we're bootstrapping or continuously syncing

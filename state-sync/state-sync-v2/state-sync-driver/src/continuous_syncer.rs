@@ -180,16 +180,16 @@ impl<S: StorageSynchronizerInterface> ContinuousSyncer<S> {
         payload_start_version: Option<Version>,
     ) -> Result<(), Error> {
         // Verify the payload starting version
-        self.verify_payload_start_version(notification_id, payload_start_version)
-            .await?;
+        //self.verify_payload_start_version(notification_id, payload_start_version)
+        //    .await?;
 
         // Verify the given proof ledger info
-        self.verify_proof_ledger_info(
-            consensus_sync_request.clone(),
-            notification_id,
-            &ledger_info_with_signatures,
-        )
-        .await?;
+        // self.verify_proof_ledger_info(
+        //    consensus_sync_request.clone(),
+        //    notification_id,
+        //    &ledger_info_with_signatures,
+        //)
+        //.await?;
 
         // Execute/apply and commit the transactions/outputs
         match self.driver_configuration.config.continuous_syncing_mode {

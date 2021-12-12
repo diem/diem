@@ -274,25 +274,35 @@ impl<C: ChunkExecutorTrait + 'static> StorageSynchronizerInterface for StorageSy
 fn spawn_committer_thread<C: ChunkExecutorTrait + 'static>(
     chunk_executor: Arc<C>,
     mut committed_events_sender: mpsc::UnboundedSender<CommittedEvents>,
-    mut executed_chunk_listener: channel::diem_channel::Receiver<(), Result<(), Error>>,
+    mut executed_chunk_listener: channel::diem_channel::Receiver<(), Result<u64, Error>>,
     runtime: Option<&Runtime>,
 ) {
     let committer_thread = async move {
         loop {
             ::futures::select! {
-                _ = executed_chunk_listener.select_next_some() => {
-                    match chunk_executor.commit_chunk() {
-                        Ok(committed_events) => {
-                            let committed_events = CommittedEvents {
-                                version: 0,
-                                events: committed_events,
-                            };
-                            if let Err(error) = committed_events_sender.send(committed_events).await {
-                                panic!("Failed to send committed events! Error: {:?}", error);
+                num_transactions = executed_chunk_listener.select_next_some() => {
+                    match num_transactions {
+                        Ok(num_transactions) => {
+                            match chunk_executor.commit_chunk() {
+                                Ok(committed_events) => {
+                                    let committed_events = CommittedEvents {
+                                        version: 0,
+                                        events: committed_events,
+                                    };
+                                    if let Err(error) = committed_events_sender.send(committed_events).await {
+                                        panic!("Failed to send committed events! Error: {:?}", error);
+                                    }
+
+                                    // Update the metrics
+                                    set_metrics(num_transactions);
+                                }
+                                Err(error) => {
+                                    panic!("Failed to commit pending chunk! Error: {:?}", error);
+                                }
                             }
                         }
                         Err(error) => {
-                            panic!("Failed to commit pending chunk! Error: {:?}", error);
+                            panic!("Received error from executed chunk listener! Error: {:?}", error);
                         }
                     }
                 }
@@ -313,7 +323,7 @@ fn spawn_executor_thread<C: ChunkExecutorTrait + 'static>(
     chunk_executor: Arc<C>,
     cached_storage_summary: Arc<RwLock<Option<StorageStateSummary>>>,
     mut data_chunk_listener: channel::diem_channel::Receiver<(), Result<DataChunk, Error>>,
-    executed_chunk_notifier: channel::diem_channel::Sender<(), Result<(), Error>>,
+    executed_chunk_notifier: channel::diem_channel::Sender<(), Result<u64, Error>>,
     runtime: Option<&Runtime>,
 ) {
     let executor_thread = async move {
@@ -358,10 +368,10 @@ fn spawn_executor_thread<C: ChunkExecutorTrait + 'static>(
                     };
 
                     // Notify the listener of new chunks!
-                    notify_executed_chunks_listener(&executed_chunk_notifier);
+                    notify_executed_chunks_listener(&executed_chunk_notifier, num_transactions);
 
                     // Update the metrics
-                    set_metrics(num_transactions);
+                    // set_metrics(num_transactions);
 
                     // Invalid the cache
                     *cached_storage_summary.write() = None;
@@ -389,9 +399,10 @@ fn set_metrics(num_transactions: u64) {
 /// Notifies the executed chunks listener that executed chunks are ready to
 /// be committed.
 fn notify_executed_chunks_listener(
-    executed_chunk_notifier: &channel::diem_channel::Sender<(), Result<(), Error>>,
+    executed_chunk_notifier: &channel::diem_channel::Sender<(), Result<u64, Error>>,
+    num_transactions: u64,
 ) {
-    if let Err(error) = executed_chunk_notifier.push((), Ok(())) {
+    if let Err(error) = executed_chunk_notifier.push((), Ok(num_transactions)) {
         panic!(
             "Failed to notify the executed chunk listener! Error: {:?}",
             error
