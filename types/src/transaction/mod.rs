@@ -1085,37 +1085,43 @@ impl Display for TransactionInfo {
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct TransactionToCommit {
     transaction: Transaction,
+    transaction_info: TransactionInfo,
     account_states: HashMap<AccountAddress, AccountStateBlob>,
     jf_node_hashes: Option<HashMap<NibblePath, HashValue>>,
     write_set: WriteSet,
     events: Vec<ContractEvent>,
-    gas_used: u64,
-    status: KeptVMStatus,
 }
 
 impl TransactionToCommit {
     pub fn new(
         transaction: Transaction,
+        transaction_info: TransactionInfo,
         account_states: HashMap<AccountAddress, AccountStateBlob>,
         jf_node_hashes: Option<HashMap<NibblePath, HashValue>>,
         write_set: WriteSet,
         events: Vec<ContractEvent>,
-        gas_used: u64,
-        status: KeptVMStatus,
     ) -> Self {
         TransactionToCommit {
             transaction,
+            transaction_info,
             account_states,
             jf_node_hashes,
             write_set,
             events,
-            gas_used,
-            status,
         }
     }
 
     pub fn transaction(&self) -> &Transaction {
         &self.transaction
+    }
+
+    pub fn transaction_info(&self) -> &TransactionInfo {
+        &self.transaction_info
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn set_transaction_info(&mut self, txn_info: TransactionInfo) {
+        self.transaction_info = txn_info
     }
 
     pub fn account_states(&self) -> &HashMap<AccountAddress, AccountStateBlob> {
@@ -1135,11 +1141,11 @@ impl TransactionToCommit {
     }
 
     pub fn gas_used(&self) -> u64 {
-        self.gas_used
+        self.transaction_info.gas_used
     }
 
     pub fn status(&self) -> &KeptVMStatus {
-        &self.status
+        &self.transaction_info.status
     }
 }
 

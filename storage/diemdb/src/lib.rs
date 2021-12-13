@@ -57,7 +57,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Result};
 use diem_config::config::RocksdbConfig;
-use diem_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
+use diem_crypto::hash::{HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use diem_logger::prelude::*;
 use diem_types::{
     account_address::AccountAddress,
@@ -78,7 +78,7 @@ use diem_types::{
         PRE_GENESIS_VERSION,
     },
 };
-use itertools::{izip, zip_eq};
+use itertools::zip_eq;
 use move_core_types::{
     language_storage::{ModuleId, StructTag},
     resolver::{ModuleResolver, ResourceResolver},
@@ -569,7 +569,7 @@ impl DiemDB {
         let last_version = first_version + txns_to_commit.len() as u64 - 1;
 
         // Account state updates. Gather account state root hashes
-        let state_root_hashes = {
+        {
             let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
                 .with_label_values(&["save_transactions_state"])
                 .start_timer();
@@ -588,11 +588,11 @@ impl DiemDB {
                 node_hashes,
                 first_version,
                 &mut cs,
-            )?
-        };
+            )?;
+        }
 
         // Event updates. Gather event accumulator root hashes.
-        let event_root_hashes = {
+        {
             let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
                 .with_label_values(&["save_transactions_events"])
                 .start_timer();
@@ -601,8 +601,8 @@ impl DiemDB {
                     self.event_store
                         .put_events(ver, txn_to_commit.events(), &mut cs)
                 })
-                .collect::<Result<Vec<_>>>()?
-        };
+                .collect::<Result<Vec<_>>>()?;
+        }
 
         let new_root_hash = {
             let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
@@ -621,19 +621,11 @@ impl DiemDB {
                 },
             )?;
             // Transaction accumulator updates. Get result root hash.
-            let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
-                .map(|(t, s, e)| {
-                    Ok(TransactionInfo::new(
-                        t.transaction().hash(),
-                        s,
-                        e,
-                        t.gas_used(),
-                        t.status().clone(),
-                    ))
-                })
-                .collect::<Result<Vec<_>>>()?;
-            assert_eq!(txn_infos.len(), txns_to_commit.len());
-
+            let txn_infos: Vec<_> = txns_to_commit
+                .iter()
+                .map(|t| t.transaction_info())
+                .cloned()
+                .collect();
             self.ledger_store
                 .put_transaction_infos(first_version, &txn_infos, &mut cs)?
         };
@@ -1277,12 +1269,12 @@ impl DbWriter for DiemDB {
             if let Some(x) = ledger_info_with_sigs {
                 let claimed_last_version = x.ledger_info().version();
                 ensure!(
-                claimed_last_version + 1 == first_version + num_txns,
-                "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
-                first_version,
-                num_txns,
-                claimed_last_version,
-            );
+                    claimed_last_version + 1 == first_version + num_txns,
+                    "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
+                    first_version,
+                    num_txns,
+                    claimed_last_version,
+                );
             }
 
             // Gather db mutations to `batch`.
