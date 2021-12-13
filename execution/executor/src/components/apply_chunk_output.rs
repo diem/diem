@@ -289,7 +289,8 @@ impl ApplyChunkOutput {
                     state_tree_hash,
                     Arc::new(event_tree),
                     txn_output.gas_used(),
-                    Some(txn_info_hash),
+                    txn_info,
+                    txn_info_hash,
                 ),
             ))
         }

@@ -26,8 +26,8 @@ fn to_blocks_to_commit(
     let mut cur_txn_accu_hash = HashValue::zero();
     let blocks_to_commit = partial_blocks
         .into_iter()
-        .map(|(txns_to_commit, partial_ledger_info, validator_set)| {
-            for txn_to_commit in txns_to_commit.iter() {
+        .map(|(mut txns_to_commit, partial_ledger_info, validator_set)| {
+            for txn_to_commit in txns_to_commit.iter_mut() {
                 let mut cs = ChangeSet::new();
 
                 let txn_hash = txn_to_commit.transaction().hash();
@@ -48,6 +48,7 @@ fn to_blocks_to_commit(
                     txn_to_commit.gas_used(),
                     txn_to_commit.status().clone(),
                 );
+                txn_to_commit.set_transaction_info(txn_info.clone());
                 let txn_accu_hash =
                     db.ledger_store
                         .put_transaction_infos(cur_ver, &[txn_info], &mut cs)?;

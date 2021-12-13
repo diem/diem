@@ -431,8 +431,11 @@ pub struct TransactionData {
     /// The amount of gas used.
     gas_used: u64,
 
-    /// The transaction info hash if the VM status output was keep, None otherwise
-    txn_info_hash: Option<HashValue>,
+    /// TransactionInfo
+    txn_info: TransactionInfo,
+
+    /// TransactionInfo.hash()
+    txn_info_hash: HashValue,
 }
 
 impl TransactionData {
@@ -445,7 +448,8 @@ impl TransactionData {
         state_root_hash: HashValue,
         event_tree: Arc<InMemoryAccumulator<EventAccumulatorHasher>>,
         gas_used: u64,
-        txn_info_hash: Option<HashValue>,
+        txn_info: TransactionInfo,
+        txn_info_hash: HashValue,
     ) -> Self {
         TransactionData {
             account_blobs,
@@ -456,6 +460,7 @@ impl TransactionData {
             state_root_hash,
             event_tree,
             gas_used,
+            txn_info,
             txn_info_hash,
         }
     }
@@ -492,7 +497,7 @@ impl TransactionData {
         self.gas_used
     }
 
-    pub fn txn_info_hash(&self) -> Option<HashValue> {
+    pub fn txn_info_hash(&self) -> HashValue {
         self.txn_info_hash
     }
 }
