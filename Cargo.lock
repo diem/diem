@@ -8839,12 +8839,15 @@ name = "transaction-emitter"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "diem-client",
  "diem-config",
  "diem-crypto",
  "diem-logger",
  "diem-rest-client",
  "diem-sdk",
+ "diem-transaction-builder",
+ "diem-types",
  "diem-workspace-hack",
  "futures",
  "generate-key",

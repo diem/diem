@@ -10,6 +10,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = { version = "1.0", features = ["backtrace"] }
+async-trait = "0.1.42"
 futures = "0.3.12"
 generate-key = { path = "../../config/generate-key" }
 itertools = "0.10.0"
@@ -28,4 +29,6 @@ diem-config = { path = "../../config" }
 diem-crypto = { path = "../diem-crypto" }
 diem-logger = { path = "../../crates/diem-logger" }
 diem-sdk = { path = "../../sdk" }
-diem-workspace-hack = { version = "0.1", path = "../diem-workspace-hack" }
+diem-transaction-builder = { path = "../../sdk/transaction-builder"}
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }

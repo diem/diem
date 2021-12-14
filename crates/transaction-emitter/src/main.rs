@@ -1,26 +1,15 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{format_err, Result};
 use diem_config::config::DEFAULT_PORT;
-use diem_sdk::{
-    transaction_builder::TransactionFactory,
-    types::{chain_id::ChainId, LocalAccount},
-};
-use futures::future::join_all;
-use itertools::zip;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use rand_core::OsRng;
-use std::{
-    cmp::min,
-    process,
-    time::{Duration, Instant},
-};
+use diem_sdk::types::chain_id::ChainId;
+use std::{process, time::Duration};
 use structopt::StructOpt;
-use termion::color;
 use transaction_emitter::{
-    cluster::Cluster, instance::Instance, query_sequence_numbers, EmitJobRequest, EmitThreadParams,
-    TxnEmitter,
+    cluster::{Cluster, DPNCluster, NFTCluster},
+    instance::Instance,
+    EmitJobRequest, EmitThreadParams, Mode,
 };
 
 #[derive(StructOpt, Debug)]
@@ -47,6 +36,9 @@ struct Args {
     wait_millis: u64,
     #[structopt(long)]
     burst: bool,
+    // experiment
+    #[structopt(long)]
+    nft: bool,
     #[structopt(long, default_value = "mint.key")]
     mint_file: String,
     #[structopt(long, default_value = "TESTING")]
@@ -69,52 +61,63 @@ pub async fn main() {
         panic!("Can only use --emit-tx or --diag mode");
     }
 
-    let util = BasicSwarmUtil::setup(&args);
+    if args.peers.is_empty() {
+        panic!("Peers not set in args");
+    }
+    let parsed_peers: Vec<_> = args
+        .peers
+        .iter()
+        .map(|peer| parse_host_port(peer).expect("Failed to parse host_port"))
+        .collect();
+    let cluster: Box<dyn Cluster> = if !args.nft {
+        println!("Initialize DPN cluster");
+        Box::new(DPNCluster::from_host_port(
+            parsed_peers,
+            &args.mint_file,
+            args.chain_id,
+            args.vasp,
+        ))
+    } else {
+        println!("Initialize NFT cluster");
+        Box::new(NFTCluster::from_host_port(
+            parsed_peers,
+            &args.mint_file,
+            args.chain_id,
+        ))
+    };
     if args.diag {
-        exit_on_error(util.diag(args.vasp).await);
+        exit_on_error(cluster.diag().await);
         return;
     } else if args.emit_tx {
-        exit_on_error(emit_tx(&util.cluster, &args).await);
+        exit_on_error(emit_tx(&*cluster, &args).await);
         return;
     }
 
-    let util = BasicSwarmUtil::setup(&args);
-    exit_on_error(util.diag(args.vasp).await);
+    exit_on_error(cluster.diag().await);
 }
 
-async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
+async fn emit_tx(cluster: &dyn Cluster, args: &Args) -> Result<()> {
     let thread_params = EmitThreadParams {
         wait_millis: args.wait_millis,
         wait_committed: !args.burst,
     };
     let duration = Duration::from_secs(args.duration);
-    let client = cluster.random_instance().rest_client();
-    let (mut treasury_compliance_account, mut designated_dealer_account) = if args.vasp {
-        (
-            LocalAccount::generate(&mut rand::rngs::OsRng),
-            cluster
-                .load_dd_account(&client)
-                .await
-                .map_err(|e| format_err!("Failed to get dd account: {}", e))?,
-        )
+    let mut emitter = cluster.gen_txn_emitter().await?;
+    let mode = if args.nft {
+        Mode::NFT
     } else {
-        (
-            cluster.load_tc_account(&client).await?,
-            cluster.load_faucet_account(&client).await?,
-        )
+        Mode::DPN {
+            gas_price: 0,
+            vasp: args.vasp,
+        }
     };
-    let mut emitter = TxnEmitter::new(
-        &mut treasury_compliance_account,
-        &mut designated_dealer_account,
-        client,
-        TransactionFactory::new(cluster.chain_id),
-        StdRng::from_seed(OsRng.gen()),
-    );
-    let mut emit_job_request =
-        EmitJobRequest::new(cluster.all_instances().map(Instance::rest_client).collect())
-            .accounts_per_client(args.accounts_per_client)
-            .thread_params(thread_params)
-            .invalid_transaction_ratio(args.invalid_tx);
+    let mut emit_job_request = EmitJobRequest::new(
+        mode,
+        cluster.all_instances().map(Instance::rest_client).collect(),
+    )
+    .accounts_per_client(args.accounts_per_client)
+    .thread_params(thread_params)
+    .invalid_transaction_ratio(args.invalid_tx);
     if let Some(workers_per_endpoint) = args.workers_per_ac {
         emit_job_request = emit_job_request.workers_per_endpoint(workers_per_endpoint);
     }
@@ -148,144 +151,6 @@ fn parse_host_port(s: &str) -> Result<(String, u32, Option<u32>)> {
         return Ok((host, port, Some(debug_interface_port)));
     }
     Ok((host, port, None))
-}
-
-struct BasicSwarmUtil {
-    cluster: Cluster,
-}
-
-impl BasicSwarmUtil {
-    pub fn setup(args: &Args) -> Self {
-        if args.peers.is_empty() {
-            panic!("Peers not set in args");
-        }
-        let parsed_peers: Vec<_> = args
-            .peers
-            .iter()
-            .map(|peer| parse_host_port(peer).expect("Failed to parse host_port"))
-            .collect();
-
-        let cluster =
-            Cluster::from_host_port(parsed_peers, &args.mint_file, args.chain_id, args.vasp);
-        Self { cluster }
-    }
-
-    pub async fn diag(&self, vasp: bool) -> Result<()> {
-        let client = self.cluster.random_instance().rest_client();
-        let (mut treasury_compliance_account, mut designated_dealer_account) = if vasp {
-            (
-                LocalAccount::generate(&mut rand::rngs::OsRng),
-                self.cluster
-                    .load_dd_account(&client)
-                    .await
-                    .map_err(|e| format_err!("Failed to get dd account: {}", e))?,
-            )
-        } else {
-            (
-                self.cluster.load_tc_account(&client).await?,
-                self.cluster.load_faucet_account(&client).await?,
-            )
-        };
-        let emitter = TxnEmitter::new(
-            &mut treasury_compliance_account,
-            &mut designated_dealer_account,
-            client,
-            TransactionFactory::new(self.cluster.chain_id),
-            StdRng::from_seed(OsRng.gen()),
-        );
-        let mut faucet_account: Option<LocalAccount> = None;
-        let instances: Vec<_> = self.cluster.all_instances().collect();
-        for instance in &instances {
-            let client = instance.rest_client();
-            print!("Getting faucet account sequence number on {}...", instance);
-            let account = if vasp {
-                self.cluster
-                    .load_dd_account(&client)
-                    .await
-                    .map_err(|e| format_err!("Failed to get dd account: {}", e))?
-            } else {
-                self.cluster
-                    .load_faucet_account(&client)
-                    .await
-                    .map_err(|e| {
-                        format_err!("Failed to get faucet account sequence number: {}", e)
-                    })?
-            };
-            println!("seq={}", account.sequence_number());
-            if let Some(faucet_account) = &faucet_account {
-                if account.sequence_number() != faucet_account.sequence_number() {
-                    bail!(
-                        "Loaded sequence number {}, which is different from seen before {}",
-                        account.sequence_number(),
-                        faucet_account.sequence_number()
-                    );
-                }
-            } else {
-                faucet_account = Some(account);
-            }
-        }
-        let mut faucet_account =
-            faucet_account.expect("There is no faucet account set (not expected)");
-        let faucet_account_address = faucet_account.address();
-        for instance in &instances {
-            print!("Submitting txn through {}...", instance);
-            let deadline = emitter
-                .submit_single_transaction(
-                    &instance.rest_client(),
-                    &mut faucet_account,
-                    &faucet_account_address,
-                    10,
-                )
-                .await
-                .map_err(|e| format_err!("Failed to submit txn through {}: {}", instance, e))?;
-            println!("seq={}", faucet_account.sequence_number());
-            println!(
-                "Waiting all full nodes to get to seq {}",
-                faucet_account.sequence_number()
-            );
-            loop {
-                let addresses = &[faucet_account_address];
-                let clients = instances
-                    .iter()
-                    .map(|instance| instance.rest_client())
-                    .collect::<Vec<_>>();
-                let futures = clients
-                    .iter()
-                    .map(|client| query_sequence_numbers(client, addresses));
-                let results = join_all(futures).await;
-                let mut all_good = true;
-                for (instance, result) in zip(instances.iter(), results) {
-                    let seq = result.map_err(|e| {
-                        format_err!("Failed to query sequence number from {}: {}", instance, e)
-                    })?[0];
-                    let ip = instance.ip();
-                    let color = if seq != faucet_account.sequence_number() {
-                        all_good = false;
-                        color::Fg(color::Red).to_string()
-                    } else {
-                        color::Fg(color::Green).to_string()
-                    };
-                    print!(
-                        "[{}{}:{}{}]  ",
-                        color,
-                        &ip[..min(ip.len(), 10)],
-                        seq,
-                        color::Fg(color::Reset)
-                    );
-                }
-                println!();
-                if all_good {
-                    break;
-                }
-                if Instant::now() > deadline {
-                    bail!("Not all full nodes were updated and transaction expired");
-                }
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-        }
-        println!("Looks like all full nodes are healthy!");
-        Ok(())
-    }
 }
 
 fn exit_on_error<T>(r: Result<T>) -> T {
