@@ -11,7 +11,7 @@ use crate::{
     state_store::StateStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{ensure, Result};
 use diem_crypto::hash::HashValue;
 use diem_jellyfish_merkle::iterator::JellyfishMerkleIterator;
 use diem_types::{
@@ -128,27 +128,28 @@ impl BackupHandler {
             .get_account_state_range_proof(rightmost_key, version)
     }
 
-    /// Gets the epoch, commited version, and synced version of the DB.
+    /// Gets the epoch, committed version, and synced version of the DB.
     pub fn get_db_state(&self) -> Result<Option<DbState>> {
         self.ledger_store
             .get_startup_info()?
-            .map(|s| {
-                Ok(DbState {
-                    epoch: s.get_epoch_state().epoch,
-                    committed_version: s
-                        .committed_tree_state
-                        .num_transactions
-                        .checked_sub(1)
-                        .ok_or_else(|| anyhow!("Bootstrapped DB has no transactions."))?,
-                    synced_version: s
-                        .synced_tree_state
-                        .as_ref()
-                        .unwrap_or(&s.committed_tree_state)
-                        .num_transactions
-                        .checked_sub(1)
-                        .ok_or_else(|| anyhow!("Bootstrapped DB has no transactions."))?,
-                })
-            })
+            .map(
+                |(latest_li, epoch_state_if_not_in_li, synced_version_opt)| {
+                    Ok(DbState {
+                        epoch: latest_li
+                            .ledger_info()
+                            .next_epoch_state()
+                            .unwrap_or_else(|| {
+                                epoch_state_if_not_in_li
+                                    .as_ref()
+                                    .expect("EpochState must exist")
+                            })
+                            .epoch,
+                        committed_version: latest_li.ledger_info().version(),
+                        synced_version: synced_version_opt
+                            .unwrap_or_else(|| latest_li.ledger_info().version()),
+                    })
+                },
+            )
             .transpose()
     }
 

@@ -84,6 +84,16 @@ impl VMExecutor for MockVM {
         let mut outputs = vec![];
 
         for txn in transactions {
+            if matches!(txn, Transaction::StateCheckpoint) {
+                outputs.push(TransactionOutput::new(
+                    WriteSet::default(),
+                    vec![],
+                    0,
+                    KEEP_STATUS.clone(),
+                ));
+                continue;
+            }
+
             match decode_transaction(txn.as_signed_user_txn().unwrap()) {
                 MockVMTransaction::Mint { sender, amount } => {
                     let old_balance = read_balance(&output_cache, state_view, sender);

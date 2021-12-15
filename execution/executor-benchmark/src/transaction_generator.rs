@@ -17,6 +17,7 @@ use diem_types::{
         XUS_NAME,
     },
     chain_id::ChainId,
+    proof::definition::LeafCount,
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction, Transaction,
         Version,
@@ -62,6 +63,7 @@ enum TestCase {
 #[derive(Serialize, Deserialize)]
 struct P2pTestCase {
     num_accounts: usize,
+    num_transactions: LeafCount,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -174,9 +176,10 @@ impl TransactionGenerator {
         let mut contents = vec![];
         file.read_to_end(&mut contents).unwrap();
         let test_case: TestCase = toml::from_slice(&contents).expect("Must exist.");
-        let num_accounts = match test_case {
-            TestCase::P2p(P2pTestCase { num_accounts }) => num_accounts,
-        };
+        let TestCase::P2p(P2pTestCase {
+            num_accounts,
+            num_transactions,
+        }) = test_case;
 
         let seed = [1u8; 32];
         let rng = StdRng::from_seed(seed);
@@ -187,7 +190,7 @@ impl TransactionGenerator {
             )),
             num_accounts,
             genesis_key,
-            version: 2 * num_accounts as Version,
+            version: num_transactions - 1,
             rng,
             block_sender: Some(block_sender),
         }
@@ -197,6 +200,7 @@ impl TransactionGenerator {
     pub fn write_meta<P: AsRef<Path>>(self, path: &P) {
         let metadata = TestCase::P2p(P2pTestCase {
             num_accounts: self.num_accounts,
+            num_transactions: self.version + 1,
         });
         let serialized = toml::to_vec(&metadata).unwrap();
         let meta_file = path.as_ref().join(META_FILENAME);
@@ -248,6 +252,7 @@ impl TransactionGenerator {
                 );
                 transactions.push(txn);
             }
+            transactions.push(Transaction::StateCheckpoint);
             self.version += transactions.len() as Version;
             if let Some(sender) = &self.block_sender {
                 sender.send(transactions).unwrap();
@@ -294,6 +299,7 @@ impl TransactionGenerator {
                 );
                 transactions.push(txn);
             }
+            transactions.push(Transaction::StateCheckpoint);
             self.version += transactions.len() as Version;
 
             if let Some(sender) = &self.block_sender {
@@ -341,6 +347,7 @@ impl TransactionGenerator {
                 transactions.push(txn);
                 self.accounts_cache[sender_idx].sequence_number += 1;
             }
+            transactions.push(Transaction::StateCheckpoint);
             self.version += transactions.len() as Version;
 
             if let Some(sender) = &self.block_sender {

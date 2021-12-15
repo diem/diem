@@ -109,10 +109,11 @@ where
             };
             chunk_output.trace_log_transaction_status();
 
-            let (output, _, _) = chunk_output.apply_to_ledger(parent_accumulator)?;
+            let (output, _, _) = chunk_output.apply_to_ledger(parent_view)?;
             output
         };
 
+        output.ensure_ends_with_state_checkpoint()?;
         let block = self
             .block_tree
             .add_block(parent_block_id, block_id, output)?;

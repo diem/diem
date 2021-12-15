@@ -32,7 +32,6 @@ use diem_types::{
 use itertools::Itertools;
 use schemadb::{ReadOptions, SchemaIterator, DB};
 use std::{ops::Deref, sync::Arc};
-use storage_interface::{StartupInfo, TreeState};
 
 #[derive(Debug)]
 pub(crate) struct LedgerStore {
@@ -157,23 +156,19 @@ impl LedgerStore {
         Ok(latest_epoch_state.clone())
     }
 
-    pub fn get_tree_state(
-        &self,
-        num_transactions: LeafCount,
-        transaction_info: TransactionInfo,
-    ) -> Result<TreeState> {
-        Ok(TreeState::new(
-            num_transactions,
-            self.get_frozen_subtree_hashes(num_transactions)?,
-            transaction_info.state_change_hash(),
-        ))
-    }
-
     pub fn get_frozen_subtree_hashes(&self, num_transactions: LeafCount) -> Result<Vec<HashValue>> {
         Accumulator::get_frozen_subtree_hashes(self, num_transactions)
     }
 
-    pub fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
+    pub fn get_startup_info(
+        &self,
+    ) -> Result<
+        Option<(
+            LedgerInfoWithSignatures, // latest ledger info
+            Option<EpochState>,       // latest epoch state if not in the above ledger info
+            Option<Version>,          // synced version if newer than the ledger info
+        )>,
+    > {
         // Get the latest ledger info. Return None if not bootstrapped.
         let latest_ledger_info = match self.get_latest_ledger_info_option() {
             Some(x) => x,
@@ -188,26 +183,18 @@ impl LedgerStore {
             };
 
         let li_version = latest_ledger_info.ledger_info().version();
-        let (latest_version, latest_txn_info) = self.get_latest_transaction_info()?;
+        let (latest_version, _) = self.get_latest_transaction_info()?;
         assert!(latest_version >= li_version);
-        let (commited_tree_state, synced_tree_state) = if latest_version == li_version {
-            (
-                self.get_tree_state(latest_version + 1, latest_txn_info)?,
-                None,
-            )
+        let synced_version_opt = if latest_version == li_version {
+            None
         } else {
-            let commited_txn_info = self.get_transaction_info(li_version)?;
-            (
-                self.get_tree_state(li_version + 1, commited_txn_info)?,
-                Some(self.get_tree_state(latest_version + 1, latest_txn_info)?),
-            )
+            Some(latest_version)
         };
 
-        Ok(Some(StartupInfo::new(
+        Ok(Some((
             latest_ledger_info,
             latest_epoch_state_if_not_in_li,
-            commited_tree_state,
-            synced_tree_state,
+            synced_version_opt,
         )))
     }
 

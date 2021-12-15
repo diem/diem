@@ -298,6 +298,7 @@ impl Block {
                     .cloned()
                     .map(Transaction::UserTransaction),
             )
+            .chain(std::iter::once(Transaction::StateCheckpoint))
             .collect()
     }
 }

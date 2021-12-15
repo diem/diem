@@ -137,11 +137,19 @@ impl TxnManager for MempoolProxy {
             Some(txns) => txns,
             None => return Ok(()),
         };
-        // skip the block metadata txn result
-        for (txn, status) in txns
-            .iter()
-            .zip_eq(compute_results.compute_status().iter().skip(1))
-        {
+        // FIXME(aldenhu)
+        if txns.is_empty() {
+            return Ok(());
+        }
+        assert_eq!(txns.len() + 2, compute_results.compute_status().len());
+        // skip the block metadata txn and state checkpoint txn results
+        for (txn, status) in txns.iter().zip_eq(
+            compute_results
+                .compute_status()
+                .iter()
+                .skip(1)
+                .take(txns.len()),
+        ) {
             if let TransactionStatus::Discard(_) = status {
                 rejected_txns.push(TransactionSummary {
                     sender: txn.sender(),

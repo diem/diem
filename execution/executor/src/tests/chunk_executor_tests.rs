@@ -13,11 +13,12 @@ use crate::{
 use diem_crypto::HashValue;
 use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
-    transaction::{TransactionListWithProof, TransactionOutputListWithProof},
+    transaction::{Transaction, TransactionListWithProof, TransactionOutputListWithProof},
 };
 use diemdb::DiemDB;
 use executor_types::{BlockExecutorTrait, ChunkExecutorTrait};
 use proptest::prelude::Rng;
+use std::iter::once;
 use storage_interface::DbReaderWriter;
 
 pub struct TestExecutor {
@@ -101,20 +102,14 @@ fn test_executor_execute_or_apply_and_commit_chunk() {
     let second_batch_start = first_batch_start + first_batch_size;
     let third_batch_start = second_batch_start + second_batch_size - overlapping_size;
 
-    let (chunks, ledger_info) = {
-        tests::create_transaction_chunks(vec![
-            first_batch_start..first_batch_start + first_batch_size,
-            second_batch_start..second_batch_start + second_batch_size,
-            third_batch_start..third_batch_start + third_batch_size,
-        ])
-    };
+    let (chunks, ledger_info) = tests::create_transaction_chunks(vec![
+        first_batch_start..first_batch_start + first_batch_size,
+        second_batch_start..second_batch_start + second_batch_size,
+        third_batch_start..third_batch_start + third_batch_size,
+    ]);
     // First test with transactions only and reset chunks to be `Vec<TransactionOutputListWithProof>`.
     let chunks = {
-        let TestExecutor {
-            _path,
-            db,
-            executor,
-        } = TestExecutor::new();
+        let TestExecutor { db, executor, .. } = TestExecutor::new();
         execute_and_commit_chunk(chunks, ledger_info.clone(), &db, &executor);
 
         let ledger_version = db.reader.get_latest_version().unwrap();
@@ -134,11 +129,7 @@ fn test_executor_execute_or_apply_and_commit_chunk() {
     };
 
     // Test with transaction outputs.
-    let TestExecutor {
-        _path,
-        db,
-        executor,
-    } = TestExecutor::new();
+    let TestExecutor { db, executor, .. } = TestExecutor::new();
     // Execute the first chunk. After that we should still get the genesis ledger info from DB.
     executor
         .apply_and_commit_chunk(chunks[0].clone(), &ledger_info, None)
@@ -250,20 +241,22 @@ fn test_executor_execute_and_commit_chunk_local_result_mismatch() {
         let executor = BlockExecutor::<MockVM>::new(db);
         let parent_block_id = executor.committed_block_id();
         let block_id = tests::gen_block_id(1);
-        let version = 5;
         let mut rng = rand::thread_rng();
-        let txns = (0..version)
+        let txns = (0..5)
             .map(|_| encode_mint_transaction(tests::gen_address(rng.gen::<u64>()), 100))
+            .chain(once(Transaction::StateCheckpoint))
             .collect::<Vec<_>>();
         let output = executor
             .execute_block((block_id, txns), parent_block_id)
             .unwrap();
-        let ledger_info = tests::gen_ledger_info(version, output.root_hash(), block_id, 1);
+        let ledger_info = tests::gen_ledger_info(6, output.root_hash(), block_id, 1);
         executor.commit_blocks(vec![block_id], ledger_info).unwrap();
     }
 
     // Fork starts. Should fail.
     chunk_manager.reset().unwrap();
+
+    // TODO(aldenhu): test for specific error
     assert!(chunk_manager
         .execute_and_commit_chunk(chunks[0].clone(), &ledger_info, None)
         .is_err());

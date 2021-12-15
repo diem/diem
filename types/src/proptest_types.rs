@@ -45,7 +45,7 @@ use proptest::{
 use proptest_derive::Arbitrary;
 use serde_json::Value;
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
     iter::Iterator,
 };
@@ -837,27 +837,22 @@ impl TransactionToCommitGen {
             .into_iter()
             .map(|(index, event_gen)| event_gen.materialize(index, universe))
             .collect();
-        // Account states must be materialized last, to reflect the latest account and event
-        // sequence numbers.
-        let account_states = self
-            .account_state_gens
-            .into_iter()
-            .map(|(index, blob_gen)| {
-                (
-                    universe.get_account_info(index).address,
-                    blob_gen.materialize(index, universe),
-                )
-            })
-            .collect();
 
         TransactionToCommit::new(
             Transaction::UserTransaction(transaction),
             TransactionInfo::new_placeholder(self.gas_used, self.status),
-            account_states,
+            // account states will be dealt with in BlockGen at a state checkpoint
+            HashMap::new(),
             None,
             self.write_set,
             events,
         )
+    }
+
+    pub fn take_account_gens(&mut self) -> Vec<(Index, AccountStateBlobGen)> {
+        let mut ret = Vec::new();
+        std::mem::swap(&mut ret, &mut self.account_state_gens);
+        ret
     }
 }
 
@@ -1130,11 +1125,32 @@ impl BlockGen {
         universe: &mut AccountInfoUniverse,
     ) -> (Vec<TransactionToCommit>, LedgerInfo) {
         let mut txns_to_commit = Vec::new();
+        let mut touched_accounts = Vec::new();
 
         // materialize user transactions
-        for txn_gen in self.txn_gens {
+        for mut txn_gen in self.txn_gens {
+            touched_accounts.extend(txn_gen.take_account_gens().into_iter());
             txns_to_commit.push(txn_gen.materialize(universe));
         }
+
+        // create state checkpoint transaction as the last transaction of the block
+        let account_states = touched_accounts
+            .into_iter()
+            .map(|(index, blob_gen)| {
+                (
+                    universe.get_account_info(index).address,
+                    blob_gen.materialize(index, universe),
+                )
+            })
+            .collect();
+        txns_to_commit.push(TransactionToCommit::new(
+            Transaction::StateCheckpoint,
+            TransactionInfo::new_placeholder(0, KeptVMStatus::Executed),
+            account_states,
+            None,
+            WriteSet::default(),
+            Vec::new(),
+        ));
 
         // materialize ledger info
         let ledger_info = self

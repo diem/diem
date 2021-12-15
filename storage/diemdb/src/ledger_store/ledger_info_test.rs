@@ -150,29 +150,22 @@ proptest! {
         let db = set_up(&tmp_dir, &ledger_infos_with_sigs);
         put_transaction_infos(&db, &txn_infos);
 
-        let startup_info = db.ledger_store.get_startup_info().unwrap().unwrap();
-        let latest_li = ledger_infos_with_sigs.last().unwrap().ledger_info();
-        assert_eq!(startup_info.latest_ledger_info, *ledger_infos_with_sigs.last().unwrap());
-        let expected_epoch_state = if latest_li.next_epoch_state().is_none() {
-            Some(db.ledger_store.get_epoch_state(latest_li.epoch()).unwrap())
+        let (latest_li, epoch_state, synced_version_opt) = db.ledger_store.get_startup_info().unwrap().unwrap();
+        assert_eq!(latest_li, *ledger_infos_with_sigs.last().unwrap());
+        let li = latest_li.ledger_info();
+        let expected_epoch_state = if li.next_epoch_state().is_none() {
+            Some(db.ledger_store.get_epoch_state(li.epoch()).unwrap())
         } else {
             None
         };
-        assert_eq!(startup_info.latest_epoch_state, expected_epoch_state);
-        let committed_version = get_last_version(&ledger_infos_with_sigs);
-        assert_eq!(
-            startup_info.committed_tree_state.account_state_root_hash,
-            txn_infos[committed_version as usize].state_change_hash(),
-        );
+        assert_eq!(epoch_state, expected_epoch_state);
         let synced_version = (txn_infos.len() - 1) as u64;
-        if synced_version > committed_version {
-            assert_eq!(
-                startup_info.synced_tree_state.unwrap().account_state_root_hash,
-                txn_infos.last().unwrap().state_change_hash(),
-            );
+        let expected_synced_version = if synced_version > li.version() {
+                Some(synced_version)
         } else {
-            assert!(startup_info.synced_tree_state.is_none());
-        }
+            None
+        };
+        assert_eq!(synced_version_opt, expected_synced_version);
     }
 }
 

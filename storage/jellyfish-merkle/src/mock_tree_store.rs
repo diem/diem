@@ -32,6 +32,18 @@ where
         Ok(self.data.read().0.get(node_key).cloned())
     }
 
+    fn get_prev_node(&self, node_key: &NodeKey) -> Result<Option<(NodeKey, Node<V>)>> {
+        let locked = self.data.read();
+        match locked.0.get(node_key) {
+            Some(node) => Ok(Some((node_key.clone(), node.clone()))),
+            None => {
+                // FIXME(aldenhu): test the case of empty updates better
+                assert!(locked.0.is_empty());
+                Ok(None)
+            }
+        }
+    }
+
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode<V>)>> {
         let locked = self.data.read();
         let mut node_key_and_node: Option<(NodeKey, LeafNode<V>)> = None;

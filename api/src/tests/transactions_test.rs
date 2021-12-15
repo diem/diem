@@ -163,14 +163,14 @@ async fn test_get_transactions_returns_last_page_when_start_version_is_not_speci
     for _i in 0..20 {
         let account = context.gen_account();
         let txn = context.create_parent_vasp_by_account(&mut tc, &account);
-        context.commit_block(&vec![txn.clone()]).await;
+        context.commit_block(&vec![txn]).await;
     }
 
     let resp = context.get("/transactions").await;
     let txns = resp.as_array().unwrap();
     assert_eq!(25, txns.len());
-    assert_eq!("15", txns[0]["version"]);
-    assert_eq!("39", txns[24]["version"]);
+    assert_eq!("35", txns[0]["version"]);
+    assert_eq!("59", txns[24]["version"]);
 }
 
 #[tokio::test]
@@ -262,7 +262,7 @@ async fn test_get_transactions_output_user_transaction_with_script_function_payl
     let txn = context.create_parent_vasp(&account);
     context.commit_block(&vec![txn.clone()]).await;
 
-    let txns = context.get("/transactions?start=1").await;
+    let txns = context.get("/transactions?start=1&limit=2").await;
     assert_eq!(2, txns.as_array().unwrap().len());
 
     let expected_txns = context.get_transactions(1, 2);
@@ -374,7 +374,7 @@ async fn test_get_transactions_output_user_transaction_with_script_payload() {
     );
     context.commit_block(&vec![txn.clone()]).await;
 
-    let txns = context.get("/transactions?start=2").await;
+    let txns = context.get("/transactions?start=2&limit=1").await;
     assert_eq!(1, txns.as_array().unwrap().len());
 
     let expected_txns = context.get_transactions(2, 1);
@@ -417,7 +417,7 @@ async fn test_get_transactions_output_user_transaction_with_module_payload() {
     );
     context.commit_block(&vec![txn.clone()]).await;
 
-    let txns = context.get("/transactions?start=2").await;
+    let txns = context.get("/transactions?start=2&limit=1").await;
     assert_eq!(1, txns.as_array().unwrap().len());
 
     let expected_txns = context.get_transactions(2, 1);
@@ -491,7 +491,7 @@ async fn test_get_transactions_output_user_transaction_with_write_set_payload() 
     );
     context.commit_block(&vec![txn.clone()]).await;
 
-    let txns = context.get("/transactions?start=2").await;
+    let txns = context.get("/transactions?start=2&limit=1").await;
     assert_eq!(1, txns.as_array().unwrap().len());
 
     assert_json(
@@ -777,7 +777,7 @@ async fn test_get_transaction_by_hash() {
     let txn = context.create_parent_vasp(&account);
     context.commit_block(&vec![txn.clone()]).await;
 
-    let txns = context.get("/transactions?start=2").await;
+    let txns = context.get("/transactions?start=2&limit=1").await;
     assert_eq!(1, txns.as_array().unwrap().len());
 
     let resp = context
@@ -849,7 +849,7 @@ async fn test_get_transaction_by_version() {
     let txn = context.create_parent_vasp(&account);
     context.commit_block(&vec![txn.clone()]).await;
 
-    let txns = context.get("/transactions?start=2").await;
+    let txns = context.get("/transactions?start=2&limit=1").await;
     assert_eq!(1, txns.as_array().unwrap().len());
 
     let resp = context.get("/transactions/2").await;
@@ -1093,7 +1093,7 @@ async fn test_signing_message_with_payload(
     context.commit_mempool_txns(10).await;
 
     let ledger = context.get("/").await;
-    assert_eq!(ledger["ledger_version"].as_str().unwrap(), "2"); // one metadata + one txn
+    assert_eq!(ledger["ledger_version"].as_str().unwrap(), "3"); // metadata + txn + state checkpoint
 }
 
 #[tokio::test]

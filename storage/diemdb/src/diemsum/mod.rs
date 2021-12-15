@@ -32,7 +32,6 @@ impl Diemsum {
 
     pub fn get_startup_info(&self) -> Result<StartupInfo> {
         self.db
-            .ledger_store
             .get_startup_info()?
             .ok_or_else(|| format_err!("DB is empty"))
     }

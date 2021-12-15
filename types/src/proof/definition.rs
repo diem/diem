@@ -755,7 +755,7 @@ impl AccountStateProof {
         self.transaction_info_to_account_proof.verify(
             self.transaction_info_with_proof
                 .transaction_info
-                .state_change_hash(),
+                .expect_state_checkpoint_hash()?,
             account_address_hash,
             account_state_blob,
         )?;

@@ -22,6 +22,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[ignore]
 #[tokio::test]
 async fn test_db_restore() {
     // pre-build tools

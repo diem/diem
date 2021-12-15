@@ -3,13 +3,24 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{components::chunk_output::ChunkOutput, metrics::DIEM_EXECUTOR_ERRORS};
+use std::{
+    collections::{hash_map, HashMap, HashSet},
+    convert::TryFrom,
+    iter::repeat,
+    ops::Deref,
+    sync::Arc,
+};
+
 use anyhow::{anyhow, bail, ensure, Result};
+use once_cell::sync::Lazy;
+use rayon::prelude::*;
+
 use diem_crypto::{
-    hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
+    hash::{CryptoHash, EventAccumulatorHasher},
     HashValue,
 };
 use diem_logger::error;
+use diem_state_view::StateViewId;
 use diem_types::{
     account_address::{AccountAddress, HashAccountAddress},
     account_state::AccountState,
@@ -19,31 +30,28 @@ use diem_types::{
     event::EventKey,
     nibble::nibble_path::NibblePath,
     on_chain_config,
-    proof::accumulator::InMemoryAccumulator,
+    proof::{accumulator::InMemoryAccumulator, definition::LeafCount},
     transaction::{
         Transaction, TransactionInfo, TransactionOutput, TransactionPayload, TransactionStatus,
+        Version,
     },
     write_set::{WriteOp, WriteSet},
 };
 use executor_types::{ExecutedChunk, ExecutedTrees, ProofReader, TransactionData};
-use once_cell::sync::Lazy;
-use rayon::prelude::*;
-use scratchpad::SparseMerkleTree;
-use std::{
-    collections::{hash_map, HashMap, HashSet},
-    convert::TryFrom,
-    iter::repeat,
-    ops::Deref,
-    sync::Arc,
+use scratchpad::{AccountStatus, FrozenSparseMerkleTree, SparseMerkleTree};
+use storage_interface::{
+    state_view::{InMemoryState, StateCache, VerifiedStateView},
+    DbReader, TreeState,
 };
-use storage_interface::{state_view::StateCache, DbReader, TreeState};
+
+use crate::{components::chunk_output::ChunkOutput, metrics::DIEM_EXECUTOR_ERRORS};
 
 pub struct ApplyChunkOutput;
 
 impl ApplyChunkOutput {
     pub fn apply(
         chunk_output: ChunkOutput,
-        base_accumulator: &Arc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
+        base_view: &ExecutedTrees,
     ) -> Result<(ExecutedChunk, Vec<Transaction>, Vec<Transaction>)> {
         let ChunkOutput {
             state_cache,
@@ -56,21 +64,36 @@ impl ApplyChunkOutput {
             Self::sort_transactions(transactions, transaction_outputs)?;
 
         // Apply the write set, get the latest state.
-        let (account_blobs, roots_with_node_hashes, result_state, next_epoch_state) =
-            Self::apply_write_set(state_cache, new_epoch, &to_keep)?;
+        let (
+            account_blobs,
+            new_node_hashes_vec,
+            state_checkpoint_hashes,
+            result_state,
+            next_epoch_state,
+        ) = InMemoryStateCalculator::new(
+            base_view.state(),
+            state_cache,
+            base_view.txn_accumulator().num_leaves(),
+        )
+        .run_for_transaction_chunk(&to_keep, new_epoch)?;
 
         // Calculate TransactionData and TransactionInfo, i.e. the ledger history diff.
-        let (to_commit, transaction_info_hashes) =
-            Self::assemble_ledger_diff(to_keep, account_blobs, roots_with_node_hashes);
+        let (to_commit, transaction_info_hashes) = Self::assemble_ledger_diff(
+            to_keep,
+            account_blobs,
+            new_node_hashes_vec,
+            state_checkpoint_hashes,
+        );
+        let result_view = ExecutedTrees::new(
+            result_state,
+            Arc::new(base_view.txn_accumulator().append(&transaction_info_hashes)),
+        );
 
         Ok((
             ExecutedChunk {
                 status,
                 to_commit,
-                result_view: ExecutedTrees::new_copy(
-                    result_state,
-                    Arc::new(base_accumulator.append(&transaction_info_hashes)),
-                ),
+                result_view,
                 next_epoch_state,
                 ledger_info: None,
             },
@@ -153,123 +176,34 @@ impl ApplyChunkOutput {
         ))
     }
 
-    fn apply_write_set(
-        state_cache: StateCache,
-        new_epoch: bool,
-        to_keep: &[(Transaction, ParsedTransactionOutput)],
-    ) -> Result<(
-        Vec<HashMap<AccountAddress, AccountStateBlob>>,
-        Vec<(HashValue, HashMap<NibblePath, HashValue>)>,
-        SparseMerkleTree<AccountStateBlob>,
-        Option<EpochState>,
-    )> {
-        let StateCache {
-            frozen_base,
-            mut accounts,
-            proofs,
-        } = state_cache;
-
-        // Apply write sets to account states in the AccountCache, resulting in new account states.
-        let account_states = to_keep
-            .iter()
-            .map(|(t, o)| process_write_set(t, &mut accounts, o.write_set().clone()))
-            .collect::<Result<Vec<_>>>()?;
-        let account_blobs = account_states
-            .par_iter()
-            .with_min_len(100)
-            .map(|account_to_state| {
-                account_to_state
-                    .iter()
-                    .map(|(addr, state)| Ok((*addr, AccountStateBlob::try_from(state)?)))
-                    .collect::<Result<HashMap<_, _>>>()
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        // Apply new account states to the base state tree, resulting in updated state tree.
-        let (roots_with_node_hashes, result_state) = frozen_base
-            .serial_update(
-                Self::account_blobs_to_smt_updates(&account_blobs),
-                &ProofReader::new(proofs),
-            )
-            .map_err(|e| anyhow!("Failed to update state tree. err: {:?}", e))?;
-        // Release ASAP the ref to the base SMT to allow old in-mem nodes to be dropped,
-        // now that we don't require access to them.
-        let result_state = result_state.unfreeze();
-
-        // Get the updated validator set from updated account state.
-        let next_epoch_state = if new_epoch {
-            Some(Self::parse_validator_set(&accounts)?)
-        } else {
-            None
-        };
-
-        Ok((
-            account_blobs,
-            roots_with_node_hashes,
-            result_state,
-            next_epoch_state,
-        ))
-    }
-
-    fn account_blobs_to_smt_updates(
-        account_blobs: &[HashMap<AccountAddress, AccountStateBlob>],
-    ) -> Vec<Vec<(HashValue, &AccountStateBlob)>> {
-        account_blobs
-            .iter()
-            .map(|m| {
-                m.iter()
-                    .map(|(account, blob)| (HashAccountAddress::hash(account), blob))
-                    .collect::<Vec<_>>()
-            })
-            .collect()
-    }
-
-    fn parse_validator_set(accounts: &HashMap<AccountAddress, AccountState>) -> Result<EpochState> {
-        let validator_set = accounts
-            .get(&on_chain_config::config_address())
-            .map(|state| {
-                state
-                    .get_validator_set()?
-                    .ok_or_else(|| anyhow!("ValidatorSet does not exist"))
-            })
-            .ok_or_else(|| anyhow!("ValidatorSet account does not exist"))??;
-        let configuration = accounts
-            .get(&on_chain_config::config_address())
-            .map(|state| {
-                state
-                    .get_configuration_resource()?
-                    .ok_or_else(|| anyhow!("Configuration does not exist"))
-            })
-            .ok_or_else(|| anyhow!("Association account does not exist"))??;
-
-        Ok(EpochState {
-            epoch: configuration.epoch(),
-            verifier: (&validator_set).into(),
-        })
-    }
-
     fn assemble_ledger_diff(
         to_keep: Vec<(Transaction, ParsedTransactionOutput)>,
         account_blobs: Vec<HashMap<AccountAddress, AccountStateBlob>>,
-        roots_with_node_hashes: Vec<(HashValue, HashMap<NibblePath, HashValue>)>,
+        new_node_hashes_vec: Vec<HashMap<NibblePath, HashValue>>,
+        state_checkpoint_hashes: Vec<Option<HashValue>>,
     ) -> (Vec<(Transaction, TransactionData)>, Vec<HashValue>) {
         let mut to_commit = vec![];
         let mut txn_info_hashes = vec![];
-        for ((txn, txn_output), ((state_tree_hash, new_node_hashes), blobs)) in itertools::zip_eq(
-            to_keep,
-            itertools::zip_eq(roots_with_node_hashes, account_blobs),
-        ) {
+        for (((txn, txn_output), state_checkpoint_hash), (new_node_hashes, blobs)) in
+            itertools::zip_eq(
+                itertools::zip_eq(to_keep, state_checkpoint_hashes),
+                itertools::zip_eq(new_node_hashes_vec, account_blobs),
+            )
+        {
             let (write_set, events, reconfig_events, gas_used, status) = txn_output.unpack();
             let event_tree = {
                 let event_hashes: Vec<_> = events.iter().map(CryptoHash::hash).collect();
                 InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
             };
 
+            let state_change_hash = CryptoHash::hash(&write_set);
+
             let txn_info = match &status {
                 TransactionStatus::Keep(status) => TransactionInfo::new(
                     txn.hash(),
-                    state_tree_hash,
+                    state_change_hash,
                     event_tree.root_hash(),
+                    state_checkpoint_hash,
                     gas_used,
                     status.clone(),
                 ),
@@ -311,14 +245,13 @@ pub fn ensure_no_retry(to_retry: Vec<Transaction>) -> Result<()> {
 /// For all accounts modified by this transaction, find the previous blob and update it based
 /// on the write set. Returns the blob value of all these accounts.
 pub fn process_write_set(
-    transaction: &Transaction,
+    transaction: Option<&Transaction>,
     account_to_state: &mut HashMap<AccountAddress, AccountState>,
     write_set: WriteSet,
-) -> Result<HashMap<AccountAddress, AccountState>> {
-    let mut updated_blobs = HashMap::new();
-
+) -> Result<HashSet<AccountAddress>> {
     // Find all addresses this transaction touches while processing each write op.
     let mut addrs = HashSet::new();
+
     for (access_path, write_op) in write_set.into_iter() {
         let address = access_path.address;
         let path = access_path.path;
@@ -327,23 +260,25 @@ pub fn process_write_set(
                 update_account_state(entry.get_mut(), path, write_op);
             }
             hash_map::Entry::Vacant(entry) => {
-                // Before writing to an account, VM should always read that account. So we
-                // should not reach this code path. The exception is genesis transaction (and
-                // maybe other writeset transactions).
-                match transaction {
-                    Transaction::GenesisTransaction(_) => (),
-                    Transaction::BlockMetadata(_) => {
-                        bail!("Write set should be a subset of read set.")
-                    }
-                    Transaction::UserTransaction(txn) => match txn.payload() {
-                        TransactionPayload::ModuleBundle(_)
-                        | TransactionPayload::Script(_)
-                        | TransactionPayload::ScriptFunction(_) => {
+                if let Some(transaction) = transaction {
+                    // Before writing to an account, VM should always read that account. So we
+                    // should not reach this code path. The exception is genesis transaction (and
+                    // maybe other writeset transactions).
+                    match transaction {
+                        Transaction::GenesisTransaction(_) => (),
+                        Transaction::BlockMetadata(_) => {
                             bail!("Write set should be a subset of read set.")
                         }
-                        TransactionPayload::WriteSet(_) => (),
-                    },
-                    Transaction::StateCheckpoint => {}
+                        Transaction::UserTransaction(txn) => match txn.payload() {
+                            TransactionPayload::ModuleBundle(_)
+                            | TransactionPayload::Script(_)
+                            | TransactionPayload::ScriptFunction(_) => {
+                                bail!("Write set should be a subset of read set.")
+                            }
+                            TransactionPayload::WriteSet(_) => (),
+                        },
+                        Transaction::StateCheckpoint => {}
+                    }
                 }
 
                 let mut account_state = Default::default();
@@ -354,12 +289,7 @@ pub fn process_write_set(
         addrs.insert(address);
     }
 
-    for addr in addrs {
-        let account_state = account_to_state.get(&addr).expect("Address should exist.");
-        updated_blobs.insert(addr, account_state.clone());
-    }
-
-    Ok(updated_blobs)
+    Ok(addrs)
 }
 
 fn update_account_state(account_state: &mut AccountState, path: Vec<u8>, write_op: WriteOp) {
@@ -374,12 +304,271 @@ pub trait IntoLedgerView {
 }
 
 impl IntoLedgerView for TreeState {
-    fn into_ledger_view(self, _db: &Arc<dyn DbReader>) -> Result<ExecutedTrees> {
-        Ok(ExecutedTrees::new(
-            self.account_state_root_hash,
+    fn into_ledger_view(self, db: &Arc<dyn DbReader>) -> Result<ExecutedTrees> {
+        let checkpoint_num_txns = self
+            .num_transactions
+            .checked_sub(self.write_sets_after_checkpoint.len() as LeafCount)
+            .ok_or_else(|| anyhow!("State checkpoint pre-dates genesis."))?;
+        let checkpoint =
+            InMemoryState::new_at_checkpoint(self.state_checkpoint_hash, checkpoint_num_txns);
+
+        let checkpoint_state_view = VerifiedStateView::new(
+            StateViewId::Miscellaneous,
+            db.clone(),
+            checkpoint_num_txns.checked_sub(1),
+            self.state_checkpoint_hash,
+            checkpoint.checkpoint.clone(),
+        );
+        let write_sets: Vec<_> = self.write_sets_after_checkpoint.iter().collect();
+        checkpoint_state_view.prime_cache_by_write_set(&write_sets)?;
+        let state_cache = checkpoint_state_view.into_state_cache();
+        let calculator =
+            InMemoryStateCalculator::new(&checkpoint, state_cache, checkpoint_num_txns);
+        let state = calculator.run_for_write_sets_after_checkpoint(&write_sets)?;
+        let transaction_accumulator = Arc::new(InMemoryAccumulator::new(
             self.ledger_frozen_subtree_hashes,
             self.num_transactions,
+        )?);
+
+        Ok(ExecutedTrees::new(state, transaction_accumulator))
+    }
+}
+
+// FIXME(aldenhu): doc
+struct InMemoryStateCalculator {
+    _frozen_base: FrozenSparseMerkleTree<AccountStateBlob>,
+    accounts: HashMap<AccountAddress, AccountState>,
+    proof_reader: ProofReader,
+
+    checkpoint: SparseMerkleTree<AccountStateBlob>,
+    checkpoint_num_transactions: LeafCount,
+    latest: FrozenSparseMerkleTree<AccountStateBlob>,
+
+    next_version: Version,
+    updated_between_checkpoint_and_latest: HashSet<AccountAddress>,
+    updated_after_latest: HashSet<AccountAddress>,
+}
+
+impl InMemoryStateCalculator {
+    pub fn new(base: &InMemoryState, state_cache: StateCache, next_version: Version) -> Self {
+        let StateCache {
+            _frozen_base,
+            accounts,
+            proofs,
+        } = state_cache;
+        let InMemoryState {
+            checkpoint,
+            checkpoint_num_transactions,
+            current,
+            updated_since_checkpoint: updated_addresses_since_checkpoint,
+        } = base.clone();
+
+        Self {
+            _frozen_base,
+            accounts,
+            proof_reader: ProofReader::new(proofs),
+            checkpoint,
+            checkpoint_num_transactions,
+            latest: current.freeze(),
+            next_version,
+            updated_between_checkpoint_and_latest: updated_addresses_since_checkpoint,
+            updated_after_latest: HashSet::new(),
+        }
+    }
+
+    pub fn run_for_transaction_chunk(
+        mut self,
+        to_keep: &[(Transaction, ParsedTransactionOutput)],
+        new_epoch: bool,
+    ) -> Result<(
+        Vec<HashMap<AccountAddress, AccountStateBlob>>,
+        Vec<HashMap<NibblePath, HashValue>>,
+        Vec<Option<HashValue>>,
+        InMemoryState,
+        Option<EpochState>,
+    )> {
+        let mut account_blobs = Vec::new();
+        let mut new_node_hashes_vec = Vec::new();
+        let mut state_checkpoint_hashes = Vec::new();
+
+        for (txn, txn_output) in to_keep {
+            let (b, n, c) = self.add_transaction(txn, txn_output)?;
+            account_blobs.push(b);
+            new_node_hashes_vec.push(n);
+            state_checkpoint_hashes.push(c);
+        }
+        let (result_state, accounts) = self.finish()?;
+
+        // Get the updated validator set from updated account state.
+        let next_epoch_state = if new_epoch {
+            Some(Self::parse_validator_set(&accounts)?)
+        } else {
+            None
+        };
+
+        Ok((
+            account_blobs,
+            new_node_hashes_vec,
+            state_checkpoint_hashes,
+            result_state,
+            next_epoch_state,
         ))
+    }
+
+    fn add_transaction(
+        &mut self,
+        txn: &Transaction,
+        txn_output: &ParsedTransactionOutput,
+    ) -> Result<(
+        HashMap<AccountAddress, AccountStateBlob>,
+        HashMap<NibblePath, HashValue>,
+        Option<HashValue>,
+    )> {
+        let updated_accounts = process_write_set(
+            Some(txn),
+            &mut self.accounts,
+            txn_output.write_set().clone(),
+        )?;
+        self.updated_after_latest
+            .extend(updated_accounts.into_iter());
+        self.next_version += 1;
+
+        if txn_output.is_reconfig() {
+            self.checkpoint()
+        } else {
+            match txn {
+                Transaction::BlockMetadata(_) | Transaction::UserTransaction(_) => {
+                    Ok((HashMap::new(), HashMap::new(), None))
+                }
+                Transaction::GenesisTransaction(_) | Transaction::StateCheckpoint => {
+                    self.checkpoint()
+                }
+            }
+        }
+    }
+
+    fn checkpoint(
+        &mut self,
+    ) -> Result<(
+        HashMap<AccountAddress, AccountStateBlob>,
+        HashMap<NibblePath, HashValue>,
+        Option<HashValue>,
+    )> {
+        // Update SMT.
+        let updated_after_current = self.account_blobs_after_current()?;
+        let smt_updates: Vec<_> = updated_after_current
+            .iter()
+            .map(|(addr, blob)| (HashAccountAddress::hash(addr), blob))
+            .collect();
+        let new_checkpoint = self.latest.batch_update(smt_updates, &self.proof_reader)?;
+        let new_node_hashes =
+            new_checkpoint.new_node_hashes_since(&self.checkpoint.clone().freeze());
+        let root_hash = new_checkpoint.root_hash();
+
+        // Calculate the set of accounts that got changed since last checkpoint.
+        let updated_between_checkpoint_and_current: Vec<_> = self
+            .updated_between_checkpoint_and_latest
+            .difference(&self.updated_after_latest)
+            .map(|addr| match self.latest.get(addr.hash()) {
+                AccountStatus::ExistsInScratchPad(blob) => Ok((*addr, blob)),
+                _ => Err(anyhow!(
+                    "Pending state after checkpoint missing. addr: {:x}",
+                    addr
+                )),
+            })
+            .collect::<Result<_>>()?;
+
+        let mut account_blobs = updated_after_current;
+        account_blobs.extend(updated_between_checkpoint_and_current.into_iter());
+
+        // Move self to the new checkpoint.
+        self.latest = new_checkpoint.clone();
+        self.checkpoint = new_checkpoint.unfreeze();
+        self.checkpoint_num_transactions = self.next_version;
+        self.updated_between_checkpoint_and_latest = HashSet::new();
+        self.updated_after_latest = HashSet::new();
+
+        Ok((account_blobs, new_node_hashes, Some(root_hash)))
+    }
+
+    fn parse_validator_set(accounts: &HashMap<AccountAddress, AccountState>) -> Result<EpochState> {
+        let validator_set = accounts
+            .get(&on_chain_config::config_address())
+            .map(|state| {
+                state
+                    .get_validator_set()?
+                    .ok_or_else(|| anyhow!("ValidatorSet does not exist"))
+            })
+            .ok_or_else(|| anyhow!("ValidatorSet account does not exist"))??;
+        let configuration = accounts
+            .get(&on_chain_config::config_address())
+            .map(|state| {
+                state
+                    .get_configuration_resource()?
+                    .ok_or_else(|| anyhow!("Configuration does not exist"))
+            })
+            .ok_or_else(|| anyhow!("Association account does not exist"))??;
+
+        Ok(EpochState {
+            epoch: configuration.epoch(),
+            verifier: (&validator_set).into(),
+        })
+    }
+
+    fn account_blobs_after_current(&self) -> Result<HashMap<AccountAddress, AccountStateBlob>> {
+        self.updated_after_latest
+            .iter()
+            .collect::<Vec<_>>()
+            .par_iter()
+            .with_min_len(100)
+            .map(|addr| {
+                Ok((
+                    **addr,
+                    AccountStateBlob::try_from(
+                        self.accounts
+                            .get(addr)
+                            .ok_or_else(|| anyhow!("Address should exist."))?,
+                    )?,
+                ))
+            })
+            .collect::<Result<_>>()
+    }
+
+    fn finish(self) -> Result<(InMemoryState, HashMap<AccountAddress, AccountState>)> {
+        let updates_after_current = self.account_blobs_after_current()?;
+        let smt_updates: Vec<_> = updates_after_current
+            .iter()
+            .map(|(addr, blob)| (HashAccountAddress::hash(addr), blob))
+            .collect();
+        let latest = self.latest.batch_update(smt_updates, &self.proof_reader)?;
+
+        let mut updated_since_checkpoint = self.updated_between_checkpoint_and_latest;
+        updated_since_checkpoint.extend(updates_after_current.keys().cloned());
+
+        let result_state = InMemoryState::new(
+            self.checkpoint,
+            self.checkpoint_num_transactions,
+            latest.unfreeze(),
+            updated_since_checkpoint,
+        );
+
+        // FIXME(aldenhu): do we need to prime "accounts"?
+        Ok((result_state, self.accounts))
+    }
+
+    pub fn run_for_write_sets_after_checkpoint(
+        mut self,
+        write_sets: &[&WriteSet],
+    ) -> Result<InMemoryState> {
+        for write_set in write_sets {
+            let updated_accounts =
+                process_write_set(None, &mut self.accounts, (*write_set).clone())?;
+            self.updated_after_latest
+                .extend(updated_accounts.into_iter());
+            self.next_version += 1;
+        }
+        let (result_state, _) = self.finish()?;
+        Ok(result_state)
     }
 }
 

@@ -6723,6 +6723,7 @@ dependencies = [
  "rand 0.8.4",
  "rayon",
  "storage-interface",
+ "thiserror",
 ]
 
 [[package]]

@@ -75,7 +75,7 @@ proptest! {
                  prop_assert_eq!(&Some(blob), &state_with_proof.0);
                  prop_assert!(state_with_proof.1
                      .verify(
-                         startup_info.committed_tree_state.account_state_root_hash,
+                         startup_info.committed_tree_state.state_checkpoint_hash,
                          address.hash(),
                          state_with_proof.0.as_ref()
                      )

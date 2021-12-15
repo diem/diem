@@ -1,16 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    block_executor::BlockExecutor,
-    chunk_executor::ChunkExecutor,
-    components::{apply_chunk_output::IntoLedgerView, chunk_output::ChunkOutput},
-    db_bootstrapper::{generate_waypoint, maybe_bootstrap},
-    mock_vm::{
-        encode_mint_transaction, encode_reconfiguration_transaction, encode_transfer_transaction,
-        MockVM, DISCARD_STATUS, KEEP_STATUS,
-    },
-};
+use std::{collections::BTreeMap, iter::once};
+
+use proptest::prelude::*;
+
 use diem_crypto::HashValue;
 use diem_state_view::StateViewId;
 use diem_types::{
@@ -21,10 +15,19 @@ use diem_types::{
     transaction::{Transaction, TransactionListWithProof, TransactionStatus, Version},
 };
 use diemdb::DiemDB;
-use executor_types::{BlockExecutorTrait, ChunkExecutorTrait, ExecutedTrees, TransactionReplayer};
-use proptest::prelude::*;
-use std::collections::BTreeMap;
+use executor_types::{BlockExecutorTrait, ChunkExecutorTrait, TransactionReplayer};
 use storage_interface::DbReaderWriter;
+
+use crate::{
+    block_executor::BlockExecutor,
+    chunk_executor::ChunkExecutor,
+    components::{apply_chunk_output::IntoLedgerView, chunk_output::ChunkOutput},
+    db_bootstrapper::{generate_waypoint, maybe_bootstrap},
+    mock_vm::{
+        encode_mint_transaction, encode_reconfiguration_transaction, encode_transfer_transaction,
+        MockVM, DISCARD_STATUS, KEEP_STATUS,
+    },
+};
 
 mod chunk_executor_tests;
 
@@ -35,13 +38,17 @@ fn execute_and_commit_block(
 ) -> HashValue {
     let txn = encode_mint_transaction(gen_address(txn_index), 100);
     let id = gen_block_id(txn_index + 1);
+    let version = (txn_index + 1) * 2;
 
     let output = executor
-        .execute_block((id, vec![txn]), parent_block_id)
+        .execute_block(
+            (id, vec![txn, Transaction::StateCheckpoint]),
+            parent_block_id,
+        )
         .unwrap();
-    assert_eq!(output.version(), txn_index + 1);
+    assert_eq!(output.version(), version);
 
-    let ledger_info = gen_ledger_info(txn_index + 1, output.root_hash(), id, txn_index + 1);
+    let ledger_info = gen_ledger_info(version, output.root_hash(), id, txn_index + 1);
     executor.commit_blocks(vec![id], ledger_info).unwrap();
     id
 }
@@ -130,14 +137,21 @@ fn test_executor_status() {
     let txn2 = encode_transfer_transaction(gen_address(0), gen_address(1), 500);
 
     let output = executor
-        .execute_block((block_id, vec![txn0, txn1, txn2]), parent_block_id)
+        .execute_block(
+            (
+                block_id,
+                vec![txn0, txn1, txn2, Transaction::StateCheckpoint],
+            ),
+            parent_block_id,
+        )
         .unwrap();
 
     assert_eq!(
         &vec![
             KEEP_STATUS.clone(),
             KEEP_STATUS.clone(),
-            DISCARD_STATUS.clone()
+            DISCARD_STATUS.clone(),
+            KEEP_STATUS.clone(),
         ],
         output.compute_status()
     );
@@ -149,18 +163,17 @@ fn test_executor_one_block() {
     let parent_block_id = executor.committed_block_id();
     let block_id = gen_block_id(1);
 
-    let version = 100;
-
-    let txns = (0..version)
+    let txns = (0..100)
         .map(|i| encode_mint_transaction(gen_address(i), 100))
+        .chain(once(Transaction::StateCheckpoint))
         .collect::<Vec<_>>();
     let output = executor
         .execute_block((block_id, txns), parent_block_id)
         .unwrap();
-    assert_eq!(output.version(), 100);
+    assert_eq!(output.version(), 101);
     let block_root_hash = output.root_hash();
 
-    let ledger_info = gen_ledger_info(version, block_root_hash, block_id, 1);
+    let ledger_info = gen_ledger_info(101, block_root_hash, block_id, 1);
     executor.commit_blocks(vec![block_id], ledger_info).unwrap();
 }
 
@@ -184,6 +197,7 @@ fn test_executor_two_blocks_with_failed_txns() {
 
     let block1_txns = (0..50)
         .map(|i| encode_mint_transaction(gen_address(i), 100))
+        .chain(once(Transaction::StateCheckpoint))
         .collect::<Vec<_>>();
     let block2_txns = (0..50)
         .map(|i| {
@@ -193,6 +207,7 @@ fn test_executor_two_blocks_with_failed_txns() {
                 encode_transfer_transaction(gen_address(i), gen_address(i + 1), 500)
             }
         })
+        .chain(once(Transaction::StateCheckpoint))
         .collect::<Vec<_>>();
     let _output1 = executor
         .execute_block((block1_id, block1_txns), parent_block_id)
@@ -200,7 +215,7 @@ fn test_executor_two_blocks_with_failed_txns() {
     let output2 = executor
         .execute_block((block2_id, block2_txns), block1_id)
         .unwrap();
-    let ledger_info = gen_ledger_info(75, output2.root_hash(), block2_id, 1);
+    let ledger_info = gen_ledger_info(77, output2.root_hash(), block2_id, 1);
     executor
         .commit_blocks(vec![block1_id, block2_id], ledger_info)
         .unwrap();
@@ -212,12 +227,13 @@ fn test_executor_commit_twice() {
     let parent_block_id = executor.committed_block_id();
     let block1_txns = (0..5)
         .map(|i| encode_mint_transaction(gen_address(i), 100))
+        .chain(once(Transaction::StateCheckpoint))
         .collect::<Vec<_>>();
     let block1_id = gen_block_id(1);
     let output1 = executor
         .execute_block((block1_id, block1_txns), parent_block_id)
         .unwrap();
-    let ledger_info = gen_ledger_info(5, output1.root_hash(), block1_id, 1);
+    let ledger_info = gen_ledger_info(6, output1.root_hash(), block1_id, 1);
     executor
         .commit_blocks(vec![block1_id], ledger_info.clone())
         .unwrap();
@@ -232,10 +248,10 @@ fn test_executor_execute_same_block_multiple_times() {
     let executor = TestExecutor::new();
     let parent_block_id = executor.committed_block_id();
     let block_id = gen_block_id(1);
-    let version = 100;
 
-    let txns: Vec<_> = (0..version)
+    let txns: Vec<_> = (0..100)
         .map(|i| encode_mint_transaction(gen_address(i), 100))
+        .chain(once(Transaction::StateCheckpoint))
         .collect();
 
     let mut responses = vec![];
@@ -265,17 +281,14 @@ fn create_transaction_chunks(
 
     // To obtain the batches of transactions, we first execute and save all these transactions in a
     // separate DB. Then we call get_transactions to retrieve them.
-    let TestExecutor {
-        _path,
-        db: _,
-        executor,
-    } = TestExecutor::new();
+    let TestExecutor { executor, .. } = TestExecutor::new();
 
     let mut txns = vec![];
-    for i in 1..chunk_ranges.last().unwrap().end {
+    for i in 1..(chunk_ranges.last().unwrap().end - 1) {
         let txn = encode_mint_transaction(gen_address(i), 100);
         txns.push(txn);
     }
+    txns.push(Transaction::StateCheckpoint);
     let id = gen_block_id(1);
 
     let output = executor
@@ -333,6 +346,7 @@ impl TestBlock {
         TestBlock {
             txns: (0..num_user_txns)
                 .map(|index| encode_mint_transaction(gen_address(index), u64::from(amount)))
+                .chain(once(Transaction::StateCheckpoint))
                 .collect(),
             id,
         }
@@ -348,7 +362,7 @@ impl TestBlock {
 fn run_transactions_naive(transactions: Vec<Transaction>) -> HashValue {
     let executor = TestExecutor::new();
     let db = &executor.db;
-    let mut ledger_view: ExecutedTrees = db
+    let mut ledger_view = db
         .reader
         .get_latest_tree_state()
         .unwrap()
@@ -361,7 +375,7 @@ fn run_transactions_naive(transactions: Vec<Transaction>) -> HashValue {
             ledger_view.state_view(&ledger_view, StateViewId::Miscellaneous, db.reader.clone()),
         )
         .unwrap();
-        let (executed, _, _) = out.apply_to_ledger(ledger_view.txn_accumulator()).unwrap();
+        let (executed, _, _) = out.apply_to_ledger(&ledger_view).unwrap();
         db.writer
             .save_transactions(
                 &executed.transactions_to_commit().unwrap(),
@@ -379,9 +393,9 @@ proptest! {
 
     #[test]
     fn test_executor_two_branches(
-        a_size in 0..30u64,
-        b_size in 0..30u64,
-        c_size in 0..30u64,
+        a_size in 2..30u64,
+        b_size in 2..30u64,
+        c_size in 2..30u64,
         amount in any::<u32>(),
     ) {
         // Genesis -> A -> B
@@ -433,7 +447,7 @@ proptest! {
         (num_user_txns, reconfig_txn_index) in (10..100u64).prop_flat_map(|num_user_txns| {
             (
                 Just(num_user_txns),
-                0..num_user_txns
+                0..num_user_txns-1 // avoid state checkpoint right after reconfig
             )
         })) {
             let block_id = gen_block_id(1);
@@ -554,8 +568,10 @@ proptest! {
             .execute_and_commit_chunk(txn_list_with_proof_to_commit, &ledger_info, None).unwrap();
 
         first_block_txns.extend(overlap_txn_list_with_proof.transactions);
-        let second_block_txns = ((chunk_size + overlap_size + 1..=chunk_size + overlap_size + num_new_txns)
-                             .map(|i| encode_mint_transaction(gen_address(i), 100))).collect::<Vec<_>>();
+        let second_block_txns = (chunk_size + overlap_size + 1..=chunk_size + overlap_size + num_new_txns)
+                                 .map(|i| encode_mint_transaction(gen_address(i), 100))
+                                .chain(once(Transaction::StateCheckpoint))
+                                .collect::<Vec<_>>();
 
         executor.reset().unwrap();
         let parent_block_id = executor.committed_block_id();
@@ -571,7 +587,7 @@ proptest! {
             first_block_id,
         ).unwrap();
 
-        let version = chunk_size + overlap_size + num_new_txns;
+        let version = chunk_size + overlap_size + num_new_txns + 1;
         prop_assert_eq!(output2.version(), version);
 
         let ledger_info = gen_ledger_info(version, output2.root_hash(), second_block_id, 1);

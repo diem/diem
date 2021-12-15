@@ -42,6 +42,18 @@ impl ExecutedChunk {
         }
     }
 
+    pub fn ensure_ends_with_state_checkpoint(&self) -> Result<()> {
+        ensure!(
+            self.next_epoch_state.is_some()
+                || self
+                    .to_commit
+                    .last()
+                    .map_or(false, |(t, _)| matches!(t, Transaction::StateCheckpoint)),
+            "Chunk not ending with a state checkpoint.",
+        );
+        Ok(())
+    }
+
     pub fn transactions_to_commit(&self) -> Result<Vec<TransactionToCommit>> {
         self.to_commit
             .iter()

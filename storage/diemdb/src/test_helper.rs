@@ -62,8 +62,9 @@ prop_compose! {
 
                 let txn_info = TransactionInfo::new(
                     txn.transaction().hash(),
-                    state_checkpoint_hash.unwrap(),
+                    placeholder_txn_info.state_change_hash(),
                     event_root_hash,
+                    state_checkpoint_hash,
                     placeholder_txn_info.gas_used(),
                     placeholder_txn_info.status().clone(),
                 );

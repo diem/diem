@@ -6,11 +6,13 @@ use super::*;
 use crate::{
     schema::jellyfish_merkle_node::JellyfishMerkleNodeSchema, test_helper::arb_blocks_to_commit,
 };
-use diem_crypto::hash::CryptoHash;
+#[allow(unused_imports)]
+use diem_crypto::hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH};
 #[allow(unused_imports)]
 use diem_jellyfish_merkle::node_type::{Node, NodeKey};
 use diem_temppath::TempPath;
-use diem_types::transaction::Transaction;
+#[allow(unused_imports)]
+use diem_types::transaction::{Transaction, PRE_GENESIS_VERSION};
 #[allow(unused_imports)]
 use diem_types::{
     account_address::{AccountAddress, HashAccountAddress},
@@ -477,9 +479,11 @@ fn verify_committed_transactions(
             txn_info.transaction_hash(),
             txn_to_commit.transaction().hash()
         );
+        if matches!(txn_to_commit.transaction(), Transaction::StateCheckpoint) {
+            continue;
+        }
 
         // Fetch and verify transaction itself.
-        let txn = txn_to_commit.transaction().as_signed_user_txn().unwrap();
         let txn_with_proof = db
             .get_transaction_by_hash(txn_to_commit.transaction().hash(), ledger_version, true)
             .unwrap()
@@ -488,6 +492,8 @@ fn verify_committed_transactions(
             txn_with_proof.transaction.hash(),
             txn_to_commit.transaction().hash()
         );
+
+        let txn = txn_to_commit.transaction().as_signed_user_txn().unwrap();
         txn_with_proof
             .verify_user_txn(ledger_info, cur_ver, txn.sender(), txn.sequence_number())
             .unwrap();
@@ -628,7 +634,7 @@ fn test_get_latest_tree_state() {
     let empty = db.get_latest_tree_state().unwrap();
     assert_eq!(
         empty,
-        TreeState::new(0, vec![], *SPARSE_MERKLE_PLACEHOLDER_HASH,)
+        TreeState::new_at_state_checkpoint(0, vec![], *SPARSE_MERKLE_PLACEHOLDER_HASH,)
     );
 
     // unbootstrapped db with pre-genesis state
@@ -642,21 +648,34 @@ fn test_get_latest_tree_state() {
         .unwrap();
     let hash = SparseMerkleLeafNode::new(address.hash(), blob.hash()).hash();
     let pre_genesis = db.get_latest_tree_state().unwrap();
-    assert_eq!(pre_genesis, TreeState::new(0, vec![], hash));
+    assert_eq!(
+        pre_genesis,
+        TreeState::new_at_state_checkpoint(0, vec![], hash)
+    );
 
     // bootstrapped db (any transaction info is in)
     let txn_info = TransactionInfo::new(
         HashValue::random(),
         HashValue::random(),
         HashValue::random(),
+        None,
         0,
         KeptVMStatus::MiscellaneousError,
     );
     put_transaction_info(&db, 0, &txn_info);
+    let address = AccountAddress::from_bytes([1u8; 16]).unwrap();
+    let blob = AccountStateBlob::from(vec![2]);
+    db.db
+        .put::<JellyfishMerkleNodeSchema>(
+            &NodeKey::new_empty_path(0),
+            &Node::new_leaf(address.hash(), blob.clone()),
+        )
+        .unwrap();
+    let hash = SparseMerkleLeafNode::new(address.hash(), blob.hash()).hash();
     let bootstrapped = db.get_latest_tree_state().unwrap();
     assert_eq!(
         bootstrapped,
-        TreeState::new(1, vec![txn_info.hash()], txn_info.state_change_hash())
+        TreeState::new_at_state_checkpoint(1, vec![txn_info.hash()], hash)
     );
 }
 

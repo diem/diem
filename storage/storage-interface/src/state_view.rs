@@ -10,16 +10,72 @@ use diem_types::{
     account_address::{AccountAddress, HashAccountAddress},
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
-    proof::SparseMerkleProof,
+    proof::{definition::LeafCount, SparseMerkleProof},
     transaction::{Version, PRE_GENESIS_VERSION},
+    write_set::WriteSet,
 };
 use parking_lot::RwLock;
 use scratchpad::{AccountStatus, FrozenSparseMerkleTree, SparseMerkleTree};
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{hash_map::Entry, HashMap, HashSet},
     convert::TryInto,
     sync::Arc,
 };
+
+// TODO(aldenhu): doc
+#[derive(Clone, Debug)]
+pub struct InMemoryState {
+    pub checkpoint: SparseMerkleTree<AccountStateBlob>,
+    pub checkpoint_num_transactions: LeafCount,
+    pub current: SparseMerkleTree<AccountStateBlob>,
+    ///
+    /// n.b. Keep only the addresses to avoid heavy mem copying when cloned.
+    ///      (The values themselves are heap managed on the SMT)
+    pub updated_since_checkpoint: HashSet<AccountAddress>,
+}
+
+impl InMemoryState {
+    pub fn new(
+        checkpoint: SparseMerkleTree<AccountStateBlob>,
+        checkpoint_num_transactions: LeafCount,
+        current: SparseMerkleTree<AccountStateBlob>,
+        updated_since_checkpoint: HashSet<AccountAddress>,
+    ) -> Self {
+        Self {
+            checkpoint,
+            checkpoint_num_transactions,
+            current,
+            updated_since_checkpoint,
+        }
+    }
+
+    pub fn new_empty() -> Self {
+        let smt = SparseMerkleTree::new_empty();
+        Self::new(smt.clone(), 0, smt, HashSet::new())
+    }
+
+    pub fn new_at_checkpoint(root_hash: HashValue, checkpoint_num_transactions: LeafCount) -> Self {
+        let smt = SparseMerkleTree::new(root_hash);
+        Self::new(
+            smt.clone(),
+            checkpoint_num_transactions,
+            smt,
+            HashSet::new(),
+        )
+    }
+
+    pub fn checkpoint_version(&self) -> Option<Version> {
+        self.checkpoint_num_transactions.checked_sub(1)
+    }
+
+    pub fn checkpoint_root_hash(&self) -> HashValue {
+        self.checkpoint.root_hash()
+    }
+
+    pub fn root_hash(&self) -> HashValue {
+        self.current.root_hash()
+    }
+}
 
 /// `VerifiedStateView` is like a snapshot of the global state comprised of state view at two
 /// levels, persistent storage and memory.
@@ -31,13 +87,13 @@ pub struct VerifiedStateView {
     /// accessor.
     reader: Arc<dyn DbReader>,
 
-    /// The most recent version in persistent storage.
+    /// The most recent state checkpoint version in persistent storage.
     latest_persistent_version: Option<Version>,
 
-    /// The most recent state root hash in persistent storage.
+    /// The most recent state checkpoint root hash in persistent storage.
     latest_persistent_state_root: HashValue,
 
-    /// The in-momery version of sparse Merkle tree of which the states haven't been committed.
+    /// Speculative state.
     speculative_state: FrozenSparseMerkleTree<AccountStateBlob>,
 
     /// The cache of verified account states from `reader` and `speculative_state_view`,
@@ -100,6 +156,7 @@ impl VerifiedStateView {
                 None
             }
         });
+
         Self {
             id,
             reader,
@@ -111,9 +168,27 @@ impl VerifiedStateView {
         }
     }
 
+    pub fn prime_cache(&self, accounts: HashSet<AccountAddress>) -> Result<()> {
+        // TODO(aldenhu): add concurrency
+        accounts
+            .iter()
+            .try_for_each(|addr| self.get(&AccessPath::new(*addr, Vec::new())).map(|_| ()))
+    }
+
+    pub fn prime_cache_by_write_set(&self, write_sets: &[&WriteSet]) -> Result<()> {
+        // collect all accounts touched and dedup
+        let accounts: HashSet<_> = write_sets
+            .iter()
+            .map(|write_set| write_set.iter())
+            .flatten()
+            .map(|(path, _)| path.address)
+            .collect();
+        self.prime_cache(accounts)
+    }
+
     pub fn into_state_cache(self) -> StateCache {
         StateCache {
-            frozen_base: self.speculative_state,
+            _frozen_base: self.speculative_state,
             accounts: self.account_to_state_cache.into_inner(),
             proofs: self.account_to_proof_cache.into_inner(),
         }
@@ -121,7 +196,7 @@ impl VerifiedStateView {
 }
 
 pub struct StateCache {
-    pub frozen_base: FrozenSparseMerkleTree<AccountStateBlob>,
+    pub _frozen_base: FrozenSparseMerkleTree<AccountStateBlob>,
     pub accounts: HashMap<AccountAddress, AccountState>,
     pub proofs: HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>,
 }
@@ -141,8 +216,7 @@ impl StateView for VerifiedStateView {
         }
 
         // Do most of the work outside the write lock.
-        let address_hash = address.hash();
-        let account_blob_option = match self.speculative_state.get(address_hash) {
+        let account_blob_option = match self.speculative_state.get(address.hash()) {
             AccountStatus::ExistsInScratchPad(blob) => Some(blob),
             AccountStatus::DoesNotExist => None,
             // No matter it is in db or unknown, we have to query from db since even the
@@ -173,7 +247,7 @@ impl StateView for VerifiedStateView {
                 // an address before this one. Thus the insertion might return a None here.
                 self.account_to_proof_cache
                     .write()
-                    .insert(address_hash, proof);
+                    .insert(address.hash(), proof);
 
                 blob
             }

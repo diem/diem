@@ -96,6 +96,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     sync::{Arc, Weak},
 };
+use thiserror::Error;
 
 /// To help finding the oldest ancestor of any SMT, a branch tracker is created each time
 /// the chain of SMTs forked (two or more SMTs updating the same parent).
@@ -303,6 +304,12 @@ where
 
         Self {
             inner: Inner::new(root),
+        }
+    }
+
+    pub fn new_empty() -> Self {
+        Self {
+            inner: Inner::new(SubTree::new_empty()),
         }
     }
 
@@ -612,13 +619,20 @@ pub trait ProofRead<V>: Sync {
 }
 
 /// All errors `update` can possibly return.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Error, Eq, PartialEq)]
 pub enum UpdateError {
     /// The update intends to insert a key that does not exist in the tree, so the operation needs
     /// proof to get more information about the tree, but no proof is provided.
+    #[error("Missing proof.")]
     MissingProof,
     /// At `depth` a persisted subtree was encountered and a proof was requested to assist finding
     /// details about the subtree, but the result proof indicates the subtree is empty.
+    #[error(
+        "Short proof: key: {}, num_siblings: {}, depth: {}",
+        key,
+        num_siblings,
+        depth
+    )]
     ShortProof {
         key: HashValue,
         num_siblings: usize,

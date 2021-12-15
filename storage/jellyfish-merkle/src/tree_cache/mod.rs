@@ -74,7 +74,7 @@ use crate::{
     node_type::{Node, NodeKey},
     NodeBatch, NodeStats, StaleNodeIndex, StaleNodeIndexBatch, TreeReader, TreeUpdateBatch,
 };
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use diem_crypto::HashValue;
 use diem_types::transaction::{Version, PRE_GENESIS_VERSION};
 use std::collections::{hash_map::Entry, BTreeMap, BTreeSet, HashMap, HashSet};
@@ -163,7 +163,11 @@ where
                 }
             }
         } else {
-            NodeKey::new_empty_path(next_version - 1)
+            let (key, _) = reader
+                .get_prev_node(&NodeKey::new_empty_path(next_version - 1))?
+                .ok_or_else(|| anyhow!("Checkpoint not found before version {}.", next_version))?;
+
+            NodeKey::new_empty_path(key.version())
         };
         Ok(Self {
             node_cache,

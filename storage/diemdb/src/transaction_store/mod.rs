@@ -11,7 +11,7 @@ use crate::{
         transaction_by_hash::TransactionByHashSchema, write_set::WriteSetSchema,
     },
 };
-use anyhow::{ensure, format_err, Result};
+use anyhow::{anyhow, ensure, format_err, Result};
 use diem_crypto::{hash::CryptoHash, HashValue};
 use diem_types::{
     account_address::AccountAddress,
@@ -173,6 +173,45 @@ impl TransactionStore {
         self.db
             .get::<WriteSetSchema>(&version)?
             .ok_or_else(|| DiemDbError::NotFound(format!("WriteSet at version {}", version)).into())
+    }
+
+    /// Get write sets in `[begin_version, end_version)` half-open range.
+    ///
+    /// N.b. an empty `Vec` is returned when `begin_version == end_version`
+    pub fn get_write_sets(
+        &self,
+        begin_version: Version,
+        end_version: Version,
+    ) -> Result<Vec<WriteSet>> {
+        if begin_version == end_version {
+            return Ok(Vec::new());
+        }
+        ensure!(
+            begin_version < end_version,
+            "begin_version {} > end_version {}",
+            begin_version,
+            end_version
+        );
+
+        let mut iter = self.db.iter::<WriteSetSchema>(Default::default())?;
+        iter.seek(&begin_version)?;
+
+        let mut ret = Vec::with_capacity(end_version.saturating_sub(begin_version) as usize);
+        for current_version in begin_version..end_version {
+            let (version, write_set) = iter
+                .next()
+                .transpose()?
+                .ok_or_else(|| anyhow!("Writeset missing for version {}", current_version))?;
+            ensure!(
+                version == current_version,
+                "Write set missing for version {}, got version {}",
+                current_version,
+                version,
+            );
+            ret.push(write_set);
+        }
+
+        Ok(ret)
     }
 
     /// Get the first version that write set starts existent.

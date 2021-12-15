@@ -84,6 +84,7 @@ impl<T: DiemInterface> Node<T> {
         let block_metadata = BlockMetadata::new(block_id, 0, timestamp, vec![], owner_account);
         let prologue = Transaction::BlockMetadata(block_metadata);
         block.insert(0, prologue);
+        block.push(Transaction::StateCheckpoint);
 
         // 2) Execute the transactions
         let output = self

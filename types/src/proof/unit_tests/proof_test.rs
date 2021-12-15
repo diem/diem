@@ -274,6 +274,7 @@ fn test_verify_transaction() {
         txn1_hash,
         state_root1_hash,
         event_root1_hash,
+        /* state_checkpoint_hash */ None,
         /* gas_used = */ 0,
         /* major_status = */ KeptVMStatus::Executed,
     );
@@ -306,6 +307,7 @@ fn test_verify_transaction() {
         HashValue::random(),
         state_root1_hash,
         event_root1_hash,
+        /* state_checkpoint_hash */ None,
         /* gas_used = */ 0,
         /* major_status = */ KeptVMStatus::Executed,
     );
@@ -383,8 +385,9 @@ fn test_verify_account_state_and_event() {
 
     let txn_info2 = TransactionInfo::new(
         txn2_hash,
-        state_root_hash,
+        HashValue::zero(),
         event_root_hash,
+        /* state_checkpoint_hash */ Some(state_root_hash),
         /* gas_used = */ 0,
         /* major_status = */ KeptVMStatus::Executed,
     );
@@ -688,6 +691,7 @@ fn create_transaction_info(
         transaction_hash.unwrap_or_else(HashValue::random),
         HashValue::random(),
         event_root_hash.unwrap_or_else(HashValue::random),
+        None,
         0,
         KeptVMStatus::MiscellaneousError,
     )

@@ -57,7 +57,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Result};
 use diem_config::config::RocksdbConfig;
-use diem_crypto::hash::{HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
+use diem_crypto::hash::HashValue;
 use diem_logger::prelude::*;
 use diem_types::{
     account_address::AccountAddress,
@@ -68,14 +68,13 @@ use diem_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     proof::{
-        AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
-        TransactionInfoListWithProof,
+        definition::LeafCount, AccountStateProof, AccumulatorConsistencyProof, EventProof,
+        SparseMerkleProof, TransactionInfoListWithProof,
     },
     state_proof::StateProof,
     transaction::{
         AccountTransactionsWithProof, TransactionInfo, TransactionListWithProof, TransactionOutput,
         TransactionOutputListWithProof, TransactionToCommit, TransactionWithProof, Version,
-        PRE_GENESIS_VERSION,
     },
 };
 use itertools::zip_eq;
@@ -437,6 +436,29 @@ impl DiemDB {
             events,
             proof,
         })
+    }
+
+    fn get_tree_state(&self, num_transactions: LeafCount) -> Result<TreeState> {
+        let frozen_subtrees = self
+            .ledger_store
+            .get_frozen_subtree_hashes(num_transactions)?;
+        let (checkpoint_num_txns, checkpoint_root_hash) =
+            self.state_store.get_latest_checkpoint(num_transactions)?;
+        // N.b dancing around the "version + 1 = num_txns" math here:
+        //   1. The version of the checkpoint is checkpoint_num_txns - 1, so the first version we need
+        // the write set is checkpoint_num_txns - 1 + 1 = checkpoint_num_txns
+        //   2. The last version we need a writeset is num_transactions - 1, so to construct the
+        // half-open range [begin, end), end = num_transactions - 1 + 1 = num_transactions
+        let write_sets_after_checkpoint = self
+            .transaction_store
+            .get_write_sets(checkpoint_num_txns, num_transactions)?;
+
+        Ok(TreeState::new(
+            num_transactions,
+            frozen_subtrees,
+            checkpoint_root_hash,
+            write_sets_after_checkpoint,
+        ))
     }
 
     // ================================== Backup APIs ===================================
@@ -1007,7 +1029,27 @@ impl DbReader for DiemDB {
     }
 
     fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
-        gauged_api("get_startup_info", || self.ledger_store.get_startup_info())
+        gauged_api("get_startup_info", || {
+            self.ledger_store
+                .get_startup_info()?
+                .map(
+                    |(latest_ledger_info, latest_epoch_state_if_not_in_li, synced_version_opt)| {
+                        let committed_tree_state =
+                            self.get_tree_state(latest_ledger_info.ledger_info().version() + 1)?;
+                        let synced_tree_state = synced_version_opt
+                            .map(|v| self.get_tree_state(v + 1))
+                            .transpose()?;
+
+                        Ok(StartupInfo::new(
+                            latest_ledger_info,
+                            latest_epoch_state_if_not_in_li,
+                            committed_tree_state,
+                            synced_tree_state,
+                        ))
+                    },
+                )
+                .transpose()
+        })
     }
 
     fn get_account_state_with_proof_by_version(
@@ -1026,25 +1068,13 @@ impl DbReader for DiemDB {
 
     fn get_latest_tree_state(&self) -> Result<TreeState> {
         gauged_api("get_latest_tree_state", || {
-            let tree_state = match self.ledger_store.get_latest_transaction_info_option()? {
-                Some((version, txn_info)) => {
-                    self.ledger_store.get_tree_state(version + 1, txn_info)?
-                }
-                None => TreeState::new(
-                    0,
-                    vec![],
-                    self.state_store
-                        .get_root_hash_option(PRE_GENESIS_VERSION)?
-                        .unwrap_or(*SPARSE_MERKLE_PLACEHOLDER_HASH),
-                ),
-            };
+            let num_txns = self
+                .ledger_store
+                .get_latest_transaction_info_option()?
+                .map_or(0, |(v, _)| v + 1);
+            let tree_state = self.get_tree_state(num_txns)?;
 
-            info!(
-                num_transactions = tree_state.num_transactions,
-                state_root_hash = %tree_state.account_state_root_hash,
-                description = tree_state.describe(),
-                "Got latest TreeState."
-            );
+            info!(tree_state = tree_state, "Got latest TreeState.");
 
             Ok(tree_state)
         })

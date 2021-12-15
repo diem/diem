@@ -447,6 +447,12 @@ impl Test for GetAccountByVersion {
     fn name(&self) -> &'static str {
         "jsonrpc::get-account-by-version"
     }
+
+    // TODO(aldenhu): figure out whether / how to support querying account at non-checkpoint
+    // versions.
+    fn ignored(&self) -> bool {
+        true
+    }
 }
 
 impl PublicUsageTest for GetAccountByVersion {

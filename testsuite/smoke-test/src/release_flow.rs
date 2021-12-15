@@ -38,11 +38,11 @@ async fn test_move_release_flow() {
     let account = create_and_fund_account(&mut swarm, 100).await;
 
     // With no artifact for TESTING, creating a release should fail.
-    assert!(create_release(chain_id, url.clone(), 1, false, &release_modules, None, "").is_err());
+    assert!(create_release(chain_id, url.clone(), 2, false, &release_modules, None, "").is_err());
 
     // Generate the first release package. It should pass and verify.
     let payload_1 =
-        create_release(chain_id, url.clone(), 1, true, &release_modules, None, "").unwrap();
+        create_release(chain_id, url.clone(), 2, true, &release_modules, None, "").unwrap();
     // Verifying the generated payload against release modules should pass.
     verify_release(chain_id, url.clone(), &payload_1, &release_modules, false).unwrap();
     // Verifying the generated payload against older modules should pass due to hash mismatch.

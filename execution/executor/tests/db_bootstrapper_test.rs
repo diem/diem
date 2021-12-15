@@ -225,12 +225,12 @@ fn get_state_backup(
 ) {
     let backup_handler = db.get_backup_handler();
     let accounts = backup_handler
-        .get_account_iter(4)
+        .get_account_iter(5)
         .unwrap()
         .collect::<Result<Vec<_>>>()
         .unwrap();
     let proof = backup_handler
-        .get_account_state_range_proof(accounts.last().unwrap().0, 1)
+        .get_account_state_range_proof(accounts.last().unwrap().0, 5)
         .unwrap();
     let db_reader: Arc<dyn DbReader> = db.clone();
     let root_hash = db
@@ -238,7 +238,8 @@ fn get_state_backup(
         .unwrap()
         .into_ledger_view(&db_reader)
         .unwrap()
-        .state_root();
+        .state()
+        .root_hash();
 
     (accounts, proof, root_hash)
 }
@@ -278,7 +279,8 @@ fn test_pre_genesis() {
     let txn2 = get_account_transaction(genesis_key, 1, &account2, &account2_key);
     let txn3 = get_mint_transaction(genesis_key, 0, &account1, 2000);
     let txn4 = get_mint_transaction(genesis_key, 1, &account2, 2000);
-    execute_and_commit(vec![txn1, txn2, txn3, txn4], &db_rw, &signer);
+    let txn5 = Transaction::StateCheckpoint;
+    execute_and_commit(vec![txn1, txn2, txn3, txn4, txn5], &db_rw, &signer);
     assert_eq!(get_balance(&account1, &db_rw), 2000);
     assert_eq!(get_balance(&account2, &db_rw), 2000);
 
@@ -357,7 +359,8 @@ fn test_new_genesis() {
     let txn2 = get_account_transaction(genesis_key, 1, &account2, &account2_key);
     let txn3 = get_mint_transaction(genesis_key, 0, &account1, 2_000_000);
     let txn4 = get_mint_transaction(genesis_key, 1, &account2, 2_000_000);
-    execute_and_commit(vec![txn1, txn2, txn3, txn4], &db, &signer);
+    let txn5 = Transaction::StateCheckpoint;
+    execute_and_commit(vec![txn1, txn2, txn3, txn4, txn5], &db, &signer);
     assert_eq!(get_balance(&account1, &db), 2_000_000);
     assert_eq!(get_balance(&account2, &db), 2_000_000);
 
@@ -402,7 +405,7 @@ fn test_new_genesis() {
     // Bootstrap DB into new genesis.
     let waypoint = generate_waypoint::<DiemVM>(&db, &genesis_txn).unwrap();
     assert!(maybe_bootstrap::<DiemVM>(&db, &genesis_txn, waypoint).unwrap());
-    assert_eq!(waypoint.version(), 5);
+    assert_eq!(waypoint.version(), 6);
 
     // Client bootable from waypoint.
     let trusted_state = TrustedState::from_epoch_waypoint(waypoint);
@@ -416,7 +419,7 @@ fn test_new_genesis() {
         .unwrap();
     assert!(trusted_state_change.is_epoch_change());
     let trusted_state = trusted_state_change.new_state().unwrap();
-    assert_eq!(trusted_state.version(), 5);
+    assert_eq!(trusted_state.version(), 6);
     assert!(state_proof.consistency_proof().is_empty());
 
     // Effect of bootstrapping reflected.
@@ -426,7 +429,7 @@ fn test_new_genesis() {
 
     // Transfer some money.
     let txn = get_transfer_transaction(account1, 0, &account1_key, account2, 500_000);
-    execute_and_commit(vec![txn], &db, &signer);
+    execute_and_commit(vec![txn, Transaction::StateCheckpoint], &db, &signer);
 
     // And verify.
     assert_eq!(get_balance(&account2, &db), 2_500_000);

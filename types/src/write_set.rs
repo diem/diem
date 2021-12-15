@@ -6,6 +6,7 @@
 
 use crate::access_path::AccessPath;
 use anyhow::Result;
+use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
@@ -43,7 +44,9 @@ impl std::fmt::Debug for WriteOp {
 /// `WriteSet` contains all access paths that one transaction modifies. Each of them is a `WriteOp`
 /// where `Value(val)` means that serialized representation should be updated to `val`, and
 /// `Deletion` means that we are going to delete this access path.
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(
+    BCSCryptoHash, Clone, CryptoHasher, Debug, Default, Eq, Hash, PartialEq, Serialize, Deserialize,
+)]
 pub struct WriteSet(WriteSetMut);
 
 impl WriteSet {

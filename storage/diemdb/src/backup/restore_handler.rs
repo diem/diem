@@ -153,7 +153,7 @@ impl RestoreHandler {
             self.state_store.get_root_hash(num_transactions - 1)?
         };
 
-        Ok(TreeState::new(
+        Ok(TreeState::new_at_state_checkpoint(
             num_transactions,
             frozen_subtrees,
             state_root_hash,

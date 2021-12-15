@@ -17,7 +17,7 @@ use crate::{
     vm_status::{DiscardedVMStatus, KeptVMStatus, StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
-use anyhow::{ensure, format_err, Error, Result};
+use anyhow::{anyhow, ensure, format_err, Error, Result};
 use diem_crypto::{
     ed25519::*,
     hash::{CryptoHash, EventAccumulatorHasher},
@@ -992,6 +992,7 @@ impl TransactionInfo {
         transaction_hash: HashValue,
         state_change_hash: HashValue,
         event_root_hash: HashValue,
+        state_checkpoint_hash: Option<HashValue>,
         gas_used: u64,
         status: KeptVMStatus,
     ) -> Self {
@@ -999,6 +1000,7 @@ impl TransactionInfo {
             transaction_hash,
             state_change_hash,
             event_root_hash,
+            state_checkpoint_hash,
             gas_used,
             status,
         ))
@@ -1010,6 +1012,7 @@ impl TransactionInfo {
             HashValue::default(),
             HashValue::default(),
             HashValue::default(),
+            None,
             gas_used,
             status,
         )
@@ -1059,6 +1062,7 @@ impl TransactionInfoV0 {
         transaction_hash: HashValue,
         state_change_hash: HashValue,
         event_root_hash: HashValue,
+        state_checkpoint_hash: Option<HashValue>,
         gas_used: u64,
         status: KeptVMStatus,
     ) -> Self {
@@ -1068,7 +1072,7 @@ impl TransactionInfoV0 {
             transaction_hash,
             event_root_hash,
             state_change_hash,
-            state_checkpoint_hash: None,
+            state_checkpoint_hash,
         }
     }
 
@@ -1078,6 +1082,11 @@ impl TransactionInfoV0 {
 
     pub fn state_change_hash(&self) -> HashValue {
         self.state_change_hash
+    }
+
+    pub fn expect_state_checkpoint_hash(&self) -> Result<HashValue> {
+        self.state_checkpoint_hash
+            .ok_or_else(|| anyhow!("Not a state checkpoint."))
     }
 
     pub fn event_root_hash(&self) -> HashValue {

@@ -177,6 +177,7 @@ impl DbReader for MockDiemDB {
                             Default::default(),
                             Default::default(),
                             Default::default(),
+                            None,
                             0,
                             status.clone(),
                         ),
@@ -216,6 +217,7 @@ impl DbReader for MockDiemDB {
                     Default::default(),
                     Default::default(),
                     Default::default(),
+                    None,
                     0,
                     status.clone(),
                 ));
@@ -458,7 +460,7 @@ pub fn mock_db() -> MockDiemDB {
         events.push((version as u64, mock_event));
     }
 
-    let (genesis, _) = generate_genesis_state();
+    let genesis = generate_genesis_state();
     MockDiemDB {
         version: version as u64,
         genesis,

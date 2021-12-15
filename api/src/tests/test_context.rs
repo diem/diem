@@ -220,6 +220,7 @@ impl TestContext {
                     .cloned()
                     .map(Transaction::UserTransaction),
             )
+            .chain(std::iter::once(Transaction::StateCheckpoint))
             .collect();
 
         let parent_id = self.executor.committed_block_id();
@@ -228,8 +229,13 @@ impl TestContext {
             .execute_block((metadata.id(), txns.clone()), parent_id)
             .unwrap();
 
-        assert_eq!(result.compute_status().len(), txns.len(), "{:?}", result);
-        for st in result.compute_status() {
+        let mut compute_status = result.compute_status().clone();
+        assert_eq!(compute_status.len(), txns.len(), "{:?}", result);
+        if matches!(compute_status.last(), Some(TransactionStatus::Retry)) {
+            // a state checkpoint txn can be Retry if prefixed by a write set txn
+            compute_status.pop();
+        }
+        for st in &compute_status {
             match st {
                 TransactionStatus::Discard(st) => panic!("transaction is discarded: {:?}", st),
                 TransactionStatus::Retry => panic!("should not retry"),
@@ -239,7 +245,7 @@ impl TestContext {
         self.executor
             .commit_blocks(
                 vec![metadata.id()],
-                self.new_ledger_info(&metadata, result.root_hash(), txns.len()),
+                self.new_ledger_info(&metadata, result.root_hash(), compute_status.len()),
             )
             .unwrap();
 

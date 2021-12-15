@@ -15,7 +15,7 @@ use crate::{
     DiemDbError,
 };
 use anyhow::{ensure, Result};
-use diem_crypto::HashValue;
+use diem_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use diem_jellyfish_merkle::{
     iterator::JellyfishMerkleIterator, node_type::NodeKey, restore::JellyfishMerkleRestore,
     JellyfishMerkleTree, TreeReader, TreeWriter,
@@ -24,8 +24,8 @@ use diem_types::{
     account_address::{AccountAddress, HashAccountAddress},
     account_state_blob::{AccountStateBlob, AccountStatesChunkWithProof},
     nibble::{nibble_path::NibblePath, ROOT_NIBBLE_HEIGHT},
-    proof::{SparseMerkleProof, SparseMerkleRangeProof},
-    transaction::Version,
+    proof::{definition::LeafCount, SparseMerkleProof, SparseMerkleRangeProof},
+    transaction::{Version, PRE_GENESIS_VERSION},
 };
 use itertools::process_results;
 use schemadb::{SchemaBatch, DB};
@@ -131,6 +131,28 @@ impl StateStore {
             .get_root_hash_option(version)
     }
 
+    pub fn get_latest_checkpoint(
+        &self,
+        max_num_transactions: LeafCount,
+    ) -> Result<(LeafCount, HashValue)> {
+        if max_num_transactions == 0 {
+            let root_hash = self
+                .get_root_hash_option(PRE_GENESIS_VERSION)?
+                .unwrap_or(*SPARSE_MERKLE_PLACEHOLDER_HASH);
+            Ok((0, root_hash))
+        } else {
+            let (v, n) = JellyfishMerkleTree::new_migration(self, self.account_count_migration)
+                .get_latest_root_node(max_num_transactions - 1)?
+                .ok_or_else(|| {
+                    DiemDbError::NotFound(format!(
+                        "State checkpoint before version {}",
+                        max_num_transactions
+                    ))
+                })?;
+            Ok((v + 1, n.hash()))
+        }
+    }
+
     /// Finds the rightmost leaf by scanning the entire DB.
     #[cfg(test)]
     pub fn get_rightmost_leaf_naive(&self) -> Result<Option<(NodeKey, LeafNode)>> {
@@ -209,6 +231,22 @@ impl StateStore {
 impl TreeReader<AccountStateBlob> for StateStore {
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
         self.db.get::<JellyfishMerkleNodeSchema>(node_key)
+    }
+
+    fn get_prev_node(
+        &self,
+        node_key: &NodeKey,
+    ) -> Result<
+        Option<(
+            NodeKey,
+            diem_jellyfish_merkle::node_type::Node<AccountStateBlob>,
+        )>,
+    > {
+        let mut iter = self
+            .db
+            .iter::<JellyfishMerkleNodeSchema>(Default::default())?;
+        iter.seek_for_prev(node_key)?;
+        iter.next().transpose()
     }
 
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>> {

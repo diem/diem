@@ -122,6 +122,9 @@ pub trait TreeReader<V> {
     /// Gets node given a node key. Returns `None` if the node does not exist.
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node<V>>>;
 
+    /// Gets the node before or at node_key, according to NodeKey order.
+    fn get_prev_node(&self, node_key: &NodeKey) -> Result<Option<(NodeKey, Node<V>)>>;
+
     /// Gets the rightmost leaf. Note that this assumes we are in the process of restoring the tree
     /// and all nodes are at the same version.
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode<V>)>>;
@@ -289,10 +292,10 @@ where
         for (idx, (value_set, hash_set)) in
             itertools::zip_eq(value_sets.into_iter(), hash_sets.into_iter()).enumerate()
         {
-            assert!(
-                !value_set.is_empty(),
-                "Transactions that output empty write set should not be included.",
-            );
+            if value_set.is_empty() {
+                tree_cache.freeze();
+                continue;
+            }
             let version = first_version + idx as u64;
             let deduped_and_sorted_kvs = value_set
                 .into_iter()
@@ -326,7 +329,9 @@ where
         hash_cache: &Option<&HashMap<NibblePath, HashValue>>,
         tree_cache: &mut TreeCache<R, V>,
     ) -> Result<(NodeKey, Node<V>)> {
+        /*
         assert!(!kvs.is_empty());
+         */
 
         let node = tree_cache.get_node(&node_key)?;
         Ok(match node {
@@ -605,10 +610,12 @@ where
     ) -> Result<(Vec<HashValue>, TreeUpdateBatch<V>)> {
         let mut tree_cache = TreeCache::new(self.reader, first_version)?;
         for (idx, value_set) in value_sets.into_iter().enumerate() {
+            /*
             assert!(
                 !value_set.is_empty(),
                 "Transactions that output empty write set should not be included.",
             );
+            */
             let version = first_version + idx as u64;
             value_set
                 .into_iter()
@@ -994,6 +1001,25 @@ where
 
     pub fn get_root_hash_option(&self, version: Version) -> Result<Option<HashValue>> {
         Ok(self.get_root_node_option(version)?.map(|n| n.hash()))
+    }
+
+    pub fn get_latest_root_node(&self, max_version: Version) -> Result<Option<(Version, Node<V>)>> {
+        let node = self
+            .reader
+            .get_prev_node(&NodeKey::new_empty_path(max_version))?;
+        let ret = if let Some((k, n)) = node {
+            if k.nibble_path().is_empty() {
+                // happens to be a root node
+                Some((k.version(), n))
+            } else {
+                // get the root node at the same version
+                Some((k.version(), self.get_root_node(k.version())?))
+            }
+        } else {
+            None
+        };
+
+        Ok(ret)
     }
 
     pub fn get_leaf_count(&self, version: Version) -> Result<Option<usize>> {

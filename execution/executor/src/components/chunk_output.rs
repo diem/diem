@@ -5,17 +5,11 @@
 
 use crate::components::apply_chunk_output::ApplyChunkOutput;
 use anyhow::Result;
-use diem_crypto::hash::TransactionAccumulatorHasher;
 use diem_logger::trace;
-use diem_state_view::StateView;
-use diem_types::{
-    proof::accumulator::InMemoryAccumulator,
-    transaction::{Transaction, TransactionOutput},
-};
+use diem_types::transaction::{Transaction, TransactionOutput};
 use diem_vm::VMExecutor;
-use executor_types::ExecutedChunk;
+use executor_types::{ExecutedChunk, ExecutedTrees};
 use fail::fail_point;
-use std::{collections::HashSet, sync::Arc};
 use storage_interface::state_view::{StateCache, VerifiedStateView};
 
 pub struct ChunkOutput {
@@ -50,19 +44,9 @@ impl ChunkOutput {
         let (transactions, transaction_outputs): (Vec<_>, Vec<_>) =
             transactions_and_outputs.into_iter().unzip();
 
-        // collect all accounts touched and dedup
-        let access_paths = transaction_outputs
-            .iter()
-            .map(|o| o.write_set())
-            .flatten()
-            .collect::<HashSet<_>>();
-
         // prime the state cache by fetching all touched accounts
-        // TODO: add concurrency
-        access_paths
-            .iter()
-            .map(|(p, _)| state_view.get(p))
-            .collect::<Result<Vec<_>>>()?;
+        let write_sets: Vec<_> = transaction_outputs.iter().map(|o| o.write_set()).collect();
+        state_view.prime_cache_by_write_set(&write_sets)?;
 
         Ok(Self {
             transactions,
@@ -73,12 +57,12 @@ impl ChunkOutput {
 
     pub fn apply_to_ledger(
         self,
-        base_accumulator: &Arc<InMemoryAccumulator<TransactionAccumulatorHasher>>,
+        base_view: &ExecutedTrees,
     ) -> Result<(ExecutedChunk, Vec<Transaction>, Vec<Transaction>)> {
         fail_point!("executor::vm_execute_chunk", |_| {
             Err(anyhow::anyhow!("Injected error in apply_to_ledger."))
         });
-        ApplyChunkOutput::apply(self, base_accumulator)
+        ApplyChunkOutput::apply(self, base_view)
     }
 
     pub fn trace_log_transaction_status(&self) {

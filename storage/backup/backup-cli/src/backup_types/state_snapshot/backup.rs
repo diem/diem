@@ -216,7 +216,7 @@ impl StateSnapshotBackupController {
 
         let manifest = StateSnapshotBackup {
             version: self.version,
-            root_hash: txn_info.transaction_info().state_change_hash(),
+            root_hash: txn_info.transaction_info().expect_state_checkpoint_hash()?,
             chunks,
             proof: proof_handle,
         };

@@ -121,7 +121,7 @@ pub fn calculate_genesis<V: VMExecutor>(
 
     let (mut output, _, _) =
         ChunkOutput::by_transaction_execution::<V>(vec![genesis_txn.clone()], base_state_view)?
-            .apply_to_ledger(base_view.txn_accumulator())?;
+            .apply_to_ledger(&base_view)?;
     ensure!(
         !output.to_commit.is_empty(),
         "Genesis txn execution failed."

@@ -319,7 +319,7 @@ fn test_change_publishing_option_to_custom() {
     );
 
     let block1_id = gen_block_id(1);
-    let block1 = vec![txn1, txn2, txn3, txn4, txn5];
+    let block1 = vec![txn1, txn2, txn3, txn4, txn5, Transaction::StateCheckpoint];
     let output1 = executor
         .execute_block((block1_id, block1.clone()), parent_block_id)
         .unwrap();
@@ -379,7 +379,7 @@ fn test_change_publishing_option_to_custom() {
     );
 
     let block2_id = gen_block_id(2);
-    let block2 = vec![txn2, txn3];
+    let block2 = vec![txn2, txn3, Transaction::StateCheckpoint];
     let output2 = executor
         .execute_block((block2_id, block2.clone()), executor.committed_block_id())
         .unwrap();
@@ -396,7 +396,7 @@ fn test_change_publishing_option_to_custom() {
     assert!(!trusted_state_change.is_epoch_change());
 
     let current_version = state_proof.latest_ledger_info().version();
-    assert_eq!(current_version, 5);
+    assert_eq!(current_version, 6);
     // Transaction 2 is committed.
     let txn2 = db
         .reader

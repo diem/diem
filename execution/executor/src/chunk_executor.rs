@@ -84,7 +84,7 @@ impl<V> ChunkExecutor<V> {
         transaction_infos: &[TransactionInfo],
     ) -> Result<ExecutedChunk> {
         let (mut executed_chunk, to_discard, to_retry) =
-            chunk_output.apply_to_ledger(latest_view.txn_accumulator())?;
+            chunk_output.apply_to_ledger(latest_view)?;
         ensure_no_discard(to_discard)?;
         ensure_no_retry(to_retry)?;
         executed_chunk.ledger_info = executed_chunk
@@ -282,7 +282,7 @@ impl<V: VMExecutor> TransactionReplayer for ChunkExecutor<V> {
             let txns = to_run.take().unwrap();
             let (executed, to_discard, to_retry) =
                 ChunkOutput::by_transaction_execution::<V>(txns, state_view)?
-                    .apply_to_ledger(latest_view.txn_accumulator())?;
+                    .apply_to_ledger(&latest_view)?;
 
             // Accumulate result and deal with retry
             ensure_no_discard(to_discard)?;
