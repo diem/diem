@@ -17,7 +17,7 @@ use event_notifications::EventSubscriptionService;
 use executor_types::ChunkExecutorTrait;
 use futures::channel::mpsc;
 use mempool_notifications::MempoolNotificationSender;
-use std::{boxed::Box, sync::Arc};
+use std::sync::Arc;
 use storage_interface::DbReaderWriter;
 use tokio::runtime::{Builder, Runtime};
 
@@ -29,13 +29,16 @@ pub struct DriverFactory {
 
 impl DriverFactory {
     /// Creates and spawns a new state sync driver
-    pub fn create_and_spawn_driver<M: MempoolNotificationSender + 'static>(
+    pub fn create_and_spawn_driver<
+        ChunkExecutor: ChunkExecutorTrait + 'static,
+        MempoolNotifier: MempoolNotificationSender + 'static,
+    >(
         create_runtime: bool,
         node_config: &NodeConfig,
         waypoint: Waypoint,
         storage: DbReaderWriter,
-        chunk_executor: Box<dyn ChunkExecutorTrait>,
-        mempool_notification_sender: M,
+        chunk_executor: Arc<ChunkExecutor>,
+        mempool_notification_sender: MempoolNotifier,
         consensus_listener: ConsensusNotificationListener,
         event_subscription_service: EventSubscriptionService,
         diem_data_client: DiemNetDataClient,
