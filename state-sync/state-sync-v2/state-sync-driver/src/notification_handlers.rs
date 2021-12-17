@@ -8,8 +8,11 @@ use consensus_notifications::{
 };
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
-use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::Transaction};
-use futures::{stream::FusedStream, Stream};
+use diem_types::{
+    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
+};
+use event_notifications::{EventNotificationSender, EventSubscriptionService};
+use futures::{channel::mpsc, stream::FusedStream, Stream};
 use mempool_notifications::MempoolNotificationSender;
 use std::{
     pin::Pin,
@@ -21,6 +24,92 @@ use std::{
 // TODO(joshlind): make these configurable!
 const CONSENSUS_SYNC_REQUEST_TIMEOUT_MS: u64 = 60000; // 1 minute
 const MEMPOOL_COMMIT_ACK_TIMEOUT_MS: u64 = 5000; // 5 seconds
+
+/// A notification for new transactions and events that have been committed to
+/// storage.
+pub struct CommitNotification {
+    pub events: Vec<ContractEvent>,
+    pub transactions: Vec<Transaction>,
+}
+
+impl CommitNotification {
+    pub fn new(events: Vec<ContractEvent>, transactions: Vec<Transaction>) -> Self {
+        Self {
+            events,
+            transactions,
+        }
+    }
+
+    /// Handles the commit notification by notifying mempool and the event
+    /// subscription service.
+    pub async fn handle_commit_notification<M: MempoolNotificationSender>(
+        &self,
+        latest_storage_summary: &StorageStateSummary,
+        mut mempool_notification_handler: MempoolNotificationHandler<M>,
+        event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
+    ) -> Result<(), Error> {
+        let latest_synced_version = latest_storage_summary.latest_synced_version;
+
+        // Notify mempool of the committed transactions
+        debug!(
+            "Notifying mempool of transactions at version: {:?}",
+            latest_synced_version
+        );
+        let blockchain_timestamp_usecs = latest_storage_summary
+            .latest_ledger_info
+            .ledger_info()
+            .timestamp_usecs();
+        mempool_notification_handler
+            .notify_mempool_of_committed_transactions(
+                self.transactions.clone(),
+                blockchain_timestamp_usecs,
+            )
+            .await?;
+
+        // Notify the event subscription service of the events
+        debug!(
+            "Notifying the event subscription service of events at version: {:?}",
+            latest_synced_version
+        );
+        event_subscription_service
+            .lock()
+            .notify_events(latest_synced_version, self.events.clone())
+            .map_err(|error| error.into())
+    }
+}
+
+/// A simple wrapper for a commit notification listener
+pub struct CommitNotificationListener {
+    // The listener for commit notifications
+    commit_notification_listener: mpsc::UnboundedReceiver<CommitNotification>,
+}
+
+impl CommitNotificationListener {
+    pub fn new() -> (mpsc::UnboundedSender<CommitNotification>, Self) {
+        // Create a channel to send and receive commit notifications
+        let (commit_notification_sender, commit_notification_listener) = mpsc::unbounded();
+
+        // Create and return the sender and listener
+        let commit_notification_listener = Self {
+            commit_notification_listener,
+        };
+        (commit_notification_sender, commit_notification_listener)
+    }
+}
+
+impl Stream for CommitNotificationListener {
+    type Item = CommitNotification;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Pin::new(&mut self.get_mut().commit_notification_listener).poll_next(cx)
+    }
+}
+
+impl FusedStream for CommitNotificationListener {
+    fn is_terminated(&self) -> bool {
+        self.commit_notification_listener.is_terminated()
+    }
+}
 
 /// A consensus sync request for a specified target ledger info
 pub struct ConsensusSyncRequest {
