@@ -181,7 +181,7 @@ codes!(
             severity: Warning
         },
         InvalidCallTarget: { msg: "invalid call target", severity: BlockingError },
-        InvalidFunctionType: { msg: "invalid function type", severity: BlockingError },
+        InvalidFunctionType: { msg: "invalid usage of function type", severity: BlockingError },
     ],
     // errors for ability rules. mostly typing/translate
     AbilitySafety: [

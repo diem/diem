@@ -990,6 +990,12 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             if n.value.as_str() == N::BuiltinFunction_::ASSERT_MACRO =>
         {
             use N::BuiltinFunction_ as BF;
+            if tys_opt.is_none() {
+                context.env.add_diag(diag!(
+                    TypeSafety::TooManyArguments,
+                    (eloc, "expected zero type arguments")
+                ));
+            }
             assert!(
                 tys_opt.is_none(),
                 "ICE builtin macros do not have type arguments"
@@ -1012,7 +1018,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                     }
                 }
 
-                EA::Name(n) => NE::LocalCall(Var(n), nes),
+                EA::Name(n) => NE::VarCall(Var(n), nes),
                 EA::ModuleAccess(m, n) => match context.resolve_module_function(mloc, &m, &n) {
                     None => {
                         assert!(context.env.has_diags());

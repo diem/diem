@@ -1160,7 +1160,7 @@ fn exp_impl(
             };
             HE::ModuleCall(Box::new(call))
         }
-        TE::LocalCall(..) => panic!("ICE unexpected local call"),
+        TE::VarCall(..) => panic!("ICE unexpected local call"),
         TE::Builtin(bf, targ) => builtin(context, result, eloc, *bf, targ),
         TE::Vector(vec_loc, n, tty, targ) => {
             let ty = Box::new(base_type(context, *tty));
@@ -1662,7 +1662,7 @@ fn freeze_single(sp!(sloc, s): H::SingleType) -> H::SingleType {
 fn bind_for_short_circuit(e: &T::Exp) -> bool {
     use T::UnannotatedExp_ as TE;
     match &e.exp.value {
-        TE::Use(_) | TE::LocalCall(..) => panic!("ICE should have been expanded"),
+        TE::Use(_) | TE::VarCall(..) => panic!("ICE should have been expanded"),
         TE::Value(_)
         | TE::Constant(_, _)
         | TE::Move { .. }

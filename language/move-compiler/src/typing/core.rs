@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::naming::ast::Variance;
 use crate::{
     diag,
     diagnostics::{codes::NameResolution, Diagnostic},
@@ -1536,7 +1537,9 @@ fn join_impl(
                 k1,
                 k2
             );
-            let (subst, tys) = join_impl_types(subst, case, tys1, tys2)?;
+            let arity = tys1.len();
+            let (subst, tys) =
+                join_impl_types(subst, case, |pos| n1.value.variance(pos, arity), tys1, tys2)?;
             Ok((subst, sp(*loc, Apply(k2.clone(), n2.clone(), tys))))
         }
         (sp!(loc1, Var(id1)), sp!(loc2, Var(id2))) => {
@@ -1590,14 +1593,18 @@ fn join_impl(
 fn join_impl_types(
     mut subst: Subst,
     case: TypingCase,
+    variance: impl Fn(usize) -> Variance,
     tys1: &[Type],
     tys2: &[Type],
 ) -> Result<(Subst, Vec<Type>), TypingError> {
     // if tys1.len() != tys2.len(), we will get an error when instantiating the type elsewhere
     // as all types are instantiated as a sanity check
     let mut tys = vec![];
-    for (ty1, ty2) in tys1.iter().zip(tys2) {
-        let (nsubst, t) = join_impl(subst, case, ty1, ty2)?;
+    for (pos, (ty1, ty2)) in tys1.iter().zip(tys2).enumerate() {
+        let (nsubst, t) = match (case, variance(pos)) {
+            (TypingCase::Subtype, Variance::ContraVariant) => join_impl(subst, case, ty2, ty1)?,
+            _ => join_impl(subst, case, ty1, ty2)?,
+        };
         subst = nsubst;
         tys.push(t)
     }

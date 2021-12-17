@@ -28,6 +28,12 @@ module 0x8675309::M {
         reduce!(v, 0, |t, r| t + r)
     }
 
+    public fun corrected_nested() {
+        let v = vector[vector[1,2], vector[3]];
+        let sum = 0;
+        foreach!(&v, |e| sum = sum + reduce!(*e, 0, |t, r| t + r));
+    }
+
     public macro wrong_local_call_arg_count<T>(v: &vector<T>, action: |&T|) {
         let i = 0;
         while (i < XVector::length(v)) {

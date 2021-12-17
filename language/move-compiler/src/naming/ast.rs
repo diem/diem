@@ -155,6 +155,12 @@ pub enum TypeName_ {
 }
 pub type TypeName = Spanned<TypeName_>;
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum Variance {
+    CoVariant,
+    ContraVariant,
+}
+
 #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
 pub struct TParamID(pub u64);
 
@@ -230,7 +236,7 @@ pub enum Exp_ {
         Option<Vec<Type>>,
         Spanned<Vec<Exp>>,
     ),
-    LocalCall(Var, Spanned<Vec<Exp>>),
+    VarCall(Var, Spanned<Vec<Exp>>),
     Builtin(BuiltinFunction, Spanned<Vec<Exp>>),
     Vector(Loc, Option<Type>, Spanned<Vec<Exp>>),
 
@@ -324,7 +330,7 @@ impl BuiltinTypeName_ {
     pub const U_128: &'static str = "u128";
     pub const BOOL: &'static str = "bool";
     pub const VECTOR: &'static str = "vector";
-    pub const FUN: &'static str = "fun";
+    pub const FUN: &'static str = "|..|..";
 
     pub fn all_names() -> &'static BTreeSet<Symbol> {
         &*BUILTIN_TYPE_ALL_NAMES
@@ -371,13 +377,31 @@ impl BuiltinTypeName_ {
         }
     }
 
-    pub fn tparam_constraints(&self, _loc: Loc, arg_count: usize) -> Vec<AbilitySet> {
+    pub fn tparam_constraints(&self, _loc: Loc, arity: usize) -> Vec<AbilitySet> {
         use BuiltinTypeName_ as B;
         // Match here to make sure this function is fixed when collections are added
         match self {
             B::Address | B::Signer | B::U8 | B::U64 | B::U128 | B::Bool => vec![],
             B::Vector => vec![AbilitySet::empty()],
-            B::Fun => (0..arg_count).map(|_| AbilitySet::empty()).collect(),
+            B::Fun => (0..arity).map(|_| AbilitySet::empty()).collect(),
+        }
+    }
+
+    pub fn variance(&self, pos: usize, arity: usize) -> Variance {
+        match self {
+            // Function variance: given g: T1 -> R1 and f: T2 -> R2, then
+            // f can substitute g if T2 >= T1 && R1 <= R2
+            BuiltinTypeName_::Fun if pos < arity - 1 => Variance::ContraVariant,
+            _ => Variance::CoVariant,
+        }
+    }
+}
+
+impl TypeName_ {
+    pub fn variance(&self, pos: usize, arity: usize) -> Variance {
+        match self {
+            TypeName_::Builtin(bn) => bn.value.variance(pos, arity),
+            _ => Variance::CoVariant,
         }
     }
 }
@@ -918,7 +942,7 @@ impl AstDebug for Exp_ {
                 w.comma(rhs, |w, e| e.ast_debug(w));
                 w.write(")");
             }
-            E::LocalCall(var, sp!(_, rhs)) => {
+            E::VarCall(var, sp!(_, rhs)) => {
                 w.write(&format!("{}", var));
                 w.write("(");
                 w.comma(rhs, |w, e| e.ast_debug(w));

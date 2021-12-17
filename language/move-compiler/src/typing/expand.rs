@@ -221,7 +221,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) => module_call(context, call),
-        E::LocalCall(_, args) => exp(context, args),
+        E::VarCall(_, args) => exp(context, args),
         E::Builtin(b, args) => {
             builtin_function(context, b);
             exp(context, args);

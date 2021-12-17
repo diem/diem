@@ -227,7 +227,7 @@ fn exp(context: &mut Context, e: &T::Exp) {
             context.add_usage(e.exp.loc, &call.module, &call.name, &call.type_arguments);
             exp(context, &call.arguments)
         }
-        E::LocalCall(_, args) => exp(context, args),
+        E::VarCall(_, args) => exp(context, args),
         E::IfElse(eb, et, ef) => {
             exp(context, eb);
             exp(context, et);

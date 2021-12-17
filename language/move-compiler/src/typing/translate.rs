@@ -496,7 +496,7 @@ mod check_valid_constant {
                 exp(context, &call.arguments);
                 "Module calls are"
             }
-            E::LocalCall(_, args) => {
+            E::VarCall(_, args) => {
                 exp(context, args);
                 "Local calls are"
             }
@@ -1360,9 +1360,9 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             let args = exp_vec(context, nargs_);
             module_call(context, eloc, m, f, is_macro, ty_args_opt, argloc, args)
         }
-        NE::LocalCall(var, sp!(argloc, nargs_)) => {
+        NE::VarCall(var, sp!(argloc, nargs_)) => {
             let args = exp_vec(context, nargs_);
-            local_call(context, eloc, var, argloc, args)
+            var_call(context, eloc, var, argloc, args)
         }
         NE::Builtin(b, sp!(argloc, nargs_)) => {
             let args = exp_vec(context, nargs_);
@@ -2170,7 +2170,7 @@ impl crate::shared::ast_debug::AstDebug for ExpDotted_ {
 // Calls
 //**************************************************************************************************
 
-fn local_call(
+fn var_call(
     context: &mut Context,
     loc: Loc,
     var: Var,
@@ -2202,13 +2202,13 @@ fn local_call(
             }
             (
                 targs[targs.len() - 1].clone(),
-                T::UnannotatedExp_::LocalCall(var, arguments),
+                T::UnannotatedExp_::VarCall(var, arguments),
             )
         }
         ty_ => {
             let ty_str = core::error_format_(&ty_, &context.subst);
             context.env.add_diag(diag!(
-                TypeSafety::InvalidCallTarget,
+                TypeSafety::JoinError,
                 (
                     var.loc(),
                     format!("Expected a function type but found {}", ty_str)

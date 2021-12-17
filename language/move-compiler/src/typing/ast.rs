@@ -141,7 +141,7 @@ pub enum UnannotatedExp_ {
     Constant(Option<ModuleIdent>, ConstantName),
 
     ModuleCall(Box<ModuleCall>),
-    LocalCall(Var, Box<Exp>),
+    VarCall(Var, Box<Exp>),
     Builtin(Box<BuiltinFunction>, Box<Exp>),
     Vector(Loc, usize, Box<Type>, Box<Exp>),
 
@@ -435,7 +435,7 @@ impl AstDebug for UnannotatedExp_ {
             E::ModuleCall(mcall) => {
                 mcall.ast_debug(w);
             }
-            E::LocalCall(var, rhs) => {
+            E::VarCall(var, rhs) => {
                 w.write(&format!("{}", var));
                 w.write("(");
                 rhs.ast_debug(w);

@@ -110,7 +110,7 @@ fn exp(
 
             exp(context, annotated_acquires, seen, &call.arguments);
         }
-        E::LocalCall(_, args) => {
+        E::VarCall(_, args) => {
             exp(context, annotated_acquires, seen, args);
         }
         E::Builtin(b, args) => {
