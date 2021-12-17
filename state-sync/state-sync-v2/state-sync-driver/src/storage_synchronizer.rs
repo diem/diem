@@ -131,7 +131,7 @@ impl<ChunkExecutor: ChunkExecutorTrait> StorageSynchronizerInterface
         target_ledger_info: LedgerInfoWithSignatures,
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>, Error> {
-        let committed_events = self
+        let (committed_events, _) = self
             .chunk_executor
             .apply_and_commit_chunk(
                 output_list_with_proof,
@@ -151,7 +151,7 @@ impl<ChunkExecutor: ChunkExecutorTrait> StorageSynchronizerInterface
         target_ledger_info: LedgerInfoWithSignatures,
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>, Error> {
-        let committed_events = self
+        let (committed_events, _) = self
             .chunk_executor
             .execute_and_commit_chunk(
                 transaction_list_with_proof,

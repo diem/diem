@@ -105,7 +105,7 @@ impl<C: ChunkExecutorTrait> ExecutorProxyTrait for ExecutorProxy<C> {
     ) -> Result<(), Error> {
         // track chunk execution time
         let timer = counters::EXECUTE_CHUNK_DURATION.start_timer();
-        let events = self
+        let (events, _) = self
             .chunk_executor
             .execute_and_commit_chunk(
                 txn_list_with_proof,

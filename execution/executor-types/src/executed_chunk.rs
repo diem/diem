@@ -60,6 +60,10 @@ impl ExecutedChunk {
             .collect()
     }
 
+    pub fn transactions(&self) -> Vec<Transaction> {
+        self.to_commit.iter().map(|(txn, _)| txn).cloned().collect()
+    }
+
     pub fn events_to_commit(&self) -> Vec<ContractEvent> {
         self.to_commit
             .iter()
