@@ -12,7 +12,10 @@ use crate::{
     shared::ast_debug::*,
 };
 use move_ir_types::location::*;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::{
+    cmp::Reverse,
+    collections::{BTreeMap, BTreeSet, BinaryHeap, VecDeque},
+};
 
 //**************************************************************************************************
 // CFG
@@ -25,6 +28,12 @@ pub trait CFG {
     fn commands<'a>(&'a self, label: Label) -> Box<dyn Iterator<Item = (usize, &'a Command)> + 'a>;
     fn num_blocks(&self) -> usize;
     fn start_block(&self) -> Label;
+
+    fn next_block(&self, label: Label) -> Option<Label>;
+
+    fn last_continue_to_loop(&self, label: Label) -> Option<Label>;
+
+    fn debug(&self);
 }
 
 //**************************************************************************************************
@@ -37,6 +46,9 @@ pub struct BlockCFG<'a> {
     blocks: &'a mut BasicBlocks,
     successor_map: BTreeMap<Label, BTreeSet<Label>>,
     predecessor_map: BTreeMap<Label, BTreeSet<Label>>,
+    traversal_order: Vec<Label>,
+    traversal_successors: BTreeMap<Label, Label>,
+    last_continues: BTreeMap<Label, Label>,
 }
 
 impl<'a> BlockCFG<'a> {
@@ -54,6 +66,9 @@ impl<'a> BlockCFG<'a> {
             blocks,
             successor_map: BTreeMap::new(),
             predecessor_map: BTreeMap::new(),
+            traversal_order: vec![],
+            traversal_successors: BTreeMap::new(),
+            last_continues: BTreeMap::new(),
         };
         remove_no_ops::optimize(&mut cfg);
 
@@ -65,7 +80,6 @@ impl<'a> BlockCFG<'a> {
         }
 
         let infinite_loop_starts = determine_infinite_loop_starts(&cfg, block_info);
-
         (cfg, infinite_loop_starts, diags)
     }
 
@@ -103,14 +117,38 @@ impl<'a> BlockCFG<'a> {
                 predecessor_map.get_mut(child).unwrap().insert(*parent);
             }
         }
-
         self.successor_map = successor_map;
         self.predecessor_map = predecessor_map;
 
+        let (mut post_order, last_continues) = post_order_traversal(
+            self.start,
+            blocks.keys().copied(),
+            &self.successor_map,
+            /* include_dead_code */ false,
+        );
+
+        self.traversal_order = {
+            post_order.reverse();
+            post_order
+        };
+        assert_eq!(self.traversal_order[0], self.start);
+        // build a mapping from a block id to the next block id in the traversal order
+        self.traversal_successors = self
+            .traversal_order
+            .windows(2)
+            .map(|window| {
+                debug_assert!(window.len() == 2);
+                (window[0], window[1])
+            })
+            .collect();
+        self.last_continues = last_continues;
+
+        // determine dead blocks
         let mut dead_block_labels = vec![];
         for label in self.blocks.keys() {
             if !self.successor_map.contains_key(label) {
                 assert!(!self.predecessor_map.contains_key(label));
+                assert!(!self.traversal_successors.contains_key(label));
                 dead_block_labels.push(*label);
             }
         }
@@ -168,6 +206,18 @@ impl<'a> CFG for BlockCFG<'a> {
 
     fn start_block(&self) -> Label {
         self.start
+    }
+
+    fn next_block(&self, label: Label) -> Option<Label> {
+        self.traversal_successors.get(&label).copied()
+    }
+
+    fn last_continue_to_loop(&self, label: Label) -> Option<Label> {
+        self.last_continues.get(&label).copied()
+    }
+
+    fn debug(&self) {
+        crate::shared::ast_debug::print(self);
     }
 }
 
@@ -347,16 +397,111 @@ fn maybe_unmark_infinite_loop_starts(
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
+
+fn post_order_traversal(
+    start: Label,
+    all_labels: impl IntoIterator<Item = Label>,
+    successor_map: &BTreeMap<Label, BTreeSet<Label>>,
+    include_dead_code: bool,
+) -> (
+    /* order */ Vec<Label>,
+    /* last continues */ BTreeMap<Label, Label>,
+) {
+    // Determine traversal order
+    // build a DAG subgraph (remove the loop back edges)
+    let dag: BTreeMap<Label, BTreeSet<Label>> = successor_map
+        .iter()
+        .map(|(node, successors)| {
+            let id = node.0;
+            let non_loop_continue_successors = successors
+                .iter()
+                // remove the loop back edges
+                .filter(|successor| successor.0 > id)
+                .copied()
+                .collect();
+            (*node, non_loop_continue_successors)
+        })
+        .collect();
+
+    // build the post-order traversal
+    let mut post_order = Vec::with_capacity(dag.len());
+    let mut finished = BTreeSet::new();
+    let mut stack = vec![(start, /* is_first_visit */ true)];
+    let mut remaining = all_labels
+        .into_iter()
+        .map(Reverse)
+        .collect::<BinaryHeap<_>>();
+    while let Some((cur, is_first_visit)) = stack.pop() {
+        if is_first_visit {
+            stack.push((cur, false));
+            stack.extend(
+                dag[&cur]
+                    .iter()
+                    .filter(|successor| !finished.contains(*successor))
+                    .map(|successor| (*successor, /* is_first_visit */ true)),
+            );
+        } else {
+            debug_assert!(dag[&cur]
+                .iter()
+                .all(|successor| finished.contains(successor)));
+            if finished.insert(cur) {
+                post_order.push(cur)
+            }
+        }
+        if include_dead_code {
+            // if dead code needs to be visited...
+            if stack.is_empty() {
+                // find the minimum label that has not been visited
+                let next_opt = loop {
+                    match remaining.pop() {
+                        Some(next) if finished.contains(&next.0) => continue,
+                        next_opt => break next_opt.map(|rev| rev.0),
+                    }
+                };
+                // add that min label to the stack and continue
+                if let Some(next) = next_opt {
+                    debug_assert!(!finished.contains(&next));
+                    stack.push((next, true))
+                }
+            }
+        }
+    }
+
+    // Determine loop ends
+    let mut loop_last_continue_blocks: BTreeMap<Label, Label> = BTreeMap::new();
+    for (node, successors) in successor_map {
+        let node = *node;
+        let loop_continues = successors
+            .iter()
+            .filter(|successor| successor.0 <= node.0)
+            .copied();
+        for successor in loop_continues {
+            let last_continue = loop_last_continue_blocks.entry(successor).or_insert(node);
+            *last_continue = std::cmp::max(*last_continue, node);
+        }
+    }
+    let mut last_continues = BTreeMap::new();
+    for (loop_head, last_continue) in loop_last_continue_blocks {
+        let prev = last_continues.insert(last_continue, loop_head);
+        debug_assert!(prev.is_none());
+    }
+
+    (post_order, last_continues)
+}
+
 //**************************************************************************************************
 // Reverse Traversal Block CFG
 //**************************************************************************************************
 
 #[derive(Debug)]
 pub struct ReverseBlockCFG<'a> {
-    start: Label,
+    terminal: Label,
     blocks: &'a mut BasicBlocks,
     successor_map: &'a mut BTreeMap<Label, BTreeSet<Label>>,
     predecessor_map: &'a mut BTreeMap<Label, BTreeSet<Label>>,
+    traversal_order: Vec<Label>,
+    traversal_successors: BTreeMap<Label, Label>,
+    last_continues: BTreeMap<Label, Label>,
 }
 
 impl<'a> ReverseBlockCFG<'a> {
@@ -399,12 +544,42 @@ impl<'a> ReverseBlockCFG<'a> {
         // ensure map is not partial
         forward_successors.insert(terminal, BTreeSet::new());
 
-        Self {
-            start: terminal,
+        let (post_order, forward_last_continues) = post_order_traversal(
+            forward_cfg.start,
+            blocks.keys().copied(),
+            forward_successors,
+            /* include_dead_code */ false,
+        );
+        let successor_map = forward_predecessor;
+        let predecessor_map = forward_successors;
+        let traversal_order = post_order;
+        let traversal_successors = traversal_order
+            .windows(2)
+            .map(|window| {
+                debug_assert!(window.len() == 2);
+                (window[0], window[1])
+            })
+            .collect();
+        let last_continues = forward_last_continues
+            .into_iter()
+            .map(|(last_continue, loop_head)| (loop_head, last_continue))
+            .collect();
+        let res = Self {
+            terminal,
             blocks,
-            successor_map: forward_predecessor,
-            predecessor_map: forward_successors,
+            successor_map,
+            predecessor_map,
+            traversal_order,
+            traversal_successors,
+            last_continues,
+        };
+        for l in res.blocks.keys() {
+            if l != &forward_cfg.start && !res.traversal_successors.contains_key(l) {
+                res.debug();
+                panic!("ICE {} not in traversal", l);
+            }
         }
+        res
     }
 
     pub fn blocks(&self) -> &BasicBlocks {
@@ -418,19 +593,19 @@ impl<'a> ReverseBlockCFG<'a> {
 
 impl<'a> Drop for ReverseBlockCFG<'a> {
     fn drop(&mut self) {
-        let empty_block = self.blocks.remove(&self.start);
+        let empty_block = self.blocks.remove(&self.terminal);
         assert!(empty_block.unwrap().is_empty());
-        let start_predecessors = self.predecessor_map.remove(&self.start);
+        let start_predecessors = self.predecessor_map.remove(&self.terminal);
         assert!(
             start_predecessors.is_some(),
             "ICE missing start node from predecessors"
         );
-        let start_successors = self.successor_map.remove(&self.start).unwrap();
+        let start_successors = self.successor_map.remove(&self.terminal).unwrap();
         for start_successor in start_successors {
             self.predecessor_map
                 .get_mut(&start_successor)
                 .unwrap()
-                .remove(&self.start);
+                .remove(&self.terminal);
         }
     }
 }
@@ -453,7 +628,19 @@ impl<'a> CFG for ReverseBlockCFG<'a> {
     }
 
     fn start_block(&self) -> Label {
-        self.start
+        self.traversal_order[0]
+    }
+
+    fn next_block(&self, label: Label) -> Option<Label> {
+        self.traversal_successors.get(&label).copied()
+    }
+
+    fn last_continue_to_loop(&self, label: Label) -> Option<Label> {
+        self.last_continues.get(&label).copied()
+    }
+
+    fn debug(&self) {
+        crate::shared::ast_debug::print(self);
     }
 }
 
@@ -468,6 +655,9 @@ impl AstDebug for BlockCFG<'_> {
             blocks,
             successor_map,
             predecessor_map,
+            traversal_order,
+            traversal_successors: _,
+            last_continues,
         } = self;
         w.writeln("--BlockCFG--");
         ast_debug_cfg(
@@ -476,6 +666,8 @@ impl AstDebug for BlockCFG<'_> {
             blocks,
             successor_map.iter(),
             predecessor_map.iter(),
+            traversal_order.windows(2).map(|w| (&w[0], &w[1])),
+            last_continues.iter(),
         );
     }
 }
@@ -483,18 +675,24 @@ impl AstDebug for BlockCFG<'_> {
 impl AstDebug for ReverseBlockCFG<'_> {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ReverseBlockCFG {
-            start,
+            terminal,
             blocks,
             successor_map,
             predecessor_map,
+            traversal_order,
+            traversal_successors: _,
+            last_continues,
         } = self;
         w.writeln("--ReverseBlockCFG--");
+        w.writeln(&format!("terminal: {}", terminal));
         ast_debug_cfg(
             w,
-            *start,
+            traversal_order[0],
             blocks,
             successor_map.iter(),
             predecessor_map.iter(),
+            traversal_order.windows(2).map(|w| (&w[0], &w[1])),
+            last_continues.iter(),
         );
     }
 }
@@ -505,6 +703,8 @@ fn ast_debug_cfg<'a>(
     blocks: &BasicBlocks,
     successor_map: impl Iterator<Item = (&'a Label, &'a BTreeSet<Label>)>,
     predecessor_map: impl Iterator<Item = (&'a Label, &'a BTreeSet<Label>)>,
+    traversal: impl Iterator<Item = (&'a Label, &'a Label)>,
+    loop_last_continues: impl Iterator<Item = (&'a Label, &'a Label)>,
 ) {
     w.write("successor_map:");
     w.indent(4, |w| {
@@ -521,6 +721,23 @@ fn ast_debug_cfg<'a>(
             w.write(&format!("{} <= [", lbl));
             w.comma(nexts, |w, next| w.write(&format!("{}", next)));
             w.writeln("]")
+        }
+    });
+
+    w.write("traversal:");
+    w.indent(4, |w| {
+        for (cur, next) in traversal {
+            w.writeln(&format!("{} => {}", cur, next))
+        }
+    });
+
+    w.write("loop last continues:");
+    w.indent(4, |w| {
+        for (last_continue, loop_head) in loop_last_continues {
+            w.writeln(&format!(
+                "loop: {}. last continue: {}",
+                loop_head, last_continue
+            ))
         }
     });
 

@@ -42,7 +42,7 @@ error[E07001]: referential transparency violated
    ┌─ tests/move_check/borrows/borrow_field_combo_invalid.move:67:18
    │
 66 │         let c; if (cond) c = id_mut(&mut inner.f1) else c = &mut inner.f1;
-   │                                                             ------------- Field 'f1' is still being mutably borrowed by this reference
+   │                              --------------------- Field 'f1' is still being mutably borrowed by this reference
 67 │         let f1 = &inner.f1;
    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
 

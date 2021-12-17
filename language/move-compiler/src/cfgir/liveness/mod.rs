@@ -175,7 +175,9 @@ pub fn last_usage(
 ) {
     let (final_invariants, per_command_states) = analyze(cfg, infinite_loop_starts);
     for (lbl, block) in cfg.blocks_mut() {
-        let final_invariant = final_invariants.get(lbl).unwrap();
+        let final_invariant = final_invariants
+            .get(lbl)
+            .expect(&format!("ICE no liveness states for {}", lbl));
         let command_states = per_command_states.get(lbl).unwrap();
         last_usage::block(
             compilation_env,

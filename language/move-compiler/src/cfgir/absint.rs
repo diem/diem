@@ -87,59 +87,69 @@ pub trait AbstractInterpreter: TransferFunctions {
     ) -> (BTreeMap<Label, Self::State>, Diagnostics) {
         let mut inv_map: InvariantMap<Self::State> = InvariantMap::new();
         let start = cfg.start_block();
-        let mut work_list = vec![start];
-        inv_map.insert(
-            start,
-            BlockInvariant {
-                pre: initial_state,
-                post: BlockPostcondition::Unprocessed,
-            },
-        );
+        let mut next_block = Some(start);
 
-        while let Some(block_lbl) = work_list.pop() {
-            let block_invariant = match inv_map.get_mut(&block_lbl) {
-                Some(invariant) => invariant,
-                None => unreachable!("Missing invariant for block"),
-            };
+        while let Some(block_label) = next_block {
+            let block_invariant = inv_map
+                .entry(block_label)
+                .or_insert_with(|| BlockInvariant {
+                    pre: initial_state.clone(),
+                    post: BlockPostcondition::Unprocessed,
+                });
 
-            let (post_state, errors) = self.execute_block(cfg, &block_invariant.pre, block_lbl);
+            let (post_state, errors) = self.execute_block(cfg, &block_invariant.pre, block_label);
             block_invariant.post = if errors.is_empty() {
                 BlockPostcondition::Success
             } else {
                 BlockPostcondition::Error(errors)
             };
+
             // propagate postcondition of this block to successor blocks
-            for next_lbl in cfg.successors(block_lbl) {
-                match inv_map.get_mut(next_lbl) {
+            for next_block_id in cfg.successors(block_label) {
+                match inv_map.get_mut(next_block_id) {
                     Some(next_block_invariant) => {
-                        match next_block_invariant.pre.join(&post_state) {
+                        let join_result = {
+                            let old_pre = &mut next_block_invariant.pre;
+                            old_pre.join(&post_state)
+                        };
+                        match join_result {
                             JoinResult::Unchanged => {
                                 // Pre is the same after join. Reanalyzing this block would produce
-                                // the same post. Don't schedule it.
-                                continue;
+                                // the same post
                             }
                             JoinResult::Changed => {
-                                // The pre changed. Schedule the next block.
-                                work_list.push(*next_lbl);
+                                // Pre has changed, the post condition is now unknown for the block
+                                next_block_invariant.post = BlockPostcondition::Unprocessed
                             }
                         }
                     }
                     None => {
                         // Haven't visited the next block yet. Use the post of the current block as
-                        // its pre and schedule it.
+                        // its pre
                         inv_map.insert(
-                            *next_lbl,
+                            *next_block_id,
                             BlockInvariant {
                                 pre: post_state.clone(),
-                                post: BlockPostcondition::Unprocessed,
+                                post: BlockPostcondition::Success,
                             },
                         );
-                        work_list.push(*next_lbl);
                     }
                 }
             }
-        }
 
+            // if the current block has the last continue of a loop,
+            // check that any of its associated starts need to be reprocessed
+            match cfg.last_continue_to_loop(block_label) {
+                Some(loop_head)
+                    if matches!(&inv_map[&loop_head].post, BlockPostcondition::Unprocessed) =>
+                {
+                    next_block = Some(loop_head);
+                }
+                _ => {
+                    next_block = cfg.next_block(block_label);
+                }
+            }
+        }
         collect_states_and_diagnostics(inv_map)
     }
 
