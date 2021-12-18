@@ -3,6 +3,7 @@
 
 use crate::{error::Error, notification_handlers::CommitNotification};
 use diem_infallible::RwLock;
+use diem_metrics::{register_int_gauge_vec, IntGaugeVec};
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
     epoch_state::EpochState,
@@ -11,9 +12,29 @@ use diem_types::{
 };
 use executor_types::{ChunkExecutorTrait, ExecutedTrees};
 use futures::{channel::mpsc, SinkExt, StreamExt};
+use once_cell::sync::Lazy;
 use std::{future::Future, sync::Arc};
 use storage_interface::DbReaderWriter;
 use tokio::runtime::Runtime;
+
+pub static VERSION: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        "diem_state_sync_version",
+        "Version involved in state sync v2 progress",
+        &["type"]
+    )
+    .unwrap()
+});
+
+pub fn set_version(version_type: String, version: u64) {
+    VERSION
+        .with_label_values(&[&version_type])
+        .set(version as i64)
+}
+
+pub fn get_version(version_type: String) -> u64 {
+    VERSION.with_label_values(&[&version_type]).get() as u64
+}
 
 // The maximum number of chunks that are pending execution or commit
 const MAX_PENDING_CHUNKS: usize = 50;
@@ -298,10 +319,13 @@ fn spawn_committer<ChunkExecutor: ChunkExecutorTrait + 'static>(
                     // Commit the executed chunk
                     match chunk_executor.commit_chunk() {
                         Ok((events, transactions)) => {
+                            let num_transactions = transactions.len() as u64;
                             let commit_notification = CommitNotification::new(events, transactions);
                             if let Err(error) = commit_notification_sender.send(commit_notification).await {
                                 panic!("Failed to send commit notification! Error: {:?}", error);
                             }
+                            // Update the metrics
+                            set_metrics(num_transactions);
                         }
                         Err(error) => {
                             panic!("Failed to commit executed chunk! Error: {:?}", error);
@@ -324,4 +348,12 @@ fn spawn(runtime: Option<&Runtime>, future: impl Future<Output = ()> + Send + 's
     } else {
         tokio::spawn(future);
     }
+}
+
+/// Sets the metrics required for CT benchmarking
+fn set_metrics(num_transactions: u64) {
+    let current_synced_version = get_version("synced".into());
+    let new_synced_version = current_synced_version + num_transactions;
+    set_version("synced".into(), new_synced_version);
+    set_version("committed".into(), new_synced_version);
 }
