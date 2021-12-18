@@ -7,7 +7,7 @@ use diem_metrics::{
 use network::ProtocolId;
 use once_cell::sync::Lazy;
 
-/// Counter for pending network events to the storage service (server-side)
+/// Counter for pending network events to the storage service (server-side).
 pub static PENDING_STORAGE_SERVER_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "diem_storage_service_server_pending_network_events",
