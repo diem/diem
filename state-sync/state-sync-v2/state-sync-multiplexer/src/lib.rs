@@ -5,7 +5,10 @@
 
 use consensus_notifications::ConsensusNotificationListener;
 use data_streaming_service::streaming_client::StreamingServiceClient;
-use diem_config::{config::NodeConfig, network_id::NetworkId};
+use diem_config::{
+    config::{NodeConfig, RoleType},
+    network_id::NetworkId,
+};
 use diem_data_client::diemnet::DiemNetDataClient;
 use diem_types::{move_resource::MoveStorage, waypoint::Waypoint};
 use event_notifications::{EventNotificationSender, EventSubscriptionService};

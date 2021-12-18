@@ -15,7 +15,7 @@ use futures::{channel::mpsc, SinkExt, StreamExt};
 use once_cell::sync::Lazy;
 use std::{future::Future, sync::Arc};
 use storage_interface::DbReaderWriter;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 
 pub static VERSION: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
@@ -88,13 +88,16 @@ pub struct StorageSynchronizer {
 
     // The interface to read and write to storage
     storage: Arc<RwLock<DbReaderWriter>>,
+
+    // The runtime operating the storage synchronizer
+    _storage_synchronizer_runtime: Option<Runtime>,
 }
 
 impl StorageSynchronizer {
     pub fn new<ChunkExecutor: ChunkExecutorTrait + 'static>(
+        create_runtime: bool,
         chunk_executor: Arc<ChunkExecutor>,
         commit_notification_sender: mpsc::UnboundedSender<CommitNotification>,
-        runtime: Option<&Runtime>,
         storage: Arc<RwLock<DbReaderWriter>>,
     ) -> Self {
         // Create a channel to notify the executor when transaction data chunks are ready
@@ -103,12 +106,25 @@ impl StorageSynchronizer {
         // Create a channel to notify the committer when executed chunks are ready
         let (committer_notifier, committer_listener) = mpsc::channel(MAX_PENDING_CHUNKS);
 
+        // Create a new runtime (if required)
+        let storage_synchronizer_runtime = if create_runtime {
+            Some(
+                Builder::new_multi_thread()
+                    .thread_name("storage-synchronizer")
+                    .enable_all()
+                    .build()
+                    .expect("Failed to create state sync v2 storage synchronizer runtime!"),
+            )
+        } else {
+            None
+        };
+
         // Spawn the executor that executes/applies transaction data chunks
         spawn_executor(
             chunk_executor.clone(),
             executor_listener,
             committer_notifier,
-            runtime,
+            storage_synchronizer_runtime.as_ref(),
         );
 
         // Spawn the committer that commits executed (but pending) chunks
@@ -116,12 +132,13 @@ impl StorageSynchronizer {
             chunk_executor,
             committer_listener,
             commit_notification_sender,
-            runtime,
+            storage_synchronizer_runtime.as_ref(),
         );
 
         Self {
             executor_notifier,
             storage,
+            _storage_synchronizer_runtime: storage_synchronizer_runtime,
         }
     }
 

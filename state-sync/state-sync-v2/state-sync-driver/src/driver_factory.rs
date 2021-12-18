@@ -71,9 +71,9 @@ impl DriverFactory {
 
         // Create the storage synchronizer
         let storage_synchronizer = StorageSynchronizer::new(
+            create_runtime,
             chunk_executor,
             commit_notification_sender,
-            driver_runtime.as_ref(),
             Arc::new(RwLock::new(storage)),
         );
 

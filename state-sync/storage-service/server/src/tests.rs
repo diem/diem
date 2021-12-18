@@ -141,9 +141,9 @@ async fn test_get_storage_server_summary() {
     let expected_server_summary = StorageServerSummary {
         protocol_metadata: ProtocolMetadata {
             max_epoch_chunk_size: 100,
-            max_transaction_chunk_size: 1000,
-            max_transaction_output_chunk_size: 1000,
-            max_account_states_chunk_size: 1000,
+            max_transaction_chunk_size: 2000,
+            max_transaction_output_chunk_size: 2000,
+            max_account_states_chunk_size: 2000,
         },
         data_summary: DataSummary {
             synced_ledger_info: Some(create_test_ledger_info_with_sigs(
