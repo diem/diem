@@ -144,7 +144,7 @@ fn create_driver_for_tests(
         false,
         &node_config,
         waypoint,
-        db_rw,
+        db_rw.reader,
         chunk_executor,
         mempool_notifier,
         consensus_listener,

@@ -8,8 +8,12 @@ use data_streaming_service::{
     streaming_client::{DataStreamingClient, NotificationFeedback, StreamingServiceClient},
 };
 use diem_logger::prelude::*;
+use diem_types::{
+    epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures, transaction::Version,
+};
 use futures::StreamExt;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
+use storage_interface::{DbReader, StartupInfo};
 use tokio::time::timeout;
 
 // TODO(joshlind): make this configurable
@@ -75,4 +79,45 @@ pub async fn handle_end_of_stream_or_invalid_payload(
         DataPayload::EndOfStream => Ok(()),
         _ => Err(Error::InvalidPayload("Unexpected payload type!".into())),
     }
+}
+
+/// Fetches the latest epoch state from the specified storage
+pub fn fetch_latest_epoch_state(storage: Arc<dyn DbReader>) -> Result<EpochState, Error> {
+    let startup_info = fetch_startup_info(storage)?;
+    Ok(startup_info.get_epoch_state().clone())
+}
+
+/// Fetches the latest synced ledger info from the specified storage
+pub fn fetch_latest_synced_ledger_info(
+    storage: Arc<dyn DbReader>,
+) -> Result<LedgerInfoWithSignatures, Error> {
+    let startup_info = fetch_startup_info(storage)?;
+    Ok(startup_info.latest_ledger_info)
+}
+
+/// Fetches the latest synced version from the specified storage
+pub fn fetch_latest_synced_version(storage: Arc<dyn DbReader>) -> Result<Version, Error> {
+    let latest_transaction_info =
+        storage
+            .get_latest_transaction_info_option()
+            .map_err(|error| {
+                Error::StorageError(format!(
+                    "Failed to get the latest transaction info from storage: {:?}",
+                    error
+                ))
+            })?;
+    latest_transaction_info
+        .ok_or_else(|| Error::StorageError("Latest transaction info is missing!".into()))
+        .map(|(latest_synced_version, _)| latest_synced_version)
+}
+
+/// Fetches the startup info from the specified storage
+fn fetch_startup_info(storage: Arc<dyn DbReader>) -> Result<StartupInfo, Error> {
+    let startup_info = storage.get_startup_info().map_err(|error| {
+        Error::StorageError(format!(
+            "Failed to get startup info from storage: {:?}",
+            error
+        ))
+    })?;
+    startup_info.ok_or_else(|| Error::StorageError("Missing startup info from storage".into()))
 }

@@ -146,10 +146,10 @@ pub struct DataStreamingServiceConfig {
 impl Default for DataStreamingServiceConfig {
     fn default() -> Self {
         Self {
-            global_summary_refresh_interval_ms: 500,
+            global_summary_refresh_interval_ms: 200,
             max_concurrent_requests: 5,
             max_data_stream_channel_sizes: 1000,
-            max_request_retry: 10,
+            max_request_retry: 5,
             max_notification_id_mappings: 2000,
             progress_check_interval_ms: 100,
         }

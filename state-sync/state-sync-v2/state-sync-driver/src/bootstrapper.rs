@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    driver::DriverConfiguration,
-    error::Error,
-    storage_synchronizer::{StorageStateSummary, StorageSynchronizerInterface},
+    driver::DriverConfiguration, error::Error, storage_synchronizer::StorageSynchronizerInterface,
     utils,
 };
 use data_streaming_service::{
@@ -25,6 +23,7 @@ use diem_types::{
 };
 use futures::channel::oneshot;
 use std::{collections::BTreeMap, sync::Arc};
+use storage_interface::DbReader;
 
 /// A simple container for verified epoch states and epoch ending ledger infos
 /// that have been fetched from the network.
@@ -185,11 +184,8 @@ impl VerifiedEpochStates {
     /// Returns the highest known ledger info (including the newly fetch ones)
     pub fn get_highest_known_ledger_info(
         &self,
-        latest_storage_summary: StorageStateSummary,
+        mut highest_known_ledger_info: LedgerInfoWithSignatures,
     ) -> LedgerInfoWithSignatures {
-        // Get the current highest versioned ledger info from storage
-        let mut highest_known_ledger_info = latest_storage_summary.latest_ledger_info;
-
         // Check if we've fetched a higher versioned ledger info from the network
         if !self.new_epoch_ending_ledger_infos.is_empty() {
             let highest_fetched_ledger_info = self
@@ -241,6 +237,9 @@ pub struct Bootstrapper<StorageSyncer> {
     // The client through which to stream data from the Diem network
     streaming_service_client: StreamingServiceClient,
 
+    // The interface to read from storage
+    storage: Arc<dyn DbReader>,
+
     // The storage synchronizer used to update local storage
     storage_synchronizer: Arc<Mutex<StorageSyncer>>,
 
@@ -252,14 +251,12 @@ impl<StorageSyncer: StorageSynchronizerInterface> Bootstrapper<StorageSyncer> {
     pub fn new(
         driver_configuration: DriverConfiguration,
         streaming_service_client: StreamingServiceClient,
+        storage: Arc<dyn DbReader>,
         storage_synchronizer: Arc<Mutex<StorageSyncer>>,
     ) -> Self {
         // Load the latest epoch state from storage
-        let latest_storage_summary = storage_synchronizer
-            .lock()
-            .get_storage_summary()
-            .expect("Unable to load storage summary!");
-        let latest_epoch_state = latest_storage_summary.latest_epoch_state;
+        let latest_epoch_state = utils::fetch_latest_epoch_state(storage.clone())
+            .expect("Unable to fetch latest epoch state!");
         let verified_epoch_states = VerifiedEpochStates::new(latest_epoch_state);
 
         Self {
@@ -268,6 +265,7 @@ impl<StorageSyncer: StorageSynchronizerInterface> Bootstrapper<StorageSyncer> {
             bootstrapped: false,
             driver_configuration,
             streaming_service_client,
+            storage,
             storage_synchronizer,
             verified_epoch_states,
         }
@@ -347,7 +345,7 @@ impl<StorageSyncer: StorageSynchronizerInterface> Bootstrapper<StorageSyncer> {
         }
 
         // Get the highest synced and known ledger info versions
-        let highest_synced_version = self.get_highest_synced_version()?;
+        let highest_synced_version = utils::fetch_latest_synced_version(self.storage.clone())?;
         let highest_known_ledger_info = self.get_highest_known_ledger_info()?;
         let highest_known_ledger_version = highest_known_ledger_info.ledger_info().version();
 
@@ -518,10 +516,9 @@ impl<StorageSyncer: StorageSynchronizerInterface> Bootstrapper<StorageSyncer> {
         global_data_summary: &GlobalDataSummary,
     ) -> Result<(), Error> {
         // If our storage has already synced beyond our waypoint, nothing needs to be checked
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
-        let latest_ledger_info = latest_storage_summary.latest_ledger_info.ledger_info();
+        let latest_ledger_info = utils::fetch_latest_synced_ledger_info(self.storage.clone())?;
         let waypoint_version = self.driver_configuration.waypoint.version();
-        if latest_ledger_info.version() >= waypoint_version {
+        if latest_ledger_info.ledger_info().version() >= waypoint_version {
             self.verified_epoch_states.set_verified_waypoint();
             return Ok(());
         }
@@ -665,7 +662,7 @@ impl<StorageSyncer: StorageSynchronizerInterface> Bootstrapper<StorageSyncer> {
         payload_start_version: Option<Version>,
     ) -> Result<(), Error> {
         // Fetch the highest synced version
-        let highest_synced_version = self.get_highest_synced_version()?;
+        let highest_synced_version = utils::fetch_latest_synced_version(self.storage.clone())?;
 
         // Compare the payload start version with the expected version
         if let Some(payload_start_version) = payload_start_version {
@@ -757,18 +754,13 @@ impl<StorageSyncer: StorageSynchronizerInterface> Bootstrapper<StorageSyncer> {
             .get_epoch_ending_ledger_info(payload_end_version))
     }
 
-    /// Returns the highest synced version in storage
-    fn get_highest_synced_version(&self) -> Result<Version, Error> {
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
-        Ok(latest_storage_summary.latest_synced_version)
-    }
-
     /// Returns the highest known ledger info (including the newly fetch ones)
     fn get_highest_known_ledger_info(&self) -> Result<LedgerInfoWithSignatures, Error> {
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let latest_synced_ledger_info =
+            utils::fetch_latest_synced_ledger_info(self.storage.clone())?;
         Ok(self
             .verified_epoch_states
-            .get_highest_known_ledger_info(latest_storage_summary))
+            .get_highest_known_ledger_info(latest_synced_ledger_info))
     }
 
     /// Handles the end of stream notification or an invalid payload by

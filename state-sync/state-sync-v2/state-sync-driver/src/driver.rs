@@ -11,6 +11,7 @@ use crate::{
         MempoolNotificationHandler,
     },
     storage_synchronizer::StorageSynchronizerInterface,
+    utils,
 };
 use consensus_notifications::{
     ConsensusCommitNotification, ConsensusNotification, ConsensusSyncNotification,
@@ -25,6 +26,7 @@ use event_notifications::EventSubscriptionService;
 use futures::StreamExt;
 use mempool_notifications::MempoolNotificationSender;
 use std::sync::Arc;
+use storage_interface::DbReader;
 use tokio::time::{interval, Duration};
 use tokio_stream::wrappers::IntervalStream;
 
@@ -82,8 +84,8 @@ pub struct StateSyncDriver<DataClient, MempoolNotifier, StorageSyncer> {
     // The handler for notifications to mempool
     mempool_notification_handler: MempoolNotificationHandler<MempoolNotifier>,
 
-    // The storage synchronizer used to update local storage
-    storage_synchronizer: Arc<Mutex<StorageSyncer>>,
+    // The interface to read from storage
+    storage: Arc<dyn DbReader>,
 }
 
 impl<
@@ -102,18 +104,21 @@ impl<
         storage_synchronizer: StorageSyncer,
         diem_data_client: DataClient,
         streaming_service_client: StreamingServiceClient,
+        storage: Arc<dyn DbReader>,
     ) -> Self {
         let event_subscription_service = Arc::new(Mutex::new(event_subscription_service));
         let storage_synchronizer = Arc::new(Mutex::new(storage_synchronizer));
         let bootstrapper = Bootstrapper::new(
             driver_configuration.clone(),
             streaming_service_client.clone(),
+            storage.clone(),
             storage_synchronizer.clone(),
         );
         let continuous_syncer = ContinuousSyncer::new(
             driver_configuration.clone(),
             streaming_service_client,
-            storage_synchronizer.clone(),
+            storage.clone(),
+            storage_synchronizer,
         );
 
         Self {
@@ -126,7 +131,7 @@ impl<
             driver_configuration,
             event_subscription_service,
             mempool_notification_handler,
-            storage_synchronizer,
+            storage,
         }
     }
 
@@ -236,10 +241,13 @@ impl<
         );
 
         // Handle the commit notification
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let latest_synced_version = utils::fetch_latest_synced_version(self.storage.clone())?;
+        let latest_synced_ledger_info =
+            utils::fetch_latest_synced_ledger_info(self.storage.clone())?;
         commit_notification
             .handle_commit_notification(
-                &latest_storage_summary,
+                latest_synced_version,
+                latest_synced_ledger_info,
                 self.mempool_notification_handler.clone(),
                 self.event_subscription_service.clone(),
             )
@@ -256,15 +264,17 @@ impl<
         &mut self,
         sync_notification: ConsensusSyncNotification,
     ) -> Result<(), Error> {
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let latest_synced_version = utils::fetch_latest_synced_version(self.storage.clone())?;
         debug!(
-            "Received a consensus sync notification! Target version: {:?}. Latest storage summary: {:?}",
-            sync_notification.target, &latest_storage_summary,
+            "Received a consensus sync notification! Target version: {:?}. Latest synced version: {:?}",
+            sync_notification.target, latest_synced_version,
         );
+
         // Initialize a new sync request
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let latest_synced_ledger_info =
+            utils::fetch_latest_synced_ledger_info(self.storage.clone())?;
         self.consensus_notification_handler
-            .initialize_sync_request(sync_notification, latest_storage_summary)
+            .initialize_sync_request(sync_notification, latest_synced_ledger_info)
             .await
     }
 
@@ -292,10 +302,13 @@ impl<
         );
 
         // Handle the commit notification
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let latest_synced_version = utils::fetch_latest_synced_version(self.storage.clone())?;
+        let latest_synced_ledger_info =
+            utils::fetch_latest_synced_ledger_info(self.storage.clone())?;
         commit_notification
             .handle_commit_notification(
-                &latest_storage_summary,
+                latest_synced_version,
+                latest_synced_ledger_info,
                 self.mempool_notification_handler.clone(),
                 self.event_subscription_service.clone(),
             )
@@ -308,9 +321,10 @@ impl<
             return Ok(());
         }
 
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
+        let latest_synced_ledger_info =
+            utils::fetch_latest_synced_ledger_info(self.storage.clone())?;
         self.consensus_notification_handler
-            .check_sync_request_progress(&latest_storage_summary)
+            .check_sync_request_progress(latest_synced_ledger_info)
             .await
     }
 
@@ -334,6 +348,7 @@ impl<
         // Fetch the global data summary and verify we have active peers
         let global_data_summary = self.diem_data_client.get_global_data_summary();
         if global_data_summary.is_empty() {
+            // TODO(joshlind): what if we have no peers? i.e., we're only a single node deployment?
             trace!("The global data summary is empty! It's likely that we have no active peers.");
             return;
         }

@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, storage_synchronizer::StorageStateSummary};
+use crate::error::Error;
 use consensus_notifications::{
     ConsensusCommitNotification, ConsensusNotification, ConsensusNotificationListener,
     ConsensusSyncNotification,
@@ -9,7 +9,9 @@ use consensus_notifications::{
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_types::{
-    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
+    contract_event::ContractEvent,
+    ledger_info::LedgerInfoWithSignatures,
+    transaction::{Transaction, Version},
 };
 use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use futures::{channel::mpsc, stream::FusedStream, Stream};
@@ -44,21 +46,17 @@ impl CommitNotification {
     /// subscription service.
     pub async fn handle_commit_notification<M: MempoolNotificationSender>(
         &self,
-        latest_storage_summary: &StorageStateSummary,
+        latest_synced_version: Version,
+        latest_synced_ledger_info: LedgerInfoWithSignatures,
         mut mempool_notification_handler: MempoolNotificationHandler<M>,
         event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
     ) -> Result<(), Error> {
-        let latest_synced_version = latest_storage_summary.latest_synced_version;
-
         // Notify mempool of the committed transactions
         debug!(
             "Notifying mempool of transactions at version: {:?}",
             latest_synced_version
         );
-        let blockchain_timestamp_usecs = latest_storage_summary
-            .latest_ledger_info
-            .ledger_info()
-            .timestamp_usecs();
+        let blockchain_timestamp_usecs = latest_synced_ledger_info.ledger_info().timestamp_usecs();
         mempool_notification_handler
             .notify_mempool_of_committed_transactions(
                 self.transactions.clone(),
@@ -169,14 +167,11 @@ impl ConsensusNotificationHandler {
     pub async fn initialize_sync_request(
         &mut self,
         sync_notification: ConsensusSyncNotification,
-        latest_storage_summary: StorageStateSummary,
+        latest_synced_ledger_info: LedgerInfoWithSignatures,
     ) -> Result<(), Error> {
         // Get the latest committed version and the target sync version
         let sync_target_version = sync_notification.target.ledger_info().version();
-        let latest_committed_version = latest_storage_summary
-            .latest_ledger_info
-            .ledger_info()
-            .version();
+        let latest_committed_version = latest_synced_ledger_info.ledger_info().version();
 
         // If the target version is old, return an error to consensus (something is wrong!)
         if sync_target_version < latest_committed_version {
@@ -208,7 +203,7 @@ impl ConsensusNotificationHandler {
     /// Checks to see if the sync request has been successfully fulfilled
     pub async fn check_sync_request_progress(
         &mut self,
-        latest_storage_summary: &StorageStateSummary,
+        latest_synced_ledger_info: LedgerInfoWithSignatures,
     ) -> Result<(), Error> {
         // Fetch the sync target version
         let consensus_sync_request = self.get_consensus_sync_request();
@@ -222,10 +217,7 @@ impl ConsensusNotificationHandler {
 
         // Compare our local state to the target version
         if let Some(sync_target_version) = sync_target_version {
-            let latest_committed_version = latest_storage_summary
-                .latest_ledger_info
-                .ledger_info()
-                .version();
+            let latest_committed_version = latest_synced_ledger_info.ledger_info().version();
 
             // Check if we've synced beyond the target
             if latest_committed_version > sync_target_version {
@@ -296,6 +288,11 @@ impl ConsensusNotificationHandler {
             consensus_notifications::Error::UnexpectedErrorEncountered(format!("{:?}", error))
         });
 
+        debug!(
+            "Responding to consensus sync notification with message: {:?}",
+            message
+        );
+
         // Send the result
         self.consensus_listener
             .respond_to_sync_notification(sync_notification, message)
@@ -318,6 +315,11 @@ impl ConsensusNotificationHandler {
         let message = result.map_err(|error| {
             consensus_notifications::Error::UnexpectedErrorEncountered(format!("{:?}", error))
         });
+
+        debug!(
+            "Responding to consensus commit notification with message: {:?}",
+            message
+        );
 
         // Send the result
         self.consensus_listener
