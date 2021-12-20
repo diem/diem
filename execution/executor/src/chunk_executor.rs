@@ -223,10 +223,13 @@ impl<V: VMExecutor> ChunkExecutorTrait for ChunkExecutor<V> {
         Ok(())
     }
 
-    fn commit_chunk(&self) -> Result<Vec<ContractEvent>> {
+    fn commit_chunk(&self) -> Result<(Vec<ContractEvent>, Vec<Transaction>)> {
         let _timer = DIEM_EXECUTOR_COMMIT_CHUNK_SECONDS.start_timer();
-
-        Ok(self.commit_chunk_impl()?.events_to_commit())
+        let executed_chunk = self.commit_chunk_impl()?;
+        Ok((
+            executed_chunk.events_to_commit(),
+            executed_chunk.transactions(),
+        ))
     }
 
     fn execute_and_commit_chunk(
@@ -234,7 +237,7 @@ impl<V: VMExecutor> ChunkExecutorTrait for ChunkExecutor<V> {
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: &LedgerInfoWithSignatures,
         epoch_change_li: Option<&LedgerInfoWithSignatures>,
-    ) -> Result<Vec<ContractEvent>> {
+    ) -> Result<(Vec<ContractEvent>, Vec<Transaction>)> {
         // Re-sync with DB, make sure the queue is empty.
         self.reset()?;
 
@@ -247,7 +250,7 @@ impl<V: VMExecutor> ChunkExecutorTrait for ChunkExecutor<V> {
         txn_output_list_with_proof: TransactionOutputListWithProof,
         verified_target_li: &LedgerInfoWithSignatures,
         epoch_change_li: Option<&LedgerInfoWithSignatures>,
-    ) -> Result<Vec<ContractEvent>> {
+    ) -> Result<(Vec<ContractEvent>, Vec<Transaction>)> {
         // Re-sync with DB, make sure the queue is empty.
         self.reset()?;
 

@@ -64,22 +64,23 @@ pub trait ChunkExecutorTrait: Send + Sync {
         epoch_change_li: Option<&LedgerInfoWithSignatures>,
     ) -> anyhow::Result<()>;
 
-    /// Commit a previously executed chunks, returns a vector of reconfiguration events in the chunk.
-    fn commit_chunk(&self) -> Result<Vec<ContractEvent>>;
+    /// Commit a previously executed chunk. Returns a vector of reconfiguration
+    /// events in the chunk and the transactions that were committed.
+    fn commit_chunk(&self) -> Result<(Vec<ContractEvent>, Vec<Transaction>)>;
 
     fn execute_and_commit_chunk(
         &self,
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: &LedgerInfoWithSignatures,
         epoch_change_li: Option<&LedgerInfoWithSignatures>,
-    ) -> Result<Vec<ContractEvent>>;
+    ) -> Result<(Vec<ContractEvent>, Vec<Transaction>)>;
 
     fn apply_and_commit_chunk(
         &self,
         txn_output_list_with_proof: TransactionOutputListWithProof,
         verified_target_li: &LedgerInfoWithSignatures,
         epoch_change_li: Option<&LedgerInfoWithSignatures>,
-    ) -> Result<Vec<ContractEvent>>;
+    ) -> Result<(Vec<ContractEvent>, Vec<Transaction>)>;
 }
 
 pub trait BlockExecutorTrait: Send + Sync {
