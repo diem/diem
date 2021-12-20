@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    driver::DriverConfiguration,
-    error::Error,
-    notification_handlers::{ConsensusSyncRequest, MempoolNotificationHandler},
-    storage_synchronizer::StorageSynchronizerInterface,
-    utils,
+    driver::DriverConfiguration, error::Error, notification_handlers::ConsensusSyncRequest,
+    storage_synchronizer::StorageSynchronizerInterface, utils,
 };
 use data_streaming_service::{
     data_notification::{DataNotification, DataPayload, NotificationId},
@@ -16,28 +13,19 @@ use data_streaming_service::{
 use diem_config::config::ContinuousSyncingMode;
 use diem_infallible::Mutex;
 use diem_types::{
-    contract_event::ContractEvent,
     epoch_change::Verifier,
     ledger_info::LedgerInfoWithSignatures,
-    transaction::{Transaction, TransactionListWithProof, TransactionOutputListWithProof, Version},
+    transaction::{TransactionListWithProof, TransactionOutputListWithProof, Version},
 };
-use event_notifications::EventSubscriptionService;
-use mempool_notifications::MempoolNotificationSender;
 use std::sync::Arc;
 
 /// A simple component that manages the continuous syncing of the node
-pub struct ContinuousSyncer<MempoolNotifier, StorageSyncer> {
+pub struct ContinuousSyncer<StorageSyncer> {
     // The currently active data stream (provided by the data streaming service)
     active_data_stream: Option<DataStreamListener>,
 
     // The config of the state sync driver
     driver_configuration: DriverConfiguration,
-
-    // The event subscription service to notify listeners of on-chain events
-    event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
-
-    // The handler for notifications to mempool
-    mempool_notification_handler: MempoolNotificationHandler<MempoolNotifier>,
 
     // The client through which to stream data from the Diem network
     streaming_service_client: StreamingServiceClient,
@@ -46,21 +34,15 @@ pub struct ContinuousSyncer<MempoolNotifier, StorageSyncer> {
     storage_synchronizer: Arc<Mutex<StorageSyncer>>,
 }
 
-impl<MempoolNotifier: MempoolNotificationSender, StorageSyncer: StorageSynchronizerInterface>
-    ContinuousSyncer<MempoolNotifier, StorageSyncer>
-{
+impl<StorageSyncer: StorageSynchronizerInterface> ContinuousSyncer<StorageSyncer> {
     pub fn new(
         driver_configuration: DriverConfiguration,
-        event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
-        mempool_notification_handler: MempoolNotificationHandler<MempoolNotifier>,
         streaming_service_client: StreamingServiceClient,
         storage_synchronizer: Arc<Mutex<StorageSyncer>>,
     ) -> Self {
         Self {
             active_data_stream: None,
             driver_configuration,
-            event_subscription_service,
-            mempool_notification_handler,
             streaming_service_client,
             storage_synchronizer,
         }
@@ -207,108 +189,46 @@ impl<MempoolNotifier: MempoolNotificationSender, StorageSyncer: StorageSynchroni
         .await?;
 
         // Execute/apply and commit the transactions/outputs
-        let (committed_events, committed_transactions) =
-            match self.driver_configuration.config.continuous_syncing_mode {
-                ContinuousSyncingMode::ApplyTransactionOutputs => {
-                    if let Some(transaction_outputs_with_proof) = transaction_outputs_with_proof {
-                        let committed_transactions = transaction_outputs_with_proof
-                            .transactions_and_outputs
-                            .iter()
-                            .map(|(txn, _)| txn.clone())
-                            .collect();
-                        let committed_events = self
-                            .storage_synchronizer
-                            .lock()
-                            .apply_and_commit_transaction_outputs(
-                                transaction_outputs_with_proof,
-                                ledger_info_with_signatures,
-                                None,
-                            );
-                        (committed_events, committed_transactions)
-                    } else {
-                        self.terminate_active_stream(
-                            notification_id,
-                            NotificationFeedback::PayloadTypeIsIncorrect,
-                        )
-                        .await?;
-                        return Err(Error::InvalidPayload(
-                            "Did not receive transaction outputs with proof!".into(),
-                        ));
-                    }
+        match self.driver_configuration.config.continuous_syncing_mode {
+            ContinuousSyncingMode::ApplyTransactionOutputs => {
+                if let Some(transaction_outputs_with_proof) = transaction_outputs_with_proof {
+                    self.storage_synchronizer.lock().apply_transaction_outputs(
+                        transaction_outputs_with_proof,
+                        ledger_info_with_signatures,
+                        None,
+                    )?;
+                } else {
+                    self.terminate_active_stream(
+                        notification_id,
+                        NotificationFeedback::PayloadTypeIsIncorrect,
+                    )
+                    .await?;
+                    return Err(Error::InvalidPayload(
+                        "Did not receive transaction outputs with proof!".into(),
+                    ));
                 }
-                ContinuousSyncingMode::ExecuteTransactions => {
-                    if let Some(transaction_list_with_proof) = transaction_list_with_proof {
-                        let committed_transactions =
-                            transaction_list_with_proof.transactions.clone();
-                        let committed_events = self
-                            .storage_synchronizer
-                            .lock()
-                            .execute_and_commit_transactions(
-                                transaction_list_with_proof,
-                                ledger_info_with_signatures,
-                                None,
-                            );
-                        (committed_events, committed_transactions)
-                    } else {
-                        self.terminate_active_stream(
-                            notification_id,
-                            NotificationFeedback::PayloadTypeIsIncorrect,
-                        )
-                        .await?;
-                        return Err(Error::InvalidPayload(
-                            "Did not receive transactions with proof!".into(),
-                        ));
-                    }
+            }
+            ContinuousSyncingMode::ExecuteTransactions => {
+                if let Some(transaction_list_with_proof) = transaction_list_with_proof {
+                    self.storage_synchronizer.lock().execute_transactions(
+                        transaction_list_with_proof,
+                        ledger_info_with_signatures,
+                        None,
+                    )?;
+                } else {
+                    self.terminate_active_stream(
+                        notification_id,
+                        NotificationFeedback::PayloadTypeIsIncorrect,
+                    )
+                    .await?;
+                    return Err(Error::InvalidPayload(
+                        "Did not receive transactions with proof!".into(),
+                    ));
                 }
-            };
-
-        // Notify listeners of committed events and transactions
-        self.notify_committed_events_and_transactions(
-            notification_id,
-            committed_events,
-            committed_transactions,
-        )
-        .await?;
-
-        // Update the last commit timestamp for the sync request
-        if let Some(sync_request) = consensus_sync_request.lock().as_mut() {
-            sync_request.update_last_commit_timestamp()
-        }
+            }
+        };
 
         Ok(())
-    }
-
-    /// Notifies mempool of the committed transactions and notifies the event
-    /// subscription service of committed events.
-    async fn notify_committed_events_and_transactions(
-        &mut self,
-        notification_id: NotificationId,
-        committed_events: Result<Vec<ContractEvent>, Error>,
-        committed_transactions: Vec<Transaction>,
-    ) -> Result<(), Error> {
-        match committed_events {
-            Ok(committed_events) => {
-                let latest_storage_summary =
-                    self.storage_synchronizer.lock().get_storage_summary()?;
-
-                utils::notify_committed_events_and_transactions(
-                    &latest_storage_summary,
-                    self.mempool_notification_handler.clone(),
-                    committed_transactions,
-                    self.event_subscription_service.clone(),
-                    committed_events,
-                )
-                .await
-            }
-            Err(error) => {
-                self.terminate_active_stream(
-                    notification_id,
-                    NotificationFeedback::InvalidPayloadData,
-                )
-                .await?;
-                Err(error)
-            }
-        }
     }
 
     /// Verifies the first payload version matches the version we wish to sync

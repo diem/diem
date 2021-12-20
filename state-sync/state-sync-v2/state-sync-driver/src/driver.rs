@@ -6,9 +6,11 @@ use crate::{
     continuous_syncer::ContinuousSyncer,
     driver_client::{ClientNotificationListener, DriverNotification},
     error::Error,
-    notification_handlers::{ConsensusNotificationHandler, MempoolNotificationHandler},
+    notification_handlers::{
+        CommitNotification, CommitNotificationListener, ConsensusNotificationHandler,
+        MempoolNotificationHandler,
+    },
     storage_synchronizer::StorageSynchronizerInterface,
-    utils,
 };
 use consensus_notifications::{
     ConsensusCommitNotification, ConsensusNotification, ConsensusSyncNotification,
@@ -54,16 +56,19 @@ impl DriverConfiguration {
 /// The state sync driver that drives synchronization progress
 pub struct StateSyncDriver<DataClient, MempoolNotifier, StorageSyncer> {
     // The component that manages the initial bootstrapping of the node
-    bootstrapper: Bootstrapper<MempoolNotifier, StorageSyncer>,
+    bootstrapper: Bootstrapper<StorageSyncer>,
 
     // The listener for client notifications
     client_notification_listener: ClientNotificationListener,
+
+    // The listener for commit notifications
+    commit_notification_listener: CommitNotificationListener,
 
     // The handler for notifications from consensus
     consensus_notification_handler: ConsensusNotificationHandler,
 
     // The component that manages the continuous syncing of the node
-    continuous_syncer: ContinuousSyncer<MempoolNotifier, StorageSyncer>,
+    continuous_syncer: ContinuousSyncer<StorageSyncer>,
 
     // The client for checking the global data summary of our peers
     diem_data_client: DataClient,
@@ -89,6 +94,7 @@ impl<
 {
     pub fn new(
         client_notification_listener: ClientNotificationListener,
+        commit_notification_listener: CommitNotificationListener,
         consensus_notification_handler: ConsensusNotificationHandler,
         driver_configuration: DriverConfiguration,
         event_subscription_service: EventSubscriptionService,
@@ -101,15 +107,11 @@ impl<
         let storage_synchronizer = Arc::new(Mutex::new(storage_synchronizer));
         let bootstrapper = Bootstrapper::new(
             driver_configuration.clone(),
-            event_subscription_service.clone(),
-            mempool_notification_handler.clone(),
             streaming_service_client.clone(),
             storage_synchronizer.clone(),
         );
         let continuous_syncer = ContinuousSyncer::new(
             driver_configuration.clone(),
-            event_subscription_service.clone(),
-            mempool_notification_handler.clone(),
             streaming_service_client,
             storage_synchronizer.clone(),
         );
@@ -117,8 +119,9 @@ impl<
         Self {
             bootstrapper,
             client_notification_listener,
-            continuous_syncer,
+            commit_notification_listener,
             consensus_notification_handler,
+            continuous_syncer,
             diem_data_client,
             driver_configuration,
             event_subscription_service,
@@ -136,12 +139,15 @@ impl<
 
         loop {
             ::futures::select! {
-                notification = self.consensus_notification_handler.select_next_some() => {
-                    self.handle_consensus_notification(notification).await;
-                }
                 notification = self.client_notification_listener.select_next_some() => {
                     self.handle_client_notification(notification);
                 },
+                notification = self.commit_notification_listener.select_next_some() => {
+                    self.handle_commit_notification(notification).await;
+                }
+                notification = self.consensus_notification_handler.select_next_some() => {
+                    self.handle_consensus_notification(notification).await;
+                }
                 _ = progress_check_interval.select_next_some() => {
                     self.drive_progress().await;
                 }
@@ -214,28 +220,34 @@ impl<
     /// Handles a commit notification sent by consensus
     async fn handle_consensus_commit_notification(
         &mut self,
-        commit_notification: ConsensusCommitNotification,
+        consensus_commit_notification: ConsensusCommitNotification,
     ) -> Result<(), Error> {
-        debug!("Received a consensus commit notification!");
+        debug!(
+            "Received a consensus commit notification! Transaction total: {:?}, event total: {:?}",
+            consensus_commit_notification.transactions.len(),
+            consensus_commit_notification.reconfiguration_events.len()
+        );
 
+        // Create a commit notification
         // TODO(joshlind): can we get consensus to forward the events?
-        // Notify mempool and the event subscription service
-        let committed_transactions = commit_notification.transactions.clone();
-        let reconfiguration_events = commit_notification.reconfiguration_events.clone();
+        let commit_notification = CommitNotification::new(
+            consensus_commit_notification.reconfiguration_events.clone(),
+            consensus_commit_notification.transactions.clone(),
+        );
+
+        // Handle the commit notification
         let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
-        utils::notify_committed_events_and_transactions(
-            &latest_storage_summary,
-            self.mempool_notification_handler.clone(),
-            committed_transactions,
-            self.event_subscription_service.clone(),
-            reconfiguration_events,
-        )
-        .await
-        .map_err(|error| Error::EventNotificationError(format!("{:?}", error)))?;
+        commit_notification
+            .handle_commit_notification(
+                &latest_storage_summary,
+                self.mempool_notification_handler.clone(),
+                self.event_subscription_service.clone(),
+            )
+            .await?;
 
         // Respond to consensus successfully
         self.consensus_notification_handler
-            .respond_to_commit_notification(commit_notification, Ok(()))
+            .respond_to_commit_notification(consensus_commit_notification, Ok(()))
             .await
     }
 
@@ -269,6 +281,41 @@ impl<
             .subscribe_to_bootstrap_notifications(notifier_channel);
     }
 
+    /// Handles a commit notification sent by the storage synchronizer
+    async fn handle_commit_notification(&mut self, commit_notification: CommitNotification) {
+        debug!("Received a commit notification from the storage synchronizer! Transaction total: {:?}, event total: {:?}",
+               commit_notification.transactions.len(),
+               commit_notification.events.len()
+        );
+
+        // Handle the commit notification
+        match self.storage_synchronizer.lock().get_storage_summary() {
+            Ok(latest_storage_summary) => {
+                if let Err(error) = commit_notification
+                    .handle_commit_notification(
+                        &latest_storage_summary,
+                        self.mempool_notification_handler.clone(),
+                        self.event_subscription_service.clone(),
+                    )
+                    .await
+                {
+                    error!("Failed to handle a commit notification. Error {:?}", error);
+                }
+            }
+            Err(error) => {
+                error!("Failed to fetch storage summary! Error: {:?}", error);
+            }
+        }
+
+        // Update the last commit timestamp for the sync request
+        let consensus_sync_request = self
+            .consensus_notification_handler
+            .get_consensus_sync_request();
+        if let Some(sync_request) = consensus_sync_request.lock().as_mut() {
+            sync_request.update_last_commit_timestamp()
+        };
+    }
+
     /// Checks if the node has successfully reached the sync target
     async fn check_sync_request_progress(&mut self) -> Result<(), Error> {
         if !self.consensus_notification_handler.active_sync_request() {
@@ -291,12 +338,6 @@ impl<
     /// Checks that state sync is making progress
     async fn drive_progress(&mut self) {
         trace!("Checking progress of the state sync driver!");
-
-        // If consensus is executing, there's nothing to do.
-        if self.check_if_consensus_executing() {
-            trace!("Consensus is executing. There's nothing to do.");
-            return;
-        }
 
         // Fetch the global data summary and verify we have active peers
         let global_data_summary = self.diem_data_client.get_global_data_summary();

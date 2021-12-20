@@ -1,22 +1,15 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    error::Error, notification_handlers::MempoolNotificationHandler,
-    storage_synchronizer::StorageStateSummary,
-};
+use crate::error::Error;
 use data_streaming_service::{
     data_notification::{DataNotification, DataPayload, NotificationId},
     data_stream::DataStreamListener,
     streaming_client::{DataStreamingClient, NotificationFeedback, StreamingServiceClient},
 };
-use diem_infallible::Mutex;
 use diem_logger::prelude::*;
-use diem_types::{contract_event::ContractEvent, transaction::Transaction};
-use event_notifications::{EventNotificationSender, EventSubscriptionService};
 use futures::StreamExt;
-use mempool_notifications::MempoolNotificationSender;
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use tokio::time::timeout;
 
 // TODO(joshlind): make this configurable
@@ -82,42 +75,4 @@ pub async fn handle_end_of_stream_or_invalid_payload(
         DataPayload::EndOfStream => Ok(()),
         _ => Err(Error::InvalidPayload("Unexpected payload type!".into())),
     }
-}
-
-/// Notifies mempool of the committed transactions and notifies the event
-/// subscription service of committed events.
-pub async fn notify_committed_events_and_transactions<M: MempoolNotificationSender>(
-    latest_storage_summary: &StorageStateSummary,
-    mut mempool_notification_handler: MempoolNotificationHandler<M>,
-    committed_transactions: Vec<Transaction>,
-    event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
-    committed_events: Vec<ContractEvent>,
-) -> Result<(), Error> {
-    let latest_synced_version = latest_storage_summary.latest_synced_version;
-
-    // Notify mempool of the committed transactions
-    debug!(
-        "Notifying mempool of transactions at version: {:?}",
-        latest_synced_version
-    );
-    let blockchain_timestamp_usecs = latest_storage_summary
-        .latest_ledger_info
-        .ledger_info()
-        .timestamp_usecs();
-    mempool_notification_handler
-        .notify_mempool_of_committed_transactions(
-            committed_transactions.clone(),
-            blockchain_timestamp_usecs,
-        )
-        .await?;
-
-    // Notify the event subscription service of the events
-    debug!(
-        "Notifying the event subscription service of events at version: {:?}",
-        latest_synced_version
-    );
-    event_subscription_service
-        .lock()
-        .notify_events(latest_synced_version, committed_events)
-        .map_err(|error| error.into())
 }

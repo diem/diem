@@ -4,7 +4,9 @@
 use crate::{
     driver::{DriverConfiguration, StateSyncDriver},
     driver_client::{ClientNotificationListener, DriverClient, DriverNotification},
-    notification_handlers::{ConsensusNotificationHandler, MempoolNotificationHandler},
+    notification_handlers::{
+        CommitNotificationListener, ConsensusNotificationHandler, MempoolNotificationHandler,
+    },
     storage_synchronizer::StorageSynchronizer,
 };
 use consensus_notifications::ConsensusNotificationListener;
@@ -23,8 +25,8 @@ use tokio::runtime::{Builder, Runtime};
 
 /// Creates a new state sync driver and client
 pub struct DriverFactory {
-    _driver_runtime: Option<Runtime>,
     client_notification_sender: mpsc::UnboundedSender<DriverNotification>,
+    _driver_runtime: Option<Runtime>,
 }
 
 impl DriverFactory {
@@ -48,9 +50,32 @@ impl DriverFactory {
         let (client_notification_sender, client_notification_receiver) = mpsc::unbounded();
         let client_notification_listener =
             ClientNotificationListener::new(client_notification_receiver);
+        let (commit_notification_sender, commit_notification_listener) =
+            CommitNotificationListener::new();
         let consensus_notification_handler = ConsensusNotificationHandler::new(consensus_listener);
         let mempool_notification_handler =
             MempoolNotificationHandler::new(mempool_notification_sender);
+
+        // Create a new runtime (if required)
+        let driver_runtime = if create_runtime {
+            Some(
+                Builder::new_multi_thread()
+                    .thread_name("state-sync-driver")
+                    .enable_all()
+                    .build()
+                    .expect("Failed to create state sync v2 driver runtime!"),
+            )
+        } else {
+            None
+        };
+
+        // Create the storage synchronizer
+        let storage_synchronizer = StorageSynchronizer::new(
+            create_runtime,
+            chunk_executor,
+            commit_notification_sender,
+            Arc::new(RwLock::new(storage)),
+        );
 
         // Create the driver configuration
         let driver_configuration = DriverConfiguration::new(
@@ -59,13 +84,10 @@ impl DriverFactory {
             waypoint,
         );
 
-        // Create a storage synchronizer
-        let storage_synchronizer =
-            StorageSynchronizer::new(chunk_executor, Arc::new(RwLock::new(storage)));
-
-        // Create the driver
+        // Create the state sync driver
         let state_sync_driver = StateSyncDriver::new(
             client_notification_listener,
+            commit_notification_listener,
             consensus_notification_handler,
             driver_configuration,
             event_subscription_service,
@@ -76,20 +98,11 @@ impl DriverFactory {
         );
 
         // Spawn the driver
-        let driver_runtime = if create_runtime {
-            // Create a new runtime for the driver
-            let driver_runtime = Builder::new_multi_thread()
-                .thread_name("state-sync-driver")
-                .enable_all()
-                .build()
-                .expect("Failed to create state sync v2 driver runtime!");
+        if let Some(driver_runtime) = &driver_runtime {
             driver_runtime.spawn(state_sync_driver.start_driver());
-            Some(driver_runtime)
         } else {
-            // Spawn the driver on the current runtime
             tokio::spawn(state_sync_driver.start_driver());
-            None
-        };
+        }
 
         Self {
             _driver_runtime: driver_runtime,
