@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{error::Error, notification_handlers::CommitNotification};
+use diem_logger::prelude::*;
 use diem_metrics::{register_int_gauge_vec, IntGaugeVec};
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
@@ -203,38 +204,42 @@ fn spawn_executor<ChunkExecutor: ChunkExecutorTrait + 'static>(
             ::futures::select! {
                 transaction_data_chunk = executor_listener.select_next_some() => {
                     // Execute/apply the transaction data chunk
-                    match transaction_data_chunk {
+                    let result = match transaction_data_chunk {
                         TransactionDataChunk::Transactions(transactions_with_proof, target_ledger_info, end_of_epoch_ledger_info) => {
-                            if let Err(error) = chunk_executor
+                            chunk_executor
                                .execute_chunk(
                                     transactions_with_proof,
                                     &target_ledger_info,
                                     end_of_epoch_ledger_info.as_ref(),
-                                ) {
-                                    panic!(
+                                ).map_err(|error| {
+                                     error!(
                                         "Failed to execute the transaction data chunk! Error: {:?}", error
                                     );
-                                }
+                                    error
+                                })
                         },
                         TransactionDataChunk::TransactionOutputs(outputs_with_proof, target_ledger_info, end_of_epoch_ledger_info) => {
-                            if let Err(error) = chunk_executor
+                            chunk_executor
                                 .apply_chunk(
                                     outputs_with_proof,
                                     &target_ledger_info,
                                     end_of_epoch_ledger_info.as_ref(),
-                                ) {
-                                    panic!(
+                                ).map_err(|error| {
+                                    error!(
                                         "Failed to apply the transaction data chunk! Error: {:?}", error
                                     );
-                                }
+                                    error
+                                })
                         }
-                    }
+                    };
 
-                    // Notify the committer of new executed chunks
-                    if let Err(error) = committer_notifier.try_send(()) {
-                        panic!(
-                            "Failed to notify the committer! Error: {:?}", error
-                        );
+                    if result.is_ok() {
+                        // Notify the committer of new executed chunks
+                        if let Err(error) = committer_notifier.try_send(()) {
+                            error!(
+                                "Failed to notify the committer! Error: {:?}", error
+                            );
+                        }
                     }
                 }
             }
@@ -261,15 +266,19 @@ fn spawn_committer<ChunkExecutor: ChunkExecutorTrait + 'static>(
                     match chunk_executor.commit_chunk() {
                         Ok((events, transactions)) => {
                             let num_transactions = transactions.len() as u64;
+                            debug!("Successfully committed a chunk! Num transactions: {:?}", num_transactions);
+
+                            // Send a commit notification
                             let commit_notification = CommitNotification::new(events, transactions);
                             if let Err(error) = commit_notification_sender.send(commit_notification).await {
-                                panic!("Failed to send commit notification! Error: {:?}", error);
+                                error!("Failed to send commit notification! Error: {:?}", error);
                             }
+
                             // Update the metrics
                             set_metrics(num_transactions);
                         }
                         Err(error) => {
-                            panic!("Failed to commit executed chunk! Error: {:?}", error);
+                            error!("Failed to commit executed chunk! Error: {:?}", error);
                         }
                     }
                 }

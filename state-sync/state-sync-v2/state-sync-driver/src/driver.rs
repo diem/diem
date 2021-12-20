@@ -148,7 +148,7 @@ impl<
                     self.handle_client_notification(notification);
                 },
                 notification = self.commit_notification_listener.select_next_some() => {
-                    let _ = self.handle_commit_notification(notification);
+                    self.handle_commit_notification(notification).await;
                 }
                 notification = self.consensus_notification_handler.select_next_some() => {
                     self.handle_consensus_notification(notification).await;
@@ -292,20 +292,34 @@ impl<
     }
 
     /// Handles a commit notification sent by the storage synchronizer
-    async fn handle_commit_notification(
-        &mut self,
-        commit_notification: CommitNotification,
-    ) -> Result<(), Error> {
+    async fn handle_commit_notification(&mut self, commit_notification: CommitNotification) {
         debug!("Received a commit notification from the storage synchronizer! Transaction total: {:?}, event total: {:?}",
                commit_notification.transactions.len(),
                commit_notification.events.len()
         );
 
+        // Fetch the latest synced version and ledger info from storage
+        let (latest_synced_version, latest_synced_ledger_info) =
+            match utils::fetch_latest_synced_version(self.storage.clone()) {
+                Ok(latest_synced_version) => {
+                    match utils::fetch_latest_synced_ledger_info(self.storage.clone()) {
+                        Ok(latest_synced_ledger_info) => {
+                            (latest_synced_version, latest_synced_ledger_info)
+                        }
+                        Err(error) => {
+                            error!("Failed to fetch latest synced ledger info: {:?}", error);
+                            return;
+                        }
+                    }
+                }
+                Err(error) => {
+                    error!("Failed to fetch latest synced version: {:?}", error);
+                    return;
+                }
+            };
+
         // Handle the commit notification
-        let latest_synced_version = utils::fetch_latest_synced_version(self.storage.clone())?;
-        let latest_synced_ledger_info =
-            utils::fetch_latest_synced_ledger_info(self.storage.clone())?;
-        commit_notification
+        if let Err(error) = commit_notification
             .handle_commit_notification(
                 latest_synced_version,
                 latest_synced_ledger_info,
@@ -313,6 +327,9 @@ impl<
                 self.event_subscription_service.clone(),
             )
             .await
+        {
+            error!("Failed to handle a commit notification: {:?}", error);
+        }
     }
 
     /// Checks if the node has successfully reached the sync target
