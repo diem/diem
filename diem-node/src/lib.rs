@@ -36,7 +36,6 @@ use diem_vm::DiemVM;
 use diemdb::DiemDB;
 use event_notifications::EventSubscriptionService;
 use executor::{chunk_executor::ChunkExecutor, db_bootstrapper::maybe_bootstrap};
-use executor_types::ChunkExecutorTrait;
 use futures::channel::mpsc::channel;
 use mempool_notifications::MempoolNotificationSender;
 use network::application::storage::PeerMetadataStorage;
@@ -231,10 +230,6 @@ fn fetch_chain_id(db: &DbReaderWriter) -> ChainId {
         .chain_id()
 }
 
-fn setup_chunk_executor(db: DbReaderWriter) -> Box<dyn ChunkExecutorTrait> {
-    Box::new(ChunkExecutor::<DiemVM>::new(db).unwrap())
-}
-
 fn setup_debug_interface(config: &NodeConfig, logger: Option<Arc<Logger>>) -> NodeDebugService {
     let addr = format!(
         "{}:{}",
@@ -259,7 +254,6 @@ fn create_state_sync_runtimes<M: MempoolNotificationSender + 'static>(
     peer_metadata_storage: Arc<PeerMetadataStorage>,
     mempool_notifier: M,
     consensus_listener: ConsensusNotificationListener,
-    chunk_executor: Box<dyn ChunkExecutorTrait>,
     waypoint: Waypoint,
     event_subscription_service: EventSubscriptionService,
     db_rw: DbReaderWriter,
@@ -283,6 +277,11 @@ fn create_state_sync_runtimes<M: MempoolNotificationSender + 'static>(
     let (streaming_service_client, streaming_service_runtime) = setup_data_streaming_service(
         node_config.state_sync.data_streaming_service,
         diem_data_client.clone(),
+    );
+
+    // Create the chunk executor
+    let chunk_executor = Arc::new(
+        ChunkExecutor::<DiemVM>::new(db_rw.clone()).expect("Unable to create the chunk executor!"),
     );
 
     // Create the state sync multiplexer
@@ -474,12 +473,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         instant.elapsed().as_millis()
     );
 
-    instant = Instant::now();
-    let chunk_executor = setup_chunk_executor(db_rw.clone());
-    debug!(
-        "ChunkExecutor setup in {} ms",
-        instant.elapsed().as_millis()
-    );
     let chain_id = fetch_chain_id(&db_rw);
     let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
@@ -618,7 +611,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         peer_metadata_storage.clone(),
         mempool_notifier,
         consensus_listener,
-        chunk_executor,
         genesis_waypoint,
         event_subscription_service,
         db_rw.clone(),

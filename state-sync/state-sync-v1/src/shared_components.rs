@@ -116,12 +116,12 @@ pub(crate) mod test_utils {
     pub(crate) fn create_coordinator_with_config_and_waypoint(
         node_config: NodeConfig,
         waypoint: Waypoint,
-    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
+    ) -> StateSyncCoordinator<ExecutorProxy<ChunkExecutor<DiemVM>>, MempoolNotifier> {
         create_state_sync_coordinator_for_tests(node_config, waypoint, false)
     }
 
     pub(crate) fn create_validator_coordinator(
-    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
+    ) -> StateSyncCoordinator<ExecutorProxy<ChunkExecutor<DiemVM>>, MempoolNotifier> {
         let mut node_config = NodeConfig::default();
         node_config.base.role = RoleType::Validator;
 
@@ -130,7 +130,7 @@ pub(crate) mod test_utils {
 
     #[cfg(test)]
     pub(crate) fn create_full_node_coordinator(
-    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
+    ) -> StateSyncCoordinator<ExecutorProxy<ChunkExecutor<DiemVM>>, MempoolNotifier> {
         let mut node_config = NodeConfig::default();
         node_config.base.role = RoleType::FullNode;
 
@@ -139,7 +139,7 @@ pub(crate) mod test_utils {
 
     #[cfg(test)]
     pub(crate) fn create_read_only_coordinator(
-    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
+    ) -> StateSyncCoordinator<ExecutorProxy<ChunkExecutor<DiemVM>>, MempoolNotifier> {
         let mut node_config = NodeConfig::default();
         node_config.base.role = RoleType::Validator;
 
@@ -150,7 +150,7 @@ pub(crate) mod test_utils {
         node_config: NodeConfig,
         waypoint: Waypoint,
         read_only_mode: bool,
-    ) -> StateSyncCoordinator<ExecutorProxy, MempoolNotifier> {
+    ) -> StateSyncCoordinator<ExecutorProxy<ChunkExecutor<DiemVM>>, MempoolNotifier> {
         // Generate a genesis change set
         let (genesis, _) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
 
@@ -175,7 +175,7 @@ pub(crate) mod test_utils {
             .unwrap();
 
         // Create executor proxy
-        let chunk_executor = Box::new(ChunkExecutor::<DiemVM>::new(db_rw).unwrap());
+        let chunk_executor = Arc::new(ChunkExecutor::<DiemVM>::new(db_rw).unwrap());
         let executor_proxy = ExecutorProxy::new(db, chunk_executor, event_subscription_service);
 
         // Get initial state
