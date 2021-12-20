@@ -2,31 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{error::Error, notification_handlers::CommitNotification};
-use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_types::{
     account_state_blob::AccountStatesChunkWithProof,
-    epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
-    transaction::{TransactionListWithProof, TransactionOutputListWithProof, Version},
+    transaction::{TransactionListWithProof, TransactionOutputListWithProof},
 };
-use executor_types::{ChunkExecutorTrait, ExecutedTrees};
+use executor_types::ChunkExecutorTrait;
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use std::{future::Future, sync::Arc};
-use storage_interface::DbReaderWriter;
 use tokio::runtime::{Builder, Runtime};
 
 // The maximum number of chunks that are pending execution or commit
 const MAX_PENDING_CHUNKS: usize = 50;
-
-/// A summary of the state of local storage at a specific snapshot (e.g., version)
-#[derive(Clone, Debug)]
-pub struct StorageStateSummary {
-    pub latest_epoch_state: EpochState,
-    pub latest_executed_trees: ExecutedTrees,
-    pub latest_ledger_info: LedgerInfoWithSignatures,
-    pub latest_synced_version: Version,
-}
 
 /// Synchronizes the storage of the node by verifying and storing new data
 /// (e.g., transactions and outputs).
@@ -51,9 +39,6 @@ pub trait StorageSynchronizerInterface {
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error>;
 
-    /// Returns the latest storage summary
-    fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error>;
-
     /// Saves the given account states to storage
     fn save_account_states(
         &mut self,
@@ -66,9 +51,6 @@ pub struct StorageSynchronizer {
     // A channel through which to notify the executor of new transaction data chunks
     executor_notifier: mpsc::Sender<TransactionDataChunk>,
 
-    // The interface to read and write to storage
-    storage: Arc<RwLock<DbReaderWriter>>,
-
     // The runtime operating the storage synchronizer
     _storage_synchronizer_runtime: Option<Runtime>,
 }
@@ -78,7 +60,6 @@ impl StorageSynchronizer {
         create_runtime: bool,
         chunk_executor: Arc<ChunkExecutor>,
         commit_notification_sender: mpsc::UnboundedSender<CommitNotification>,
-        storage: Arc<RwLock<DbReaderWriter>>,
     ) -> Self {
         // Create a channel to notify the executor when transaction data chunks are ready
         let (executor_notifier, executor_listener) = mpsc::channel(MAX_PENDING_CHUNKS);
@@ -115,63 +96,15 @@ impl StorageSynchronizer {
             storage_synchronizer_runtime.as_ref(),
         );
 
+        // TODO(joshlind): use a shared atomic counter to count the number of items
+        // still in the pipeline!
+
+        // TODO(joshlind): handle the case where we want to reset the pipeline (due to a failure)
+
         Self {
             executor_notifier,
-            storage,
             _storage_synchronizer_runtime: storage_synchronizer_runtime,
         }
-    }
-
-    /// Fetches a summary of storage by reading directly from the database
-    fn fetch_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
-        // Fetch the startup info from storage
-        let startup_info = self
-            .storage
-            .read()
-            .reader
-            .get_startup_info()
-            .map_err(|error| {
-                Error::StorageError(format!(
-                    "Failed to get startup info from storage: {:?}",
-                    error
-                ))
-            })?;
-        let storage_info = startup_info
-            .ok_or_else(|| Error::StorageError("Missing startup info from storage".into()))?;
-
-        // Grab the latest epoch state, executed trees and ledger info
-        let latest_epoch_state = storage_info.get_epoch_state().clone();
-        let latest_executed_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state
-        {
-            ExecutedTrees::from(synced_tree_state)
-        } else {
-            ExecutedTrees::from(storage_info.committed_tree_state)
-        };
-        let latest_ledger_info = storage_info.latest_ledger_info;
-
-        // Fetch the latest synced version
-        let latest_transaction_info = self
-            .storage
-            .read()
-            .reader
-            .get_latest_transaction_info_option()
-            .map_err(|error| {
-                Error::StorageError(format!(
-                    "Failed to get the latest transaction info from storage: {:?}",
-                    error
-                ))
-            })?;
-        let (latest_synced_version, _) = latest_transaction_info
-            .ok_or_else(|| Error::StorageError("Latest transaction info is missing!".into()))?;
-
-        // Create the storage summary
-        let storage_state_summary = StorageStateSummary {
-            latest_epoch_state,
-            latest_executed_trees,
-            latest_ledger_info,
-            latest_synced_version,
-        };
-        Ok(storage_state_summary)
     }
 
     /// Notifies the executor of new transaction data chunks
@@ -217,10 +150,6 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
             end_of_epoch_ledger_info,
         );
         self.notify_executor(transaction_data_chunk)
-    }
-
-    fn get_storage_summary(&mut self) -> Result<StorageStateSummary, Error> {
-        self.fetch_storage_summary()
     }
 
     fn save_account_states(

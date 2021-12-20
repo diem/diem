@@ -19,7 +19,7 @@ use state_sync_v1::{
     network::{StateSyncEvents, StateSyncSender},
 };
 use std::sync::Arc;
-use storage_interface::DbReaderWriter;
+use storage_interface::DbReader;
 use tokio::runtime::Runtime;
 
 /// A struct for holding the various runtimes required by state sync v2.
@@ -68,7 +68,7 @@ impl StateSyncMultiplexer {
         network: Vec<(NetworkId, StateSyncSender, StateSyncEvents)>,
         mempool_notifier: MempoolNotifier,
         consensus_listener: ConsensusNotificationListener,
-        storage: DbReaderWriter,
+        storage: Arc<dyn DbReader>,
         chunk_executor: Arc<ChunkExecutor>,
         node_config: &NodeConfig,
         waypoint: Waypoint,
@@ -77,7 +77,7 @@ impl StateSyncMultiplexer {
         streaming_service_client: StreamingServiceClient,
     ) -> Self {
         // Notify subscribers of the initial on-chain config values
-        match (&*storage.reader).fetch_synced_version() {
+        match (&*storage).fetch_synced_version() {
             Ok(synced_version) => {
                 if let Err(error) =
                     event_subscription_service.notify_initial_configs(synced_version)
@@ -119,7 +119,7 @@ impl StateSyncMultiplexer {
                 network,
                 mempool_notifier,
                 consensus_listener,
-                storage.reader,
+                storage,
                 chunk_executor,
                 node_config,
                 waypoint,
@@ -233,7 +233,7 @@ mod tests {
             vec![],
             mempool_notifier,
             consensus_listener,
-            db_rw.clone(),
+            db_rw.reader.clone(),
             Arc::new(ChunkExecutor::<DiemVM>::new(db_rw).unwrap()),
             &node_config,
             Waypoint::new_any(&LedgerInfo::new(BlockInfo::empty(), HashValue::random())),

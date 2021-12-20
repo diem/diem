@@ -13,14 +13,13 @@ use consensus_notifications::ConsensusNotificationListener;
 use data_streaming_service::streaming_client::StreamingServiceClient;
 use diem_config::config::NodeConfig;
 use diem_data_client::diemnet::DiemNetDataClient;
-use diem_infallible::RwLock;
 use diem_types::waypoint::Waypoint;
 use event_notifications::EventSubscriptionService;
 use executor_types::ChunkExecutorTrait;
 use futures::channel::mpsc;
 use mempool_notifications::MempoolNotificationSender;
 use std::sync::Arc;
-use storage_interface::DbReaderWriter;
+use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
 
 /// Creates a new state sync driver and client
@@ -38,7 +37,7 @@ impl DriverFactory {
         create_runtime: bool,
         node_config: &NodeConfig,
         waypoint: Waypoint,
-        storage: DbReaderWriter,
+        storage: Arc<dyn DbReader>,
         chunk_executor: Arc<ChunkExecutor>,
         mempool_notification_sender: MempoolNotifier,
         consensus_listener: ConsensusNotificationListener,
@@ -70,12 +69,8 @@ impl DriverFactory {
         };
 
         // Create the storage synchronizer
-        let storage_synchronizer = StorageSynchronizer::new(
-            create_runtime,
-            chunk_executor,
-            commit_notification_sender,
-            Arc::new(RwLock::new(storage)),
-        );
+        let storage_synchronizer =
+            StorageSynchronizer::new(create_runtime, chunk_executor, commit_notification_sender);
 
         // Create the driver configuration
         let driver_configuration = DriverConfiguration::new(
@@ -95,6 +90,7 @@ impl DriverFactory {
             storage_synchronizer,
             diem_data_client,
             streaming_service_client,
+            storage,
         );
 
         // Spawn the driver

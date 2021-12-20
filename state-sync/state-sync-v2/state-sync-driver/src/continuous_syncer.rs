@@ -18,6 +18,7 @@ use diem_types::{
     transaction::{TransactionListWithProof, TransactionOutputListWithProof, Version},
 };
 use std::sync::Arc;
+use storage_interface::DbReader;
 
 /// A simple component that manages the continuous syncing of the node
 pub struct ContinuousSyncer<StorageSyncer> {
@@ -30,6 +31,9 @@ pub struct ContinuousSyncer<StorageSyncer> {
     // The client through which to stream data from the Diem network
     streaming_service_client: StreamingServiceClient,
 
+    // The interface to read from storage
+    storage: Arc<dyn DbReader>,
+
     // The storage synchronizer used to update local storage
     storage_synchronizer: Arc<Mutex<StorageSyncer>>,
 }
@@ -38,12 +42,14 @@ impl<StorageSyncer: StorageSynchronizerInterface> ContinuousSyncer<StorageSyncer
     pub fn new(
         driver_configuration: DriverConfiguration,
         streaming_service_client: StreamingServiceClient,
+        storage: Arc<dyn DbReader>,
         storage_synchronizer: Arc<Mutex<StorageSyncer>>,
     ) -> Self {
         Self {
             active_data_stream: None,
             driver_configuration,
             streaming_service_client,
+            storage,
             storage_synchronizer,
         }
     }
@@ -159,9 +165,8 @@ impl<StorageSyncer: StorageSynchronizerInterface> ContinuousSyncer<StorageSyncer
 
     /// Returns the highest synced version and epoch in storage
     fn get_highest_synced_version_and_epoch(&self) -> Result<(Version, Version), Error> {
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
-        let highest_synced_version = latest_storage_summary.latest_synced_version;
-        let highest_synced_epoch = latest_storage_summary.latest_epoch_state.epoch;
+        let highest_synced_version = utils::fetch_latest_synced_version(self.storage.clone())?;
+        let highest_synced_epoch = utils::fetch_latest_epoch_state(self.storage.clone())?.epoch;
 
         Ok((highest_synced_version, highest_synced_epoch))
     }
@@ -298,8 +303,7 @@ impl<StorageSyncer: StorageSynchronizerInterface> ContinuousSyncer<StorageSyncer
         }
 
         // Verify the ledger info state and signatures
-        let latest_storage_summary = self.storage_synchronizer.lock().get_storage_summary()?;
-        let trusted_state = latest_storage_summary.latest_epoch_state;
+        let trusted_state = utils::fetch_latest_epoch_state(self.storage.clone())?;
         if let Err(error) = trusted_state.verify(ledger_info_with_signatures) {
             self.terminate_active_stream(notification_id, NotificationFeedback::PayloadProofFailed)
                 .await?;
