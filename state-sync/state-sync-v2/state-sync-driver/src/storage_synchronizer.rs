@@ -10,7 +10,13 @@ use diem_types::{
 };
 use executor_types::ChunkExecutorTrait;
 use futures::{channel::mpsc, SinkExt, StreamExt};
-use std::{future::Future, sync::Arc};
+use std::{
+    future::Future,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+};
 use tokio::runtime::Runtime;
 
 // The maximum number of chunks that are pending execution or commit
@@ -39,6 +45,10 @@ pub trait StorageSynchronizerInterface {
         end_of_epoch_ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error>;
 
+    /// Returns true iff there is transaction data that is still waiting
+    /// to be executed/applied or committed.
+    fn pending_transaction_data(&self) -> bool;
+
     /// Saves the given account states to storage
     fn save_account_states(
         &mut self,
@@ -51,6 +61,9 @@ pub trait StorageSynchronizerInterface {
 pub struct StorageSynchronizer {
     // A channel through which to notify the executor of new transaction data chunks
     executor_notifier: mpsc::Sender<TransactionDataChunk>,
+
+    // The number of transaction data chunks pending execute/apply, or commit
+    pending_transaction_chunks: Arc<AtomicU64>,
 }
 
 impl StorageSynchronizer {
@@ -65,11 +78,15 @@ impl StorageSynchronizer {
         // Create a channel to notify the committer when executed chunks are ready
         let (committer_notifier, committer_listener) = mpsc::channel(MAX_PENDING_CHUNKS);
 
+        // Create a shared pending transaction chunk counter
+        let pending_transaction_chunks = Arc::new(AtomicU64::new(0));
+
         // Spawn the executor that executes/applies transaction data chunks
         spawn_executor(
             chunk_executor.clone(),
             executor_listener,
             committer_notifier,
+            pending_transaction_chunks.clone(),
             runtime,
         );
 
@@ -78,16 +95,17 @@ impl StorageSynchronizer {
             chunk_executor,
             committer_listener,
             commit_notification_sender,
+            pending_transaction_chunks.clone(),
             runtime,
         );
-
-        // TODO(joshlind): use a shared atomic counter to count the number of items
-        // still in the pipeline!
 
         // TODO(joshlind): handle the case where we want to reset the pipeline
         // (due to a failure).
 
-        Self { executor_notifier }
+        Self {
+            executor_notifier,
+            pending_transaction_chunks,
+        }
     }
 
     /// Notifies the executor of new transaction data chunks
@@ -95,14 +113,15 @@ impl StorageSynchronizer {
         &mut self,
         transaction_data_chunk: TransactionDataChunk,
     ) -> Result<(), Error> {
-        self.executor_notifier
-            .try_send(transaction_data_chunk)
-            .map_err(|error| {
-                Error::UnexpectedError(format!(
-                    "Failed to send transaction data chunk to executor: {:?}",
-                    error
-                ))
-            })
+        if let Err(error) = self.executor_notifier.try_send(transaction_data_chunk) {
+            Err(Error::UnexpectedError(format!(
+                "Failed to send transaction data chunk to executor: {:?}",
+                error
+            )))
+        } else {
+            increment_atomic(self.pending_transaction_chunks.clone());
+            Ok(())
+        }
     }
 }
 
@@ -135,6 +154,10 @@ impl StorageSynchronizerInterface for StorageSynchronizer {
         self.notify_executor(transaction_data_chunk)
     }
 
+    fn pending_transaction_data(&self) -> bool {
+        self.pending_transaction_chunks.load(Ordering::Relaxed) > 0
+    }
+
     fn save_account_states(
         &mut self,
         _account_states_with_proof: AccountStatesChunkWithProof,
@@ -163,6 +186,7 @@ fn spawn_executor<ChunkExecutor: ChunkExecutorTrait + 'static>(
     chunk_executor: Arc<ChunkExecutor>,
     mut executor_listener: mpsc::Receiver<TransactionDataChunk>,
     mut committer_notifier: mpsc::Sender<()>,
+    pending_transaction_chunks: Arc<AtomicU64>,
     runtime: Option<&Runtime>,
 ) {
     // Create an executor
@@ -178,12 +202,7 @@ fn spawn_executor<ChunkExecutor: ChunkExecutorTrait + 'static>(
                                     transactions_with_proof,
                                     &target_ledger_info,
                                     end_of_epoch_ledger_info.as_ref(),
-                                ).map_err(|error| {
-                                     error!(
-                                        "Failed to execute the transaction data chunk! Error: {:?}", error
-                                    );
-                                    error
-                                })
+                                )
                         },
                         TransactionDataChunk::TransactionOutputs(outputs_with_proof, target_ledger_info, end_of_epoch_ledger_info) => {
                             chunk_executor
@@ -191,21 +210,21 @@ fn spawn_executor<ChunkExecutor: ChunkExecutorTrait + 'static>(
                                     outputs_with_proof,
                                     &target_ledger_info,
                                     end_of_epoch_ledger_info.as_ref(),
-                                ).map_err(|error| {
-                                    error!(
-                                        "Failed to apply the transaction data chunk! Error: {:?}", error
-                                    );
-                                    error
-                                })
+                                )
                         }
                     };
 
                     // Notify the committer of new executed chunks
-                    if result.is_ok() {
-                        if let Err(error) = committer_notifier.try_send(()) {
-                            error!(
-                                "Failed to notify the committer! Error: {:?}", error
-                            );
+                    match result {
+                        Ok(()) => {
+                            if let Err(error) = committer_notifier.try_send(()) {
+                                error!("Failed to notify the committer! Error: {:?}", error);
+                                decrement_atomic(pending_transaction_chunks.clone())
+                            }
+                        },
+                        Err(error) => {
+                            error!("Failed to execute/apply the transaction data chunk! Error: {:?}", error);
+                            decrement_atomic(pending_transaction_chunks.clone());
                         }
                     }
                 }
@@ -222,6 +241,7 @@ fn spawn_committer<ChunkExecutor: ChunkExecutorTrait + 'static>(
     chunk_executor: Arc<ChunkExecutor>,
     mut committer_listener: mpsc::Receiver<()>,
     mut commit_notification_sender: mpsc::UnboundedSender<CommitNotification>,
+    pending_transaction_chunks: Arc<AtomicU64>,
     runtime: Option<&Runtime>,
 ) {
     // Create an executor
@@ -240,7 +260,8 @@ fn spawn_committer<ChunkExecutor: ChunkExecutorTrait + 'static>(
                         Err(error) => {
                             error!("Failed to commit executed chunk! Error: {:?}", error);
                         }
-                    }
+                    };
+                    decrement_atomic(pending_transaction_chunks.clone())
                 }
             }
         }
@@ -258,4 +279,14 @@ fn spawn(runtime: Option<&Runtime>, future: impl Future<Output = ()> + Send + 's
     } else {
         tokio::spawn(future);
     }
+}
+
+/// Increments the given atomic u64
+fn increment_atomic(atomic_u64: Arc<AtomicU64>) {
+    atomic_u64.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Decrements the given atomic u64
+fn decrement_atomic(atomic_u64: Arc<AtomicU64>) {
+    atomic_u64.fetch_sub(1, Ordering::Relaxed);
 }

@@ -12,6 +12,7 @@ use data_streaming_service::{
 };
 use diem_config::config::ContinuousSyncingMode;
 use diem_infallible::Mutex;
+use diem_logger::prelude::*;
 use diem_types::{
     epoch_change::Verifier,
     ledger_info::LedgerInfoWithSignatures,
@@ -63,6 +64,10 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> ContinuousSyncer<Stora
             // We have an active data stream. Process any notifications!
             self.process_active_stream_notifications(consensus_sync_request)
                 .await
+        } else if self.storage_synchronizer.pending_transaction_data() {
+            // Wait for any pending transaction data to be processed
+            trace!("Waiting for pending transaction data!");
+            Ok(())
         } else {
             // Fetch a new data stream to start streaming data
             self.initialize_active_data_stream(consensus_sync_request)
