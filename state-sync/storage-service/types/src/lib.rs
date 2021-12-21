@@ -76,7 +76,7 @@ impl StorageServiceRequest {
     }
 }
 
-/// A storage service response.
+/// A storage service response
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 // TODO(philiphayes): do something about this without making it ugly :(
 #[allow(clippy::large_enum_variant)]
