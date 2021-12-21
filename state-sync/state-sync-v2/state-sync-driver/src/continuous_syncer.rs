@@ -35,15 +35,15 @@ pub struct ContinuousSyncer<StorageSyncer> {
     storage: Arc<dyn DbReader>,
 
     // The storage synchronizer used to update local storage
-    storage_synchronizer: Arc<Mutex<StorageSyncer>>,
+    storage_synchronizer: StorageSyncer,
 }
 
-impl<StorageSyncer: StorageSynchronizerInterface> ContinuousSyncer<StorageSyncer> {
+impl<StorageSyncer: StorageSynchronizerInterface + Clone> ContinuousSyncer<StorageSyncer> {
     pub fn new(
         driver_configuration: DriverConfiguration,
         streaming_service_client: StreamingServiceClient,
         storage: Arc<dyn DbReader>,
-        storage_synchronizer: Arc<Mutex<StorageSyncer>>,
+        storage_synchronizer: StorageSyncer,
     ) -> Self {
         Self {
             active_data_stream: None,
@@ -197,7 +197,7 @@ impl<StorageSyncer: StorageSynchronizerInterface> ContinuousSyncer<StorageSyncer
         match self.driver_configuration.config.continuous_syncing_mode {
             ContinuousSyncingMode::ApplyTransactionOutputs => {
                 if let Some(transaction_outputs_with_proof) = transaction_outputs_with_proof {
-                    self.storage_synchronizer.lock().apply_transaction_outputs(
+                    self.storage_synchronizer.apply_transaction_outputs(
                         transaction_outputs_with_proof,
                         ledger_info_with_signatures,
                         None,
@@ -215,7 +215,7 @@ impl<StorageSyncer: StorageSynchronizerInterface> ContinuousSyncer<StorageSyncer
             }
             ContinuousSyncingMode::ExecuteTransactions => {
                 if let Some(transaction_list_with_proof) = transaction_list_with_proof {
-                    self.storage_synchronizer.lock().execute_transactions(
+                    self.storage_synchronizer.execute_transactions(
                         transaction_list_with_proof,
                         ledger_info_with_signatures,
                         None,

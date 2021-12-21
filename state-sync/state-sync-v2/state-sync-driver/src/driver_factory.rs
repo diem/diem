@@ -69,8 +69,11 @@ impl DriverFactory {
         };
 
         // Create the storage synchronizer
-        let storage_synchronizer =
-            StorageSynchronizer::new(create_runtime, chunk_executor, commit_notification_sender);
+        let storage_synchronizer = StorageSynchronizer::new(
+            chunk_executor,
+            commit_notification_sender,
+            driver_runtime.as_ref(),
+        );
 
         // Create the driver configuration
         let driver_configuration = DriverConfiguration::new(
@@ -101,8 +104,8 @@ impl DriverFactory {
         }
 
         Self {
-            _driver_runtime: driver_runtime,
             client_notification_sender,
+            _driver_runtime: driver_runtime,
         }
     }
 
