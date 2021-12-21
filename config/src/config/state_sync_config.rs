@@ -90,7 +90,7 @@ impl Default for StateSyncDriverConfig {
             bootstrapping_mode: BootstrappingMode::DownloadLatestAccountStates,
             enable_state_sync_v2: false,
             continuous_syncing_mode: ContinuousSyncingMode::ApplyTransactionOutputs,
-            progress_check_interval_ms: 500,
+            progress_check_interval_ms: 100,
         }
     }
 }
@@ -108,11 +108,11 @@ pub struct StorageServiceConfig {
 impl Default for StorageServiceConfig {
     fn default() -> Self {
         Self {
-            max_account_states_chunk_sizes: 1000,
+            max_account_states_chunk_sizes: 3000,
             max_concurrent_requests: 50,
             max_epoch_chunk_size: 100,
-            max_transaction_chunk_size: 1000,
-            max_transaction_output_chunk_size: 1000,
+            max_transaction_chunk_size: 3000,
+            max_transaction_output_chunk_size: 3000,
         }
     }
 }
@@ -146,10 +146,10 @@ pub struct DataStreamingServiceConfig {
 impl Default for DataStreamingServiceConfig {
     fn default() -> Self {
         Self {
-            global_summary_refresh_interval_ms: 1000,
-            max_concurrent_requests: 3,
+            global_summary_refresh_interval_ms: 300,
+            max_concurrent_requests: 5,
             max_data_stream_channel_sizes: 1000,
-            max_request_retry: 10,
+            max_request_retry: 5,
             max_notification_id_mappings: 2000,
             progress_check_interval_ms: 100,
         }
@@ -167,7 +167,7 @@ impl Default for DiemDataClientConfig {
     fn default() -> Self {
         Self {
             response_timeout_ms: 3_000,
-            summary_poll_interval_ms: 1_000,
+            summary_poll_interval_ms: 300,
         }
     }
 }
