@@ -5,7 +5,10 @@
 
 use consensus_notifications::ConsensusNotificationListener;
 use data_streaming_service::streaming_client::StreamingServiceClient;
-use diem_config::{config::NodeConfig, network_id::NetworkId};
+use diem_config::{
+    config::{NodeConfig, RoleType},
+    network_id::NetworkId,
+};
 use diem_data_client::diemnet::DiemNetDataClient;
 use diem_types::{move_resource::MoveStorage, waypoint::Waypoint};
 use event_notifications::{EventNotificationSender, EventSubscriptionService};
@@ -98,7 +101,8 @@ impl StateSyncMultiplexer {
         let activate_state_sync_v2 = node_config
             .state_sync
             .state_sync_driver
-            .enable_state_sync_v2;
+            .enable_state_sync_v2
+            && node_config.base.role == RoleType::FullNode;
         if activate_state_sync_v2 {
             // Start the state sync v2 driver
             state_sync_v2 = Some(DriverFactory::create_and_spawn_driver(
