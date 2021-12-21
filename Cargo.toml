@@ -184,6 +184,7 @@ members = [
     "storage/storage-service",
     "testsuite/cli",
     "testsuite/cli/diem-wallet",
+    "testsuite/cluster-test",
     "testsuite/diem-fuzzer",
     "testsuite/diem-fuzzer/fuzz",
     "testsuite/diem-swarm",

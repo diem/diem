@@ -1,0 +1,25 @@
+# Source: helm chart for vault
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-{validator_index}
+  labels:
+    app: diem-vault
+    diem-node: "true"
+    peer_id: vault-{validator_index}
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  type: ClusterIP
+  publishNotReadyAddresses: true
+  ports:
+  - name: "http"
+    port: 8200
+    targetPort: 8200
+  - name: internal
+    port: 8201
+    targetPort: 8201
+  selector:
+    app: diem-vault
+    diem-node: "true"
+    peer_id: vault-{validator_index}

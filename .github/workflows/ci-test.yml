@@ -179,7 +179,7 @@ jobs:
     strategy:
       matrix:
         target_images:
-          [client faucet forge, init tools validator validator-tcb]
+          [client faucet cluster-test forge, init tools validator validator-tcb]
     steps:
       - uses: actions/checkout@v2.4.0
         with:
@@ -290,6 +290,22 @@ jobs:
             echo "PREV_TAG=$compat_prev_tag" >> $GITHUB_ENV
             echo "BUILD_PREV=0" >> $GITHUB_ENV
           fi
+      - name: build extra images
+        id: build-extra-images
+        run: |
+          res=land_$BASE_GIT_REV
+          if [ $BUILD_PREV -eq 1 ]; then
+            compat_prev_tag=$res
+            echo "Starting codebuild for $compat_prev_tag"
+            VERSION=$BASE_GIT_REV ADDL_TAG=$compat_prev_tag .github/actions/land-blocking/cti-codebuild.sh &> codebuild-prev.log &
+            prev_build_pid=$!
+            wait $prev_build_pid
+            echo "====== codebuild-prev.log start ======"
+            cat codebuild-prev.log
+          else
+            res=$PREV_TAG;
+          fi
+          echo "::set-output name=prev-tag::$(echo $res)";
       - name: Early terminate workflow
         if: ${{ failure() }}
         uses: ./.github/actions/early-terminator
@@ -943,6 +959,7 @@ jobs:
           # On `push` this value will be empty and will "do-the-right-thing"
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Launch forge test
+        # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
           set +e
           date

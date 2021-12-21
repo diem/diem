@@ -159,6 +159,7 @@ members = [
     "bytecode-verifier-tests",
     "bytecode-verifier-transactional-tests",
     "cli",
+    "cluster-test",
     "testcases",
     "diem-documentation-tool",
     "diem-e2e-tests-replay",

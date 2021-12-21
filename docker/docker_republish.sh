@@ -25,7 +25,7 @@ OUTPUT_TAG=;
 TARGET_REPO="docker.io"
 TARGET_ORG="diem"
 DISABLE_TRUST="false"
-IMAGES="init faucet tools validator validator_tcb client forge"
+IMAGES="init faucet tools validator validator_tcb cluster_test client forge"
 
 #parse args
 while getopts "t:o:r:g:i:dh" arg; do

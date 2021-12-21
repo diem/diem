@@ -1,0 +1,73 @@
+base:
+  role: "full_node"
+  waypoint:
+    from_storage:
+      type: "vault"
+      server: "http://{vault_addr}:8200"
+      namespace: "{vault_ns}"
+      token:
+        from_config: root
+
+execution:
+  genesis_file_location: "genesis.blob"
+full_node_networks:
+- network_id:
+    private: "vfn"
+  listen_address: "/ip4/0.0.0.0/tcp/6181"
+  seeds:
+    d58bc7bb154b38039bc9096ce04e1237:
+      addresses:
+        - "/ip4/{seed_peer_ip}/tcp/6181/ln-noise-ik/f0274c2774519281a8332d0bb9d8101bd58bc7bb154b38039bc9096ce04e1237/ln-handshake/0"
+      role: "Validator"
+- network_id: "public"
+  discovery_method: "onchain"
+  listen_address: "/ip4/0.0.0.0/tcp/6182"
+  identity:
+    type: "from_storage"
+    key_name: "fullnode_network"
+    peer_id_name: "owner_account"
+    backend:
+      type: "vault"
+      server: "http://{vault_addr}:8200"
+      namespace: "{vault_ns}"
+      token:
+        from_config: root
+
+mempool:
+  default_failovers: 0
+
+storage:
+  prune_window: 50000
+
+json_rpc:
+    address: 0.0.0.0:8080
+
+# this is only enabled when the binary is compiled with failpoints feature, otherwise no-op
+failpoints:
+  api::endpoint_index: 1%return
+  api::endpoint_get_account: 1%return
+  api::endpoint_get_account_resources: 1%return
+  api::endpoint_get_account_modules: 1%return
+  api::endpoint_get_transaction: 1%return
+  api::endpoint_get_transactions: 1%return
+  api::endpoint_get_account_transactions: 1%return
+  api::endpoint_submit_json_transactions: 1%return
+  api::endpoint_submit_bcs_transactions: 1%return
+  api::endpoint_create_signing_message: 1%return
+  api::endpoint_get_events_by_event_key: 1%return
+  api::endpoint_get_events_by_event_handle: 1%return
+  jsonrpc::get_latest_ledger_info: 1%return
+  jsonrpc::method::submit::mempool_sender: 1%return
+  jsonrpc::method::submit: 1%return
+  jsonrpc::method::get_metadata: 1%return
+  jsonrpc::method::get_account: 1%return
+  jsonrpc::method::get_transactions: 1%return
+  jsonrpc::method::get_account_transaction: 1%return
+  jsonrpc::method::get_events: 1%return
+  jsonrpc::method::get_currencies: 1%return
+  jsonrpc::method::get_state_proof: 1%return
+  jsonrpc::method::get_account_state_with_proof: 1%return
+  jsonrpc::method::get_network_status: 1%return
+  state_sync::apply_chunk: 0.1%return
+  state_sync::process_chunk_request: 0.1%return
+  mempool::send_to: 1%return

@@ -150,6 +150,78 @@ jobs:
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
+  run-cluster-test-pre-release-suite:
+    needs: prepare
+    name: Run the pre-release suite of Cluster Test
+    runs-on: self-hosted
+    if: ${{  startsWith(needs.prepare.outputs.changes-target-branch, 'release') }}
+    # The pre-release suite run time varies 1~1.5 hr.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0 #get all the history!!!
+      - name: set_env
+        id: set_env
+        run: |
+          HEAD_GIT_REV=$(git rev-parse --short=8 HEAD)
+          echo "HEAD_GIT_REV=$HEAD_GIT_REV" >> $GITHUB_ENV
+          IMAGE_TAG=$(echo ${GITHUB_REF#refs/heads/})_$HEAD_GIT_REV
+          echo $IMAGE_TAG
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+      - name: poll_images
+        # Poll until images are ready
+        env:
+          AWS_REGION: us-west-2
+          RETRIES: 30
+        run: |
+          set +e
+          retry=0
+          status=1
+          while [[ $status != 0 && $retry -lt $RETRIES ]]; do
+            status=0
+            for image in diem/validator diem/validator_tcb diem/init diem/cluster_test; do
+              aws ecr describe-images --region $AWS_REGION --repository-name $image --image-ids=imageTag=$IMAGE_TAG
+              status=$((status + $?))
+            done
+            retry=$((retry + 1))
+            if [[ $status != 0 ]] ; then
+              echo "CI has not pushed all images to ECR."
+              echo "Wait $((1*$retry)) of $((1*$RETRIES)) minutes before retry."
+              sleep 1m
+            fi
+          done
+          exit $status
+      - name: Run Cluster Test
+        run: |
+          date
+          BASE_GIT_REV=$(git rev-parse $HEAD_GIT_REV^)
+          ./scripts/cti --tag $IMAGE_TAG --timeout-secs 7200 \
+            --env SLACK_CHANGELOG_URL=${{ secrets.WEBHOOK_CHANGELOG }} \
+            --changelog $BASE_GIT_REV $HEAD_GIT_REV \
+            --suite pre_release
+      - name: Push alert
+        if: ${{ failure() }}
+        run: |
+          jq -n \
+            --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed with $IMAGE_TAG." \
+            --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+            '{
+              "attachments": [
+                {
+                  "text": $msg,
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "Visit Job",
+                      "url": $url
+                    }
+                  ]
+                }
+              ]
+            }' > /tmp/payload
+          curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_PUSH }}
+
   run-forge-test-pre-release-suite:
     needs: prepare
     name: Run the pre-release suite of Forge Test
@@ -275,6 +347,7 @@ jobs:
           docker/build_push.sh -u -p -b ${BRANCH} -n tools || success=$(echo "tools" >> "${tmpfile}"; echo 1)
           docker/build_push.sh -u -p -b ${BRANCH} -n validator || success=$(echo "validator" >> "${tmpfile}"; echo 1)
           docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb || success=$(echo "validator-tcb" >> "${tmpfile}"; echo 1)
+          docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test || success=$(echo "cluster-test" >> "${tmpfile}"; echo 1)
           docker/build_push.sh -u -p -b ${BRANCH} -n forge || success=$(echo "forge" >> "${tmpfile}"; echo 1)
           if [[ "$success" == "1" ]]; then
             cat "${tmpfile}"
@@ -296,6 +369,7 @@ jobs:
           docker/build_push.sh -u -b ${BRANCH} -n tools ||  success=$(echo "tools" >> "${tmpfile}"; echo 1)
           docker/build_push.sh -u -b ${BRANCH} -n validator || success=$(echo "validator" >> "${tmpfile}"; echo 1)
           docker/build_push.sh -u -b ${BRANCH} -n validator-tcb || success=$(echo "validator-tcb" >> "${tmpfile}"; echo 1)
+          docker/build_push.sh -u -b ${BRANCH} -n cluster-test || success=$(echo "cluster-test" >> "${tmpfile}"; echo 1)
           docker/build_push.sh -u -b ${BRANCH} -n forge || success=$(echo "forge" >> "${tmpfile}"; echo 1)
           if [[ "$success" == "1" ]]; then
             cat "${tmpfile}"

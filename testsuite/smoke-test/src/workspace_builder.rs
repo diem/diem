@@ -12,15 +12,24 @@ use std::{env, path::PathBuf, process::Command};
 const WORKSPACE_BUILD_ERROR_MSG: &str = r#"
     Unable to build all workspace binaries. Cannot continue running tests.
 
-    Try running 'cargo build --all --bins --exclude diem-node' yourself.
+    Try running 'cargo build --all --bins --exclude cluster-test --exclude diem-node' yourself.
 "#;
 
 // Global flag indicating if all binaries in the workspace have been built.
 static WORKSPACE_BUILT: Lazy<bool> = Lazy::new(|| {
     info!("Building project binaries");
     let args = if cfg!(debug_assertions) {
+        // special case: excluding cluster-test as it exports no-struct-opt feature that poisons everything
         // use get_diem_node_with_failpoints to get diem-node binary
-        vec!["build", "--all", "--bins", "--exclude", "diem-node"]
+        vec![
+            "build",
+            "--all",
+            "--bins",
+            "--exclude",
+            "cluster-test",
+            "--exclude",
+            "diem-node",
+        ]
     } else {
         vec!["build", "--all", "--bins", "--release"]
     };

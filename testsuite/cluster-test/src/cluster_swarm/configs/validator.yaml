@@ -1,0 +1,70 @@
+base:
+  waypoint:
+    from_storage:
+      type: "vault"
+      server: "http://{vault_addr}:8200"
+      namespace: "{vault_ns}"
+      token:
+        from_config: root
+
+consensus:
+  safety_rules:
+    service:
+      type: "process"
+      server_address: "/ip4/{safety_rules_addr}/tcp/6185"
+
+execution:
+  genesis_file_location: "/opt/diem/etc/genesis.blob"
+  backend:
+    type: "vault"
+    server: "http://{vault_addr}:8200"
+    namespace: "{vault_ns}"
+    token:
+      from_config: root
+
+validator_network:
+  discovery_method: "onchain"
+  mutual_authentication: true
+  identity:
+    type: "from_storage"
+    key_name: "validator_network"
+    peer_id_name: "owner_account"
+    backend:
+      type: "vault"
+      server: "http://{vault_addr}:8200"
+      namespace: "{vault_ns}"
+      token:
+        from_config: root
+
+full_node_networks:
+  - network_id:
+      private: "vfn"
+    listen_address: "/ip4/0.0.0.0/tcp/6181"
+    identity:
+      type: "from_config"
+      key: "b0f405a3e75516763c43a2ae1d70423699f34cd68fa9f8c6bb2d67aa87d0af69"
+      peer_id: "d58bc7bb154b38039bc9096ce04e1237"
+
+storage:
+  prune_window: 50000
+
+json_rpc:
+    address: 0.0.0.0:8080
+
+# this is only enabled when the binary is compiled with failpoints feature, otherwise no-op
+failpoints:
+  consensus::process_proposal_msg: 5%return
+  consensus::process_sync_info_msg: 5%return
+  consensus::process_vote_msg: 5%return
+  consensus::process_block_retrieval: 5%return
+  consensus::sync_to: 1%return
+  consensus::compute: 1%return
+  consensus::pull_txn: 1%return
+  executor::vm_execute_chunk: 1%return
+  executor::commit_chunk: 1%return
+  executor::vm_execute_block: 1%return
+  #executor::commit_blocks: 0.01%return
+  state_sync::request_sync: 1%return
+  state_sync::apply_chunk: 1%return
+  state_sync::process_chunk_request: 0.1%return
+  mempool::send_to: 1%return

@@ -153,6 +153,7 @@ function prune_repo {
 }
 
 prune_repo "diem/client"
+prune_repo "diem/cluster_test"
 prune_repo "diem/init"
 prune_repo "diem/faucet"
 prune_repo "diem/tools"

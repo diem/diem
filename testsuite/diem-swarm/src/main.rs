@@ -90,6 +90,30 @@ fn main() {
         })
         .collect::<Vec<_>>();
 
+    let node_address_list = ports
+        .iter()
+        .map(|port| format!("localhost:{}", port.0))
+        .collect::<Vec<String>>()
+        .join(",");
+
+    println!("To run transaction generator run:");
+    println!(
+        "\tcluster-test --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
+        diem_root_key_path, node_address_list,
+    );
+
+    let node_address_list = ports
+        .iter()
+        .map(|port| format!("localhost:{}:{}", port.0, port.1))
+        .collect::<Vec<String>>()
+        .join(",");
+
+    println!("To run health check:");
+    println!(
+        "\tcluster-test --mint-file {:?} --swarm --peers {:?} --health-check --duration 30",
+        diem_root_key_path, node_address_list,
+    );
+
     let _faucet = if args.start_faucet {
         let faucet_port = diem_config::utils::get_available_port();
         let server_port = ports[0].0;

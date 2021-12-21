@@ -78,7 +78,7 @@ impl PersistentSafetyStorage {
     ) -> Result<(), Error> {
         let result = internal_store.import_private_key(CONSENSUS_KEY, consensus_private_key);
         // Attempting to re-initialize existing storage. This can happen in environments like
-        // forge. Rather than be rigid here, leave it up to the developer to detect
+        // cluster test. Rather than be rigid here, leave it up to the developer to detect
         // inconsistencies or why they did not reset storage between rounds. Do not repeat the
         // checks again below, because it is just too strange to have a partially configured
         // storage.

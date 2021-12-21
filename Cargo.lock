@@ -816,6 +816,71 @@ dependencies = [
 ]
 
 [[package]]
+name = "cluster-test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bcs",
+ "chrono",
+ "consensus-types",
+ "debug-interface",
+ "diem-client",
+ "diem-config",
+ "diem-crypto",
+ "diem-framework-releases",
+ "diem-genesis-tool",
+ "diem-global-constants",
+ "diem-infallible",
+ "diem-logger",
+ "diem-management",
+ "diem-mempool",
+ "diem-network-address-encryption",
+ "diem-node",
+ "diem-operational-tool",
+ "diem-rest-client",
+ "diem-retrier",
+ "diem-sdk",
+ "diem-secure-storage",
+ "diem-swarm",
+ "diem-temppath",
+ "diem-time-service",
+ "diem-transaction-builder",
+ "diem-types",
+ "diem-workspace-hack",
+ "flate2",
+ "forge",
+ "futures",
+ "generate-key",
+ "hex",
+ "itertools 0.10.1",
+ "k8s-openapi",
+ "kube",
+ "language-e2e-tests",
+ "move-core-types",
+ "network",
+ "network-builder",
+ "num_cpus",
+ "once_cell",
+ "rand 0.8.4",
+ "regex",
+ "reqwest",
+ "rusoto_autoscaling",
+ "rusoto_core",
+ "rusoto_s3",
+ "rusoto_sts",
+ "seed-peer-generator",
+ "serde 1.0.130",
+ "serde_json",
+ "serde_yaml",
+ "state-sync-v1",
+ "structopt 0.3.21",
+ "termion",
+ "tokio",
+ "toml",
+]
+
+[[package]]
 name = "codespan"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3279,6 +3344,18 @@ name = "fixedbitset"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "398ea4fabe40b9b0d885340a2a991a44c8a645624075ad966d21f88688e2b69e"
+
+[[package]]
+name = "flate2"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd3aec53de10fe96d7d8c565eb17f2c687bb5518a2ec453b5b1252964526abe0"
+dependencies = [
+ "cfg-if 1.0.0",
+ "crc32fast",
+ "libc",
+ "miniz_oxide",
+]
 
 [[package]]
 name = "fnv"
@@ -6952,6 +7029,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusoto_autoscaling"
+version = "0.46.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7645ce7ec0d2a2f0e2ffdd3f6e04901f70fb396e4d1767b883ebc7361dbf310"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "rusoto_core",
+ "serde_urlencoded 0.6.1",
+ "xml-rs",
+]
+
+[[package]]
 name = "rusoto_core"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7007,6 +7098,19 @@ dependencies = [
  "serde 1.0.130",
  "serde_derive",
  "serde_json",
+]
+
+[[package]]
+name = "rusoto_s3"
+version = "0.46.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abc3f56f14ccf91f880b9a9c2d0556d8523e8c155041c54db155b384a1dd1119"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "rusoto_core",
+ "xml-rs",
 ]
 
 [[package]]

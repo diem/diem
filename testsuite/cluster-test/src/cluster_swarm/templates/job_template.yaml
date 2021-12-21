@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {name}
+  labels:
+    app: {label}
+    diem-node: "true"
+spec:
+  template:
+    metadata:
+      labels:
+        app: {label}
+    spec:
+      serviceAccountName: clustertest
+      nodeName: {node_name}
+      hostNetwork: true
+      hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: main
+        image: {image}
+        volumeMounts:
+          - mountPath: /opt/diem/data
+            name: data
+          - mountPath: /opt/diem/etc
+            name: config
+        imagePullPolicy: Always
+        command: ["sh",  "-c", "{command}"]
+        securityContext:
+          runAsUser: 0 # To get permissions to write to /opt/diem/data
+          privileged: true
+          capabilities:
+            add: ["SYS_ADMIN"]
+      restartPolicy: Never
+      volumes:
+        - name: data
+          hostPath:
+            path: /data
+            type: DirectoryOrCreate
+        - name: config
+          hostPath:
+            path: /config
+            type: DirectoryOrCreate
+  backoffLimit: {back_off_limit}

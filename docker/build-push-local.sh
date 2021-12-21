@@ -10,7 +10,7 @@ aws ecr get-login-password \
     --username AWS \
     --password-stdin "$REPO"
 
-BUILD_PROJECTS=(validator init safety-rules)
+BUILD_PROJECTS=(validator cluster-test init safety-rules)
 
 TAG=${TAG:-"dev_$(whoami)_$(git rev-parse --short HEAD)"}
 echo "[$(date)] Using tag $TAG"
