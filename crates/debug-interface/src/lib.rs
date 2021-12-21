@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use diem_logger::json_log::JsonLogEntry;
 use reqwest::{blocking, Url};
 use std::collections::HashMap;
 
@@ -78,6 +79,14 @@ impl NodeDebugClient {
             })
             .collect()
     }
+
+    pub fn get_events(&self) -> Result<Vec<JsonLogEntry>> {
+        let mut url = self.url.clone();
+        url.set_path("events");
+        let response = self.client.get(url).send()?;
+
+        Ok(response.json()?)
+    }
 }
 
 /// Implement default utility client for AsyncNodeDebugInterface
@@ -119,5 +128,15 @@ impl AsyncNodeDebugClient {
                 )),
             })
             .collect()
+    }
+
+    pub async fn get_events(&mut self) -> Result<Vec<JsonLogEntry>> {
+        let response = self
+            .client
+            .get(&format!("{}/events", self.addr))
+            .send()
+            .await?;
+
+        Ok(response.json().await?)
     }
 }

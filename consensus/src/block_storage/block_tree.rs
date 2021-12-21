@@ -16,6 +16,7 @@ use diem_crypto::HashValue;
 use diem_logger::prelude::*;
 use diem_types::{block_info::BlockInfo, ledger_info::LedgerInfoWithSignatures};
 use mirai_annotations::{checked_verify_eq, precondition};
+use short_hex_str::AsShortHexStr;
 use std::{
     collections::{vec_deque::VecDeque, HashMap, HashSet},
     sync::Arc,
@@ -446,6 +447,12 @@ impl BlockTree {
             LogSchema::new(LogEvent::CommitViaBlock).round(current_round),
             committed_round = committed_round,
             block_id = block_to_commit.id(),
+        );
+        event!("committed",
+            "block_id": block_to_commit.id().short_str(),
+            "epoch": block_to_commit.epoch(),
+            "round": committed_round,
+            "parent_id": block_to_commit.parent_id().short_str(),
         );
 
         let id_to_remove = self.find_blocks_to_prune(block_to_commit.id());
