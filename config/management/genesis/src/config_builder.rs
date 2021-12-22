@@ -8,16 +8,22 @@ use diem_secure_storage::{CryptoStorage, KVStorage, Storage};
 use diem_temppath::TempPath;
 use rand::{rngs::StdRng, SeedableRng};
 
+pub fn bars_test_config() -> (NodeConfig, Ed25519PrivateKey) {
+    test_config_impl(diem_experimental_framework_releases::current_module_blobs().to_vec())
+}
+
 pub fn test_config() -> (NodeConfig, Ed25519PrivateKey) {
+    test_config_impl(diem_framework_releases::current_module_blobs().to_vec())
+}
+
+fn test_config_impl(module_blobs: Vec<Vec<u8>>) -> (NodeConfig, Ed25519PrivateKey) {
     let path = TempPath::new();
     path.create_as_dir().unwrap();
-    let (root_keys, _genesis, _genesis_waypoint, validators) = ValidatorBuilder::new(
-        path.path(),
-        diem_framework_releases::current_module_blobs().to_vec(),
-    )
-    .template(NodeConfig::default_for_validator())
-    .build(StdRng::from_seed([0; 32]))
-    .unwrap();
+    let (root_keys, _genesis, _genesis_waypoint, validators) =
+        ValidatorBuilder::new(path.path(), module_blobs)
+            .template(NodeConfig::default_for_validator())
+            .build(StdRng::from_seed([0; 32]))
+            .unwrap();
     let mut configs = validators.into_iter().map(|v| v.config).collect::<Vec<_>>();
     let key = root_keys.root_key;
 

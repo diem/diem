@@ -66,7 +66,7 @@ pub fn run_benchmark(
     .create_checkpoint(checkpoint_dir.as_ref().join("diemdb"))
     .expect("db checkpoint creation fails.");
 
-    let (mut config, genesis_key) = diem_genesis_tool::test_config();
+    let (mut config, genesis_key) = diem_genesis_tool::bars_test_config();
     config.storage.dir = checkpoint_dir.as_ref().to_path_buf();
 
     let (db, executor) = init_db_and_executor(&config);

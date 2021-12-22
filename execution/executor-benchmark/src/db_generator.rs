@@ -41,7 +41,7 @@ pub fn run(
     // create if not exists
     fs::create_dir_all(db_dir.as_ref()).unwrap();
 
-    let (config, genesis_key) = diem_genesis_tool::test_config();
+    let (config, genesis_key) = diem_genesis_tool::bars_test_config();
     // Create executor.
     let (db, db_rw) = DbReaderWriter::wrap(
         DiemDB::open(

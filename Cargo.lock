@@ -1794,6 +1794,7 @@ dependencies = [
  "consensus-types",
  "diem-config",
  "diem-crypto",
+ "diem-experimental-framework-releases",
  "diem-framework-releases",
  "diem-global-constants",
  "diem-management",
