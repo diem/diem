@@ -24,7 +24,7 @@ impl Test for StateSyncPerformance {
 impl NetworkTest for StateSyncPerformance {
     fn run<'t>(&self, ctx: &mut NetworkContext<'t>) -> Result<()> {
         let mut rng = StdRng::from_seed(OsRng.gen());
-        let duration = Duration::from_secs(30);
+        let duration = Duration::from_secs(60);
         let all_validators = ctx
             .swarm()
             .validators()

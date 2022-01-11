@@ -9,7 +9,8 @@ use data_streaming_service::{
 };
 use diem_logger::prelude::*;
 use diem_types::{
-    epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures, transaction::Version,
+    epoch_change::Verifier, epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
+    transaction::Version,
 };
 use futures::StreamExt;
 use std::{sync::Arc, time::Duration};
@@ -18,6 +19,68 @@ use tokio::time::timeout;
 
 // TODO(joshlind): make this configurable
 const MAX_NOTIFICATION_WAIT_TIME_MS: u64 = 500;
+
+/// The speculative state that tracks a data stream of transactions or outputs.
+/// This assumes all data is valid and allows the driver to speculatively verify
+/// payloads flowing along the stream without having to block on the executor or
+/// storage. Thus, increasing syncing performance.
+pub struct SpeculativeStreamState {
+    epoch_state: EpochState,
+    proof_ledger_info: Option<LedgerInfoWithSignatures>,
+    synced_version: Version,
+}
+
+impl SpeculativeStreamState {
+    pub fn new(
+        epoch_state: EpochState,
+        proof_ledger_info: Option<LedgerInfoWithSignatures>,
+        synced_version: Version,
+    ) -> Self {
+        Self {
+            epoch_state,
+            proof_ledger_info,
+            synced_version,
+        }
+    }
+
+    /// Returns the next version that we expect along the stream
+    pub fn expected_next_version(&self) -> Result<Version, Error> {
+        self.synced_version.checked_add(1).ok_or_else(|| {
+            Error::IntegerOverflow("The expected next version has overflown!".into())
+        })
+    }
+
+    /// Returns the proof ledger info that all data along the stream should have
+    /// proofs relative to. This assumes the proof ledger info exists!
+    pub fn get_proof_ledger_info(&self) -> LedgerInfoWithSignatures {
+        self.proof_ledger_info
+            .as_ref()
+            .expect("Proof ledger info is missing!")
+            .clone()
+    }
+
+    /// Updates the currently synced version of the stream
+    pub fn update_synced_version(&mut self, synced_version: Version) {
+        self.synced_version = synced_version;
+    }
+
+    /// Verifies the given ledger info with signatures against the current epoch
+    /// state and updates the state if the validator set has changed.
+    pub fn verify_ledger_info_with_signatures(
+        &mut self,
+        ledger_info_with_signatures: &LedgerInfoWithSignatures,
+    ) -> Result<(), Error> {
+        self.epoch_state
+            .verify(ledger_info_with_signatures)
+            .map_err(|error| {
+                Error::VerificationError(format!("Ledger info failed verification: {:?}", error))
+            })?;
+        if let Some(epoch_state) = ledger_info_with_signatures.ledger_info().next_epoch_state() {
+            self.epoch_state = epoch_state.clone();
+        }
+        Ok(())
+    }
+}
 
 /// Fetches a data notification from the given data stream listener. Note: this
 /// helper assumes the `active_data_stream` exists and throws an error if a
