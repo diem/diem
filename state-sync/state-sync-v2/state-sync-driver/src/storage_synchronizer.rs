@@ -11,7 +11,7 @@ use diem_types::{
 use executor_types::ChunkExecutorTrait;
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use std::{future::Future, sync::Arc};
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::Runtime;
 
 // The maximum number of chunks that are pending execution or commit
 const MAX_PENDING_CHUNKS: usize = 50;
@@ -47,19 +47,17 @@ pub trait StorageSynchronizerInterface {
 }
 
 /// The implementation of the `StorageSynchronizerInterface` used by state sync
+#[derive(Clone)]
 pub struct StorageSynchronizer {
     // A channel through which to notify the executor of new transaction data chunks
     executor_notifier: mpsc::Sender<TransactionDataChunk>,
-
-    // The runtime operating the storage synchronizer
-    _storage_synchronizer_runtime: Option<Runtime>,
 }
 
 impl StorageSynchronizer {
     pub fn new<ChunkExecutor: ChunkExecutorTrait + 'static>(
-        create_runtime: bool,
         chunk_executor: Arc<ChunkExecutor>,
         commit_notification_sender: mpsc::UnboundedSender<CommitNotification>,
+        runtime: Option<&Runtime>,
     ) -> Self {
         // Create a channel to notify the executor when transaction data chunks are ready
         let (executor_notifier, executor_listener) = mpsc::channel(MAX_PENDING_CHUNKS);
@@ -67,25 +65,12 @@ impl StorageSynchronizer {
         // Create a channel to notify the committer when executed chunks are ready
         let (committer_notifier, committer_listener) = mpsc::channel(MAX_PENDING_CHUNKS);
 
-        // Create a new runtime (if required)
-        let storage_synchronizer_runtime = if create_runtime {
-            Some(
-                Builder::new_multi_thread()
-                    .thread_name("storage-synchronizer")
-                    .enable_all()
-                    .build()
-                    .expect("Failed to create state sync v2 storage synchronizer runtime!"),
-            )
-        } else {
-            None
-        };
-
         // Spawn the executor that executes/applies transaction data chunks
         spawn_executor(
             chunk_executor.clone(),
             executor_listener,
             committer_notifier,
-            storage_synchronizer_runtime.as_ref(),
+            runtime,
         );
 
         // Spawn the committer that commits executed (but pending) chunks
@@ -93,18 +78,16 @@ impl StorageSynchronizer {
             chunk_executor,
             committer_listener,
             commit_notification_sender,
-            storage_synchronizer_runtime.as_ref(),
+            runtime,
         );
 
         // TODO(joshlind): use a shared atomic counter to count the number of items
         // still in the pipeline!
 
-        // TODO(joshlind): handle the case where we want to reset the pipeline (due to a failure)
+        // TODO(joshlind): handle the case where we want to reset the pipeline
+        // (due to a failure).
 
-        Self {
-            executor_notifier,
-            _storage_synchronizer_runtime: storage_synchronizer_runtime,
-        }
+        Self { executor_notifier }
     }
 
     /// Notifies the executor of new transaction data chunks

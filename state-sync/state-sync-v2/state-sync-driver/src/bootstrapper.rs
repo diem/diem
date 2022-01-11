@@ -12,7 +12,6 @@ use data_streaming_service::{
 };
 use diem_config::config::BootstrappingMode;
 use diem_data_client::GlobalDataSummary;
-use diem_infallible::Mutex;
 use diem_logger::*;
 use diem_types::{
     epoch_change::Verifier,
@@ -241,18 +240,18 @@ pub struct Bootstrapper<StorageSyncer> {
     storage: Arc<dyn DbReader>,
 
     // The storage synchronizer used to update local storage
-    storage_synchronizer: Arc<Mutex<StorageSyncer>>,
+    storage_synchronizer: StorageSyncer,
 
     // The epoch states verified by this node (held in memory)
     verified_epoch_states: VerifiedEpochStates,
 }
 
-impl<StorageSyncer: StorageSynchronizerInterface> Bootstrapper<StorageSyncer> {
+impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSyncer> {
     pub fn new(
         driver_configuration: DriverConfiguration,
         streaming_service_client: StreamingServiceClient,
         storage: Arc<dyn DbReader>,
-        storage_synchronizer: Arc<Mutex<StorageSyncer>>,
+        storage_synchronizer: StorageSyncer,
     ) -> Self {
         // Load the latest epoch state from storage
         let latest_epoch_state = utils::fetch_latest_epoch_state(storage.clone())
@@ -619,7 +618,7 @@ impl<StorageSyncer: StorageSynchronizerInterface> Bootstrapper<StorageSyncer> {
         match self.driver_configuration.config.bootstrapping_mode {
             BootstrappingMode::ApplyTransactionOutputsFromGenesis => {
                 if let Some(transaction_outputs_with_proof) = transaction_outputs_with_proof {
-                    self.storage_synchronizer.lock().apply_transaction_outputs(
+                    self.storage_synchronizer.apply_transaction_outputs(
                         transaction_outputs_with_proof,
                         highest_known_ledger_info,
                         end_of_epoch_ledger_info,
@@ -637,7 +636,7 @@ impl<StorageSyncer: StorageSynchronizerInterface> Bootstrapper<StorageSyncer> {
             }
             BootstrappingMode::ExecuteTransactionsFromGenesis => {
                 if let Some(transaction_list_with_proof) = transaction_list_with_proof {
-                    self.storage_synchronizer.lock().execute_transactions(
+                    self.storage_synchronizer.execute_transactions(
                         transaction_list_with_proof,
                         highest_known_ledger_info,
                         end_of_epoch_ledger_info,

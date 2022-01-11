@@ -96,7 +96,7 @@ pub struct StateSyncDriver<DataClient, MempoolNotifier, StorageSyncer> {
 impl<
         DataClient: DiemDataClient + Send + Clone + 'static,
         MempoolNotifier: MempoolNotificationSender,
-        StorageSyncer: StorageSynchronizerInterface,
+        StorageSyncer: StorageSynchronizerInterface + Clone,
     > StateSyncDriver<DataClient, MempoolNotifier, StorageSyncer>
 {
     pub fn new(
@@ -112,7 +112,6 @@ impl<
         storage: Arc<dyn DbReader>,
     ) -> Self {
         let event_subscription_service = Arc::new(Mutex::new(event_subscription_service));
-        let storage_synchronizer = Arc::new(Mutex::new(storage_synchronizer));
         let bootstrapper = Bootstrapper::new(
             driver_configuration.clone(),
             streaming_service_client.clone(),
