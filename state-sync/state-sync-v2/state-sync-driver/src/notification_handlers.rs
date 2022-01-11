@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::error::Error;
+use crate::{driver::set_metrics, error::Error};
 use consensus_notifications::{
     ConsensusCommitNotification, ConsensusNotification, ConsensusNotificationListener,
     ConsensusSyncNotification,
@@ -51,6 +51,8 @@ impl CommitNotification {
         mut mempool_notification_handler: MempoolNotificationHandler<M>,
         event_subscription_service: Arc<Mutex<EventSubscriptionService>>,
     ) -> Result<(), Error> {
+        set_metrics(latest_synced_version);
+
         // Notify mempool of the committed transactions
         debug!(
             "Notifying mempool of transactions at version: {:?}",

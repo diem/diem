@@ -21,14 +21,43 @@ use diem_config::config::{RoleType, StateSyncDriverConfig};
 use diem_data_client::DiemDataClient;
 use diem_infallible::Mutex;
 use diem_logger::*;
+use diem_metrics::{register_int_gauge_vec, IntGaugeVec};
 use diem_types::waypoint::Waypoint;
 use event_notifications::EventSubscriptionService;
 use futures::StreamExt;
 use mempool_notifications::MempoolNotificationSender;
+use once_cell::sync::Lazy;
 use std::{sync::Arc, time::SystemTime};
 use storage_interface::DbReader;
 use tokio::time::{interval, Duration};
 use tokio_stream::wrappers::IntervalStream;
+
+pub static VERSION: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        "diem_state_sync_version",
+        "Version involved in state sync v2 progress",
+        &["type"]
+    )
+    .unwrap()
+});
+
+pub fn set_version(version_type: String, version: u64) {
+    VERSION
+        .with_label_values(&[&version_type])
+        .set(version as i64)
+}
+
+pub fn get_version(version_type: String) -> u64 {
+    VERSION.with_label_values(&[&version_type]).get() as u64
+}
+
+/// Sets the metrics required for CT benchmarking
+pub fn set_metrics(new_synced_version: u64) {
+    //let current_synced_version = get_version("synced".into());
+    //let new_synced_version = current_synced_version + num_transactions;
+    set_version("synced".into(), new_synced_version);
+    set_version("committed".into(), new_synced_version);
+}
 
 // TODO(joshlind): use structured logging!
 
