@@ -230,17 +230,13 @@ impl AccountStateWithProof {
 /// in the struct itself and not behind pointers/handles to file locations.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct AccountStatesChunkWithProof {
-    pub first_index: u64,
-    // The first account index in chunk
-    pub last_index: u64,
-    // The last account index in chunk
-    pub first_key: HashValue,
-    // The first account key in chunk
-    pub last_key: HashValue,
-    // The last account key in chunk
-    pub account_blobs: Vec<(HashValue, AccountStateBlob)>,
-    // The account blobs in the chunk
+    pub first_index: u64,     // The first account index in chunk
+    pub last_index: u64,      // The last account index in chunk
+    pub first_key: HashValue, // The first account key in chunk
+    pub last_key: HashValue,  // The last account key in chunk
+    pub account_blobs: Vec<(HashValue, AccountStateBlob)>, // The account blobs in the chunk
     pub proof: SparseMerkleRangeProof, // The proof to ensure the chunk is in the account states
+    pub root_hash: HashValue, // The root hash of the sparse merkle tree for this chunk
 }
 
 #[cfg(test)]

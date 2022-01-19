@@ -19,6 +19,7 @@ tokio-stream = "0.1.4"
 consensus-notifications = { path = "../../inter-component/consensus-notifications" }
 data-streaming-service = { path = "../data-streaming-service" }
 diem-config = { path = "../../../config" }
+diem-crypto = { path = "../../../crates/diem-crypto" }
 diem-data-client = { path = "../../diem-data-client" }
 diem-infallible = { path = "../../../crates/diem-infallible" }
 diem-logger = { path = "../../../crates/diem-logger" }

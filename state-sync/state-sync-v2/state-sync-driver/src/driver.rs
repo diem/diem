@@ -7,8 +7,9 @@ use crate::{
     driver_client::{ClientNotificationListener, DriverNotification},
     error::Error,
     notification_handlers::{
-        CommitNotification, CommitNotificationListener, ConsensusNotificationHandler,
-        ErrorNotification, ErrorNotificationListener, MempoolNotificationHandler,
+        CommitNotification, CommitNotificationListener, CommittedAccounts, CommittedTransactions,
+        ConsensusNotificationHandler, ErrorNotification, ErrorNotificationListener,
+        MempoolNotificationHandler,
     },
     storage_synchronizer::StorageSynchronizerInterface,
     utils,
@@ -243,31 +244,26 @@ impl<
         &mut self,
         consensus_commit_notification: ConsensusCommitNotification,
     ) -> Result<(), Error> {
+        // TODO(joshlind): can we get consensus to forward the events?
         debug!(
             "Received a consensus commit notification! Transaction total: {:?}, event total: {:?}",
             consensus_commit_notification.transactions.len(),
             consensus_commit_notification.reconfiguration_events.len()
         );
 
-        // Create a commit notification
-        // TODO(joshlind): can we get consensus to forward the events?
-        let commit_notification = CommitNotification::new(
-            consensus_commit_notification.reconfiguration_events.clone(),
-            consensus_commit_notification.transactions.clone(),
-        );
-
         // Handle the commit notification
         let latest_synced_version = utils::fetch_latest_synced_version(self.storage.clone())?;
         let latest_synced_ledger_info =
             utils::fetch_latest_synced_ledger_info(self.storage.clone())?;
-        commit_notification
-            .handle_commit_notification(
-                latest_synced_version,
-                latest_synced_ledger_info,
-                self.mempool_notification_handler.clone(),
-                self.event_subscription_service.clone(),
-            )
-            .await?;
+        CommitNotification::handle_transaction_notification(
+            consensus_commit_notification.reconfiguration_events.clone(),
+            consensus_commit_notification.transactions.clone(),
+            latest_synced_version,
+            latest_synced_ledger_info,
+            self.mempool_notification_handler.clone(),
+            self.event_subscription_service.clone(),
+        )
+        .await?;
 
         // Respond to consensus successfully
         self.consensus_notification_handler
@@ -320,11 +316,30 @@ impl<
 
     /// Handles a commit notification sent by the storage synchronizer
     async fn handle_commit_notification(&mut self, commit_notification: CommitNotification) {
-        debug!("Received a commit notification from the storage synchronizer! Transaction total: {:?}, event total: {:?}",
-               commit_notification.transactions.len(),
-               commit_notification.events.len()
-        );
+        match commit_notification {
+            CommitNotification::CommittedAccounts(committed_accounts) => {
+                debug!(
+                    "Received an account commit notification from the storage synchronizer: {:?}",
+                    committed_accounts
+                );
+                self.handle_committed_accounts(committed_accounts).await;
+            }
+            CommitNotification::CommittedTransactions(committed_transactions) => {
+                debug!("Received a transaction commit notification from the storage synchronizer! Transaction total: {:?}, event total: {:?}",
+                       committed_transactions.transactions.len(),
+                       committed_transactions.events.len()
+                );
+                self.handle_committed_transactions(committed_transactions)
+                    .await;
+            }
+        }
+    }
 
+    /// Handles a notification sent by the storage synchronizer for committed transactions
+    async fn handle_committed_transactions(
+        &mut self,
+        committed_transactions: CommittedTransactions,
+    ) {
         // Fetch the latest synced version and ledger info from storage
         let (latest_synced_version, latest_synced_ledger_info) =
             match utils::fetch_latest_synced_version(self.storage.clone()) {
@@ -349,16 +364,20 @@ impl<
             };
 
         // Handle the commit notification
-        if let Err(error) = commit_notification
-            .handle_commit_notification(
-                latest_synced_version,
-                latest_synced_ledger_info,
-                self.mempool_notification_handler.clone(),
-                self.event_subscription_service.clone(),
-            )
-            .await
+        if let Err(error) = CommitNotification::handle_transaction_notification(
+            committed_transactions.events,
+            committed_transactions.transactions,
+            latest_synced_version,
+            latest_synced_ledger_info,
+            self.mempool_notification_handler.clone(),
+            self.event_subscription_service.clone(),
+        )
+        .await
         {
-            error!("Failed to handle a commit notification! Error: {:?}", error);
+            error!(
+                "Failed to handle a transaction commit notification! Error: {:?}",
+                error
+            );
         }
 
         // Update the last commit timestamp for the sync request
@@ -368,6 +387,19 @@ impl<
         if let Some(sync_request) = consensus_sync_request.lock().as_mut() {
             sync_request.update_last_commit_timestamp()
         };
+    }
+
+    /// Handles a notification sent by the storage synchronizer for committed accounts
+    async fn handle_committed_accounts(&mut self, committed_accounts: CommittedAccounts) {
+        if let Err(error) = self
+            .bootstrapper
+            .handle_committed_accounts(committed_accounts)
+        {
+            error!(
+                "Failed to handle an account commit notification! Error: {:?}",
+                error
+            );
+        }
     }
 
     /// Handles an error notification sent by the storage synchronizer

@@ -66,8 +66,8 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> ContinuousSyncer<Stora
             // We have an active data stream. Process any notifications!
             self.process_active_stream_notifications(consensus_sync_request)
                 .await
-        } else if self.storage_synchronizer.pending_transaction_data() {
-            // Wait for any pending transaction data to be processed
+        } else if self.storage_synchronizer.pending_storage_data() {
+            // Wait for any pending data to be processed
             Ok(())
         } else {
             // Fetch a new data stream to start streaming data

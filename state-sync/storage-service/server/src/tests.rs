@@ -105,6 +105,7 @@ async fn test_get_account_states_chunk_with_proof() {
             last_key: HashValue::zero(),
             account_blobs,
             proof: SparseMerkleRangeProof::new(vec![]),
+            root_hash: HashValue::zero(),
         });
     assert_eq!(response, expected_response);
 }
@@ -541,6 +542,7 @@ impl DbReader for MockDbReader {
             last_key: HashValue::zero(),
             account_blobs,
             proof: SparseMerkleRangeProof::new(vec![]),
+            root_hash: HashValue::zero(),
         };
         Ok(account_states_chunk_with_proof)
     }

@@ -181,6 +181,7 @@ impl StateStore {
         let first_key = account_blobs.first().expect("checked to exist").0;
         let last_key = account_blobs.last().expect("checked to exist").0;
         let proof = self.get_account_state_range_proof(last_key, version)?;
+        let root_hash = self.get_root_hash(version)?;
 
         Ok(AccountStatesChunkWithProof {
             first_index: first_index as u64,
@@ -189,6 +190,7 @@ impl StateStore {
             last_key,
             account_blobs,
             proof,
+            root_hash,
         })
     }
 

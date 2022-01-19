@@ -127,13 +127,13 @@ pub trait TreeReader<V> {
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode<V>)>>;
 }
 
-pub trait TreeWriter<V> {
+pub trait TreeWriter<V>: Send + Sync {
     /// Writes a node batch into storage.
     fn write_node_batch(&self, node_batch: &NodeBatch<V>) -> Result<()>;
 }
 
 /// `Value` defines the types of data that can be stored in a Jellyfish Merkle tree.
-pub trait Value: Clone + CryptoHash + Serialize + DeserializeOwned {}
+pub trait Value: Clone + CryptoHash + Serialize + DeserializeOwned + Send + Sync {}
 
 /// `TestValue` defines the types of data that can be stored in a Jellyfish Merkle tree and used in
 /// tests.

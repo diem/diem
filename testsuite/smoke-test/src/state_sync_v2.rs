@@ -8,6 +8,7 @@ use crate::{
 use diem_config::config::{BootstrappingMode, ContinuousSyncingMode, NodeConfig};
 use diem_rest_client::Client as RestClient;
 use diem_sdk::{transaction_builder::TransactionFactory, types::LocalAccount};
+use diem_types::PeerId;
 use forge::{LocalSwarm, NodeExt, Swarm, SwarmExt};
 use std::{
     fs,
@@ -17,9 +18,44 @@ use std::{
 const MAX_CATCH_UP_SECS: u64 = 60; // The max time we'll wait for nodes to catch up
 
 #[tokio::test]
+async fn test_full_node_bootstrap_accounts() {
+    // Create a validator swarm of 1 validator node
+    let mut swarm = new_local_swarm(1).await;
+
+    // Create a fullnode config that uses account state syncing
+    let mut vfn_config = NodeConfig::default_for_validator_full_node();
+    vfn_config.state_sync.state_sync_driver.enable_state_sync_v2 = true;
+    vfn_config.state_sync.state_sync_driver.bootstrapping_mode =
+        BootstrappingMode::DownloadLatestAccountStates;
+
+    // Create (and stop) the fullnode
+    let vfn_peer_id = create_full_node(vfn_config, &mut swarm).await;
+    swarm.fullnode_mut(vfn_peer_id).unwrap().stop();
+
+    // Enable account count support for the validator (with at most 2 accounts
+    // per storage request).
+    let validator = swarm.validators_mut().next().unwrap();
+    let mut config = validator.config().clone();
+    config.storage.account_count_migration = true;
+    config
+        .state_sync
+        .storage_service
+        .max_account_states_chunk_sizes = 2;
+    config.save(validator.config_path()).unwrap();
+    validator.restart().await.unwrap();
+    validator
+        .wait_until_healthy(Instant::now() + Duration::from_secs(MAX_CATCH_UP_SECS))
+        .await
+        .unwrap();
+
+    // Test the ability of the fullnode to sync
+    test_full_node_sync(vfn_peer_id, swarm, true).await;
+}
+
+#[tokio::test]
 async fn test_full_node_bootstrap_outputs() {
     // Create a validator swarm of 1 validator node
-    let swarm = new_local_swarm(1).await;
+    let mut swarm = new_local_swarm(1).await;
 
     // Create a fullnode config that uses transaction outputs to sync
     let mut vfn_config = NodeConfig::default_for_validator_full_node();
@@ -31,14 +67,17 @@ async fn test_full_node_bootstrap_outputs() {
         .state_sync_driver
         .continuous_syncing_mode = ContinuousSyncingMode::ApplyTransactionOutputs;
 
+    // Create the fullnode
+    let vfn_peer_id = create_full_node(vfn_config, &mut swarm).await;
+
     // Test the ability of the fullnode to sync
-    test_full_node_sync(vfn_config, swarm, true).await;
+    test_full_node_sync(vfn_peer_id, swarm, true).await;
 }
 
 #[tokio::test]
 async fn test_full_node_bootstrap_transactions() {
     // Create a validator swarm of 1 validator node
-    let swarm = new_local_swarm(1).await;
+    let mut swarm = new_local_swarm(1).await;
 
     // Create a fullnode config that uses transactions to sync
     let mut vfn_config = NodeConfig::default_for_validator_full_node();
@@ -50,14 +89,17 @@ async fn test_full_node_bootstrap_transactions() {
         .state_sync_driver
         .continuous_syncing_mode = ContinuousSyncingMode::ExecuteTransactions;
 
+    // Create the fullnode
+    let vfn_peer_id = create_full_node(vfn_config, &mut swarm).await;
+
     // Test the ability of the fullnode to sync
-    test_full_node_sync(vfn_config, swarm, true).await;
+    test_full_node_sync(vfn_peer_id, swarm, true).await;
 }
 
 #[tokio::test]
 async fn test_full_node_continuous_sync_outputs() {
     // Create a validator swarm of 1 validator node
-    let swarm = new_local_swarm(1).await;
+    let mut swarm = new_local_swarm(1).await;
 
     // Create a fullnode config that uses transaction outputs to sync
     let mut vfn_config = NodeConfig::default_for_validator_full_node();
@@ -67,14 +109,17 @@ async fn test_full_node_continuous_sync_outputs() {
         .state_sync_driver
         .continuous_syncing_mode = ContinuousSyncingMode::ApplyTransactionOutputs;
 
+    // Create the fullnode
+    let vfn_peer_id = create_full_node(vfn_config, &mut swarm).await;
+
     // Test the ability of the fullnode to sync
-    test_full_node_sync(vfn_config, swarm, false).await;
+    test_full_node_sync(vfn_peer_id, swarm, false).await;
 }
 
 #[tokio::test]
 async fn test_full_node_continuous_sync_transactions() {
     // Create a validator swarm of 1 validator node
-    let swarm = new_local_swarm(1).await;
+    let mut swarm = new_local_swarm(1).await;
 
     // Create a fullnode config that uses transactions to sync
     let mut vfn_config = NodeConfig::default_for_validator_full_node();
@@ -84,18 +129,15 @@ async fn test_full_node_continuous_sync_transactions() {
         .state_sync_driver
         .continuous_syncing_mode = ContinuousSyncingMode::ExecuteTransactions;
 
+    // Create the fullnode
+    let vfn_peer_id = create_full_node(vfn_config, &mut swarm).await;
+
     // Test the ability of the fullnode to sync
-    test_full_node_sync(vfn_config, swarm, false).await;
+    test_full_node_sync(vfn_peer_id, swarm, false).await;
 }
 
-/// A helper method that tests that a full node can sync from a validator after
-/// a failure and continue to stay up-to-date.
-async fn test_full_node_sync(
-    full_node_config: NodeConfig,
-    mut swarm: LocalSwarm,
-    epoch_changes: bool,
-) {
-    // Start the validator and fullnode (make sure they boot up)
+/// Creates a new full node using the given config and swarm
+async fn create_full_node(full_node_config: NodeConfig, swarm: &mut LocalSwarm) -> PeerId {
     // Create the fullnode
     let validator_peer_id = swarm.validators().next().unwrap().peer_id();
     let vfn_peer_id = swarm
@@ -106,24 +148,23 @@ async fn test_full_node_sync(
         )
         .await
         .unwrap();
-
-    swarm
-        .validator_mut(validator_peer_id)
-        .unwrap()
-        .wait_until_healthy(Instant::now() + Duration::from_secs(MAX_CATCH_UP_SECS))
-        .await
-        .unwrap();
     for fullnode in swarm.full_nodes_mut() {
         fullnode
             .wait_until_healthy(Instant::now() + Duration::from_secs(MAX_CATCH_UP_SECS))
             .await
             .unwrap();
     }
+    vfn_peer_id
+}
 
+/// A helper method that tests that a full node can sync from a validator after
+/// a failure and continue to stay up-to-date.
+async fn test_full_node_sync(vfn_peer_id: PeerId, mut swarm: LocalSwarm, epoch_changes: bool) {
     // Stop the fullnode
     swarm.fullnode_mut(vfn_peer_id).unwrap().stop();
 
     // Execute a number of transactions on the validator
+    let validator_peer_id = swarm.validators().next().unwrap().peer_id();
     let validator_client = swarm.validator(validator_peer_id).unwrap().rest_client();
     let transaction_factory = swarm.chain_info().transaction_factory();
 
@@ -334,7 +375,7 @@ async fn execute_transactions(
     receiver: &LocalAccount,
     execute_epoch_changes: bool,
 ) {
-    let num_transfers = 4;
+    let num_transfers = 10;
     if execute_epoch_changes {
         transfer_and_reconfig(
             client,

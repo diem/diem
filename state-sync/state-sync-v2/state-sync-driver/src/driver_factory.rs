@@ -20,7 +20,7 @@ use executor_types::ChunkExecutorTrait;
 use futures::channel::mpsc;
 use mempool_notifications::MempoolNotificationSender;
 use std::sync::Arc;
-use storage_interface::DbReader;
+use storage_interface::DbReaderWriter;
 use tokio::runtime::{Builder, Runtime};
 
 /// Creates a new state sync driver and client
@@ -38,7 +38,7 @@ impl DriverFactory {
         create_runtime: bool,
         node_config: &NodeConfig,
         waypoint: Waypoint,
-        storage: Arc<dyn DbReader>,
+        storage: DbReaderWriter,
         chunk_executor: Arc<ChunkExecutor>,
         mempool_notification_sender: MempoolNotifier,
         consensus_listener: ConsensusNotificationListener,
@@ -76,6 +76,7 @@ impl DriverFactory {
             chunk_executor,
             commit_notification_sender,
             error_notification_sender,
+            storage.writer.clone(),
             driver_runtime.as_ref(),
         );
 
@@ -98,7 +99,7 @@ impl DriverFactory {
             storage_synchronizer,
             diem_data_client,
             streaming_service_client,
-            storage,
+            storage.reader,
         );
 
         // Spawn the driver

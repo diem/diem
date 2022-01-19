@@ -54,6 +54,12 @@ impl From<data_streaming_service::error::Error> for Error {
     }
 }
 
+impl From<diem_crypto::error::Error> for Error {
+    fn from(error: diem_crypto::error::Error) -> Self {
+        Error::UnexpectedError(error.to_string())
+    }
+}
+
 impl From<event_notifications::Error> for Error {
     fn from(error: event_notifications::Error) -> Self {
         Error::EventNotificationError(error.to_string())

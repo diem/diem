@@ -138,6 +138,7 @@ impl DiemDataClient for MockDiemDataClient {
             last_key: HashValue::random(),
             account_blobs,
             proof: SparseMerkleRangeProof::new(vec![]),
+            root_hash: HashValue::zero(),
         };
         Ok(create_data_client_response(account_states))
     }

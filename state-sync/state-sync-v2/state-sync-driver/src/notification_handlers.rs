@@ -28,25 +28,55 @@ use std::{
 const CONSENSUS_SYNC_REQUEST_TIMEOUT_MS: u64 = 60000; // 1 minute
 const MEMPOOL_COMMIT_ACK_TIMEOUT_MS: u64 = 5000; // 5 seconds
 
-/// A notification for new transactions and events that have been committed to
-/// storage.
-pub struct CommitNotification {
+/// A notification for new data that has been committed to storage
+#[derive(Debug)]
+pub enum CommitNotification {
+    CommittedAccounts(CommittedAccounts),
+    CommittedTransactions(CommittedTransactions),
+}
+
+/// A commit notification for new account states
+#[derive(Debug)]
+pub struct CommittedAccounts {
+    pub all_accounts_synced: bool,
+    pub last_committed_account_index: u64,
+}
+
+/// A commit notification for new transactions
+#[derive(Debug)]
+pub struct CommittedTransactions {
     pub events: Vec<ContractEvent>,
     pub transactions: Vec<Transaction>,
 }
 
 impl CommitNotification {
-    pub fn new(events: Vec<ContractEvent>, transactions: Vec<Transaction>) -> Self {
-        Self {
+    pub fn new_committed_accounts(
+        all_accounts_synced: bool,
+        last_committed_account_index: u64,
+    ) -> Self {
+        let committed_accounts = CommittedAccounts {
+            all_accounts_synced,
+            last_committed_account_index,
+        };
+        CommitNotification::CommittedAccounts(committed_accounts)
+    }
+
+    pub fn new_committed_transactions(
+        events: Vec<ContractEvent>,
+        transactions: Vec<Transaction>,
+    ) -> Self {
+        let committed_transactions = CommittedTransactions {
             events,
             transactions,
-        }
+        };
+        CommitNotification::CommittedTransactions(committed_transactions)
     }
 
     /// Handles the commit notification by notifying mempool and the event
     /// subscription service.
-    pub async fn handle_commit_notification<M: MempoolNotificationSender>(
-        &self,
+    pub async fn handle_transaction_notification<M: MempoolNotificationSender>(
+        events: Vec<ContractEvent>,
+        transactions: Vec<Transaction>,
         latest_synced_version: Version,
         latest_synced_ledger_info: LedgerInfoWithSignatures,
         mut mempool_notification_handler: MempoolNotificationHandler<M>,
@@ -60,7 +90,7 @@ impl CommitNotification {
         let blockchain_timestamp_usecs = latest_synced_ledger_info.ledger_info().timestamp_usecs();
         mempool_notification_handler
             .notify_mempool_of_committed_transactions(
-                self.transactions.clone(),
+                transactions.clone(),
                 blockchain_timestamp_usecs,
             )
             .await?;
@@ -72,7 +102,7 @@ impl CommitNotification {
         );
         event_subscription_service
             .lock()
-            .notify_events(latest_synced_version, self.events.clone())
+            .notify_events(latest_synced_version, events.clone())
             .map_err(|error| error.into())
     }
 }

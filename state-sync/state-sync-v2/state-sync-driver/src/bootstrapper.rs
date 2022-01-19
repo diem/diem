@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    driver::DriverConfiguration, error::Error, storage_synchronizer::StorageSynchronizerInterface,
-    utils, utils::SpeculativeStreamState,
+    driver::DriverConfiguration, error::Error, notification_handlers::CommittedAccounts,
+    storage_synchronizer::StorageSynchronizerInterface, utils, utils::SpeculativeStreamState,
 };
 use data_streaming_service::{
     data_notification::{DataNotification, DataPayload, NotificationId},
@@ -14,10 +14,13 @@ use diem_config::config::BootstrappingMode;
 use diem_data_client::GlobalDataSummary;
 use diem_logger::*;
 use diem_types::{
+    account_state_blob::AccountStatesChunkWithProof,
     epoch_change::Verifier,
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
-    transaction::{TransactionListWithProof, TransactionOutputListWithProof, Version},
+    transaction::{
+        TransactionInfo, TransactionListWithProof, TransactionOutputListWithProof, Version,
+    },
     waypoint::Waypoint,
 };
 use futures::channel::oneshot;
@@ -210,8 +213,54 @@ impl VerifiedEpochStates {
     }
 }
 
+// TODO(joshlind): persist the index (e.g., in case we crash mid-download)?
+/// A simple container to manage state related to account state snapshot syncing
+struct AccountStateSyncer {
+    // Whether or not a state snapshot receiver has been initialized
+    initialized_state_snapshot_receiver: bool,
+
+    // Whether or not all states have been synced
+    is_sync_complete: bool,
+
+    // The ledger info we're currently syncing
+    ledger_info_to_sync: Option<LedgerInfoWithSignatures>,
+
+    // The next account index to commit (all accounts before this have been
+    // committed).
+    next_account_index_to_commit: u64,
+
+    // The next account index to process (all accounts before this have been
+    // processed -- i.e., sent to the storage synchronizer).
+    next_account_index_to_process: u64,
+
+    // The transaction info for the version we're trying to sync to
+    transaction_info_for_version: Option<TransactionInfo>,
+}
+
+impl AccountStateSyncer {
+    pub fn new() -> Self {
+        Self {
+            initialized_state_snapshot_receiver: false,
+            is_sync_complete: false,
+            ledger_info_to_sync: None,
+            next_account_index_to_commit: 0,
+            next_account_index_to_process: 0,
+            transaction_info_for_version: None,
+        }
+    }
+
+    /// Resets all speculative state related to account state syncing (i.e., all
+    /// speculative data that as not been successfully committed to storage)
+    pub fn reset_speculative_state(&mut self) {
+        self.next_account_index_to_process = self.next_account_index_to_commit
+    }
+}
+
 /// A simple component that manages the bootstrapping of the node
 pub struct Bootstrapper<StorageSyncer> {
+    // The component used to sync account states (if downloading accounts)
+    account_state_syncer: AccountStateSyncer,
+
     // The currently active data stream (provided by the data streaming service)
     active_data_stream: Option<DataStreamListener>,
 
@@ -253,6 +302,7 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
         let verified_epoch_states = VerifiedEpochStates::new(latest_epoch_state);
 
         Self {
+            account_state_syncer: AccountStateSyncer::new(),
             active_data_stream: None,
             bootstrap_notifier_channel: None,
             bootstrapped: false,
@@ -320,7 +370,7 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
         if self.active_data_stream.is_some() {
             // We have an active data stream. Process any notifications!
             self.process_active_stream_notifications().await?;
-        } else if !self.storage_synchronizer.pending_transaction_data() {
+        } else if !self.storage_synchronizer.pending_storage_data() {
             // Fetch a new data stream to start streaming data
             self.initialize_active_data_stream(global_data_summary)
                 .await?;
@@ -330,17 +380,22 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
         self.notify_listeners_if_bootstrapped()
     }
 
+    /// Returns true iff the bootstrapper should continue to fetch epoch ending
+    /// ledger infos (in order to make progress).
+    fn should_fetch_epoch_ending_ledger_infos(&self) -> bool {
+        !self
+            .verified_epoch_states
+            .fetched_epoch_ending_ledger_infos()
+            || !self.verified_epoch_states.verified_waypoint()
+    }
+
     /// Initializes an active data stream so that we can begin to process notifications
     async fn initialize_active_data_stream(
         &mut self,
         global_data_summary: &GlobalDataSummary,
     ) -> Result<(), Error> {
         // Always fetch the new epoch ending ledger infos first
-        if !self
-            .verified_epoch_states
-            .fetched_epoch_ending_ledger_infos()
-            || !self.verified_epoch_states.verified_waypoint()
-        {
+        if self.should_fetch_epoch_ending_ledger_infos() {
             return self
                 .fetch_epoch_ending_ledger_infos(global_data_summary)
                 .await;
@@ -352,7 +407,9 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
         let highest_known_ledger_version = highest_known_ledger_info.ledger_info().version();
 
         // Check if we've already fetched the required data for bootstrapping
-        if highest_synced_version == highest_known_ledger_version {
+        if highest_synced_version == highest_known_ledger_version
+            || self.account_state_syncer.is_sync_complete
+        {
             return self.bootstrapping_complete();
         }
 
@@ -363,46 +420,16 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
             );
         }
 
-        // Fetch all data until the epoch ending ledger info for the current epoch
-        let next_version = highest_synced_version.checked_add(1).ok_or_else(|| {
-            Error::IntegerOverflow("The next output version has overflown!".into())
-        })?;
-        let end_version = self
-            .verified_epoch_states
-            .next_epoch_ending_version(highest_synced_version)
-            .expect("No higher epoch ending version known!");
-        let data_stream = match self.driver_configuration.config.bootstrapping_mode {
-            BootstrappingMode::ApplyTransactionOutputsFromGenesis => {
-                self.streaming_service_client
-                    .get_all_transaction_outputs(
-                        next_version,
-                        end_version,
-                        highest_known_ledger_version,
-                    )
-                    .await?
-            }
-            BootstrappingMode::ExecuteTransactionsFromGenesis => {
-                self.streaming_service_client
-                    .get_all_transactions(
-                        next_version,
-                        end_version,
-                        highest_known_ledger_version,
-                        false,
-                    )
-                    .await?
-            }
-            bootstrapping_mode => {
-                unimplemented!("Bootstrapping mode not supported: {:?}", bootstrapping_mode)
-            }
-        };
-        self.speculative_stream_state = Some(SpeculativeStreamState::new(
-            utils::fetch_latest_epoch_state(self.storage.clone())?,
-            Some(highest_known_ledger_info),
-            highest_synced_version,
-        ));
-        self.active_data_stream = Some(data_stream);
-
-        Ok(())
+        // Bootstrap according to the mode
+        if self.driver_configuration.config.bootstrapping_mode
+            == BootstrappingMode::DownloadLatestAccountStates
+        {
+            self.fetch_all_account_states(highest_known_ledger_info)
+                .await
+        } else {
+            self.fetch_missing_transaction_data(highest_synced_version, highest_known_ledger_info)
+                .await
+        }
     }
 
     /// Processes any notifications already pending on the active stream
@@ -412,6 +439,13 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
             let data_notification =
                 utils::get_data_notification(self.active_data_stream.as_mut()).await?;
             match data_notification.data_payload {
+                DataPayload::AccountStatesWithProof(account_states_with_proof) => {
+                    self.process_account_states_payload(
+                        data_notification.notification_id,
+                        account_states_with_proof,
+                    )
+                    .await?;
+                }
                 DataPayload::EpochEndingLedgerInfos(epoch_ending_ledger_infos) => {
                     self.process_epoch_ending_payload(
                         data_notification.notification_id,
@@ -447,6 +481,97 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
                 }
             }
         }
+    }
+
+    /// Fetches all account states (as required to bootstrap the node)
+    async fn fetch_all_account_states(
+        &mut self,
+        highest_known_ledger_info: LedgerInfoWithSignatures,
+    ) -> Result<(), Error> {
+        let highest_known_ledger_version = highest_known_ledger_info.ledger_info().version();
+
+        // Verify we're trying to sync to an unchanging ledger info
+        if let Some(ledger_info_to_sync) = &self.account_state_syncer.ledger_info_to_sync {
+            if ledger_info_to_sync != &highest_known_ledger_info {
+                panic!(
+                    "Mismatch in ledger info to sync! Highest: {:?}, target: {:?}",
+                    highest_known_ledger_info, ledger_info_to_sync
+                );
+            }
+        } else {
+            self.account_state_syncer.ledger_info_to_sync = Some(highest_known_ledger_info);
+        }
+
+        // Fetch the transaction info first, before the account states
+        let data_stream = if self
+            .account_state_syncer
+            .transaction_info_for_version
+            .is_none()
+        {
+            self.streaming_service_client
+                .get_all_transaction_outputs(
+                    highest_known_ledger_version,
+                    highest_known_ledger_version,
+                    highest_known_ledger_version,
+                )
+                .await?
+        } else {
+            let start_account_index = Some(self.account_state_syncer.next_account_index_to_commit);
+            self.streaming_service_client
+                .get_all_accounts(highest_known_ledger_version, start_account_index)
+                .await?
+        };
+        self.active_data_stream = Some(data_stream);
+
+        Ok(())
+    }
+
+    /// Fetches all missing transaction data in order to bootstrap the node
+    async fn fetch_missing_transaction_data(
+        &mut self,
+        highest_synced_version: Version,
+        highest_known_ledger_info: LedgerInfoWithSignatures,
+    ) -> Result<(), Error> {
+        let highest_known_ledger_version = highest_known_ledger_info.ledger_info().version();
+        let next_version = highest_synced_version.checked_add(1).ok_or_else(|| {
+            Error::IntegerOverflow("The next output version has overflown!".into())
+        })?;
+        let end_version = self
+            .verified_epoch_states
+            .next_epoch_ending_version(highest_synced_version)
+            .expect("No higher epoch ending version known!");
+        let data_stream = match self.driver_configuration.config.bootstrapping_mode {
+            BootstrappingMode::ApplyTransactionOutputsFromGenesis => {
+                self.streaming_service_client
+                    .get_all_transaction_outputs(
+                        next_version,
+                        end_version,
+                        highest_known_ledger_version,
+                    )
+                    .await?
+            }
+            BootstrappingMode::ExecuteTransactionsFromGenesis => {
+                self.streaming_service_client
+                    .get_all_transactions(
+                        next_version,
+                        end_version,
+                        highest_known_ledger_version,
+                        false,
+                    )
+                    .await?
+            }
+            bootstrapping_mode => {
+                unreachable!("Bootstrapping mode not supported: {:?}", bootstrapping_mode)
+            }
+        };
+        self.speculative_stream_state = Some(SpeculativeStreamState::new(
+            utils::fetch_latest_epoch_state(self.storage.clone())?,
+            Some(highest_known_ledger_info),
+            highest_synced_version,
+        ));
+        self.active_data_stream = Some(data_stream);
+
+        Ok(())
     }
 
     /// Fetches all epoch ending ledger infos (from the current epoch to the
@@ -552,12 +677,149 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
         }
     }
 
+    /// Verifies the start and end indices in the given account states chunk
+    async fn verify_account_states_indices(
+        &mut self,
+        notification_id: NotificationId,
+        account_states_chunk_with_proof: &AccountStatesChunkWithProof,
+    ) -> Result<(), Error> {
+        // Verify the payload start index is valid
+        let expected_start_index = self.account_state_syncer.next_account_index_to_process;
+        if expected_start_index != account_states_chunk_with_proof.first_index {
+            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await?;
+            return Err(Error::VerificationError(format!(
+                "The start index of the account states was invalid! Expected: {:?}, received: {:?}",
+                expected_start_index, account_states_chunk_with_proof.first_index
+            )));
+        }
+
+        // Verify the number of account blobs is valid
+        let expected_num_accounts = account_states_chunk_with_proof
+            .last_index
+            .checked_sub(account_states_chunk_with_proof.first_index)
+            .and_then(|version| version.checked_add(1)) // expected_num_accounts = last_index - first_index + 1
+            .ok_or_else(|| {
+                Error::IntegerOverflow("The expected number of accounts has overflown!".into())
+            })?;
+        let num_accounts = account_states_chunk_with_proof.account_blobs.len() as u64;
+        if expected_num_accounts != num_accounts {
+            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await?;
+            return Err(Error::VerificationError(format!(
+                "The expected number of accounts was invalid! Expected: {:?}, received: {:?}",
+                expected_num_accounts, num_accounts,
+            )));
+        }
+
+        // Verify the payload end index is valid
+        let expected_end_index = account_states_chunk_with_proof
+            .first_index
+            .checked_add(num_accounts)
+            .and_then(|version| version.checked_sub(1)) // expected_end_index = first_index + num_accounts - 1
+            .ok_or_else(|| {
+                Error::IntegerOverflow("The expected end of index has overflown!".into())
+            })?;
+        if expected_end_index != account_states_chunk_with_proof.last_index {
+            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await?;
+            return Err(Error::VerificationError(format!(
+                "The expected end index was invalid! Expected: {:?}, received: {:?}",
+                expected_num_accounts, account_states_chunk_with_proof.last_index,
+            )));
+        }
+
+        Ok(())
+    }
+
+    /// Process a single account states with proof payload
+    async fn process_account_states_payload(
+        &mut self,
+        notification_id: NotificationId,
+        account_states_chunk_with_proof: AccountStatesChunkWithProof,
+    ) -> Result<(), Error> {
+        // Verify that we're expecting account payloads
+        let bootstrapping_mode = self.driver_configuration.config.bootstrapping_mode;
+        if self.should_fetch_epoch_ending_ledger_infos()
+            || !matches!(
+                bootstrapping_mode,
+                BootstrappingMode::DownloadLatestAccountStates
+            )
+        {
+            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await?;
+            return Err(Error::InvalidPayload(
+                "Received an unexpected account states payload!".into(),
+            ));
+        }
+
+        // TODO(joshlind): Verify the expected root hash!
+        // Initialize the account state synchronizer (if not already done)
+        if !self
+            .account_state_syncer
+            .initialized_state_snapshot_receiver
+        {
+            let version = self
+                .account_state_syncer
+                .ledger_info_to_sync
+                .as_ref()
+                .expect("Account state syncer version not initialized!")
+                .ledger_info()
+                .version();
+            let expected_root_hash = account_states_chunk_with_proof.root_hash;
+            self.storage_synchronizer.initialize_account_synchronizer(
+                expected_root_hash,
+                version,
+                None, // TODO(joshlind): support spawning on a given runtime!
+            )?;
+            self.account_state_syncer
+                .initialized_state_snapshot_receiver = true;
+        }
+
+        // Verify the account payload start and end indices
+        self.verify_account_states_indices(notification_id, &account_states_chunk_with_proof)
+            .await?;
+
+        // TODO(joshlind): Verify the sparse merkle tree proof is valid!
+
+        // Process the account states chunk and proof
+        let last_account_index = account_states_chunk_with_proof.last_index;
+        if let Err(error) = self
+            .storage_synchronizer
+            .save_account_states(notification_id, account_states_chunk_with_proof)
+        {
+            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await?;
+            return Err(Error::InvalidPayload(format!(
+                "The account states chunk with proof was invalid! Error: {:?}",
+                error,
+            )));
+        }
+
+        // Update the next account index to process
+        self.account_state_syncer.next_account_index_to_process =
+            last_account_index.checked_add(1).ok_or_else(|| {
+                Error::IntegerOverflow("The next account index to process has overflown!".into())
+            })?;
+
+        Ok(())
+    }
+
     /// Process a single epoch ending payload
     async fn process_epoch_ending_payload(
         &mut self,
         notification_id: NotificationId,
         epoch_ending_ledger_infos: Vec<LedgerInfoWithSignatures>,
     ) -> Result<(), Error> {
+        // Verify that we're expecting epoch ending ledger info payloads
+        if !self.should_fetch_epoch_ending_ledger_infos() {
+            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await?;
+            return Err(Error::InvalidPayload(
+                "Received an unexpected epoch ending payload!".into(),
+            ));
+        }
+
         // Verify the payload isn't empty
         if epoch_ending_ledger_infos.is_empty() {
             self.terminate_active_stream(notification_id, NotificationFeedback::EmptyPayloadData)
@@ -597,9 +859,48 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
         transaction_outputs_with_proof: Option<TransactionOutputListWithProof>,
         payload_start_version: Option<Version>,
     ) -> Result<(), Error> {
+        // Verify that we're expecting transaction or output payloads
+        let bootstrapping_mode = self.driver_configuration.config.bootstrapping_mode;
+        if self.should_fetch_epoch_ending_ledger_infos()
+            || (matches!(
+                bootstrapping_mode,
+                BootstrappingMode::DownloadLatestAccountStates
+            ) && self
+                .account_state_syncer
+                .transaction_info_for_version
+                .is_some())
+        {
+            self.terminate_active_stream(notification_id, NotificationFeedback::InvalidPayloadData)
+                .await?;
+            return Err(Error::InvalidPayload(
+                "Received an unexpected transaction or output payload!".into(),
+            ));
+        }
+
+        // If we're account state syncing, we expect a single transaction info
+        if matches!(
+            bootstrapping_mode,
+            BootstrappingMode::DownloadLatestAccountStates
+        ) {
+            return self
+                .verify_transaction_info_to_sync(
+                    notification_id,
+                    transaction_outputs_with_proof,
+                    payload_start_version,
+                )
+                .await;
+        }
+
         // Verify the payload starting version
+        let expected_start_version = self
+            .get_speculative_stream_state()
+            .expected_next_version()?;
         let payload_start_version = self
-            .verify_payload_start_version(notification_id, payload_start_version)
+            .verify_payload_start_version(
+                notification_id,
+                payload_start_version,
+                expected_start_version,
+            )
             .await?;
 
         // Get the expected proof ledger info for the payload
@@ -616,8 +917,7 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
             .await?;
 
         // Execute/apply and commit the transactions/outputs
-        let num_transactions_or_outputs = match self.driver_configuration.config.bootstrapping_mode
-        {
+        let num_transactions_or_outputs = match bootstrapping_mode {
             BootstrappingMode::ApplyTransactionOutputsFromGenesis => {
                 if let Some(transaction_outputs_with_proof) = transaction_outputs_with_proof {
                     let num_transaction_outputs = transaction_outputs_with_proof
@@ -663,7 +963,7 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
                 }
             }
             bootstrapping_mode => {
-                unimplemented!("Bootstrapping mode not supported: {:?}", bootstrapping_mode)
+                unreachable!("Bootstrapping mode not supported: {:?}", bootstrapping_mode)
             }
         };
         let synced_version = payload_start_version
@@ -676,18 +976,78 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
         Ok(())
     }
 
+    /// Verifies the payload contains the transaction info we require to
+    /// download all account states.
+    async fn verify_transaction_info_to_sync(
+        &mut self,
+        notification_id: NotificationId,
+        transaction_outputs_with_proof: Option<TransactionOutputListWithProof>,
+        payload_start_version: Option<Version>,
+    ) -> Result<(), Error> {
+        // Verify the payload starting version
+        let ledger_info_to_sync = self
+            .account_state_syncer
+            .ledger_info_to_sync
+            .clone()
+            .expect("Ledger info to sync is missing!");
+        let expected_start_version = ledger_info_to_sync.ledger_info().version();
+        let _ = self
+            .verify_payload_start_version(
+                notification_id,
+                payload_start_version,
+                expected_start_version,
+            )
+            .await?;
+
+        // Verify the payload proof (the ledger info has already been verified)
+        // and save the transaction info.
+        if let Some(transaction_outputs_with_proof) = transaction_outputs_with_proof {
+            match &transaction_outputs_with_proof.proof.transaction_infos[..] {
+                [transaction_info] => {
+                    // TODO(joshlind): don't save the transaction info until after verification!
+                    self.account_state_syncer.transaction_info_for_version =
+                        Some(transaction_info.clone());
+                    self.storage_synchronizer.apply_transaction_outputs(
+                        notification_id,
+                        transaction_outputs_with_proof,
+                        ledger_info_to_sync,
+                        None,
+                    )?;
+                }
+                _ => {
+                    self.terminate_active_stream(
+                        notification_id,
+                        NotificationFeedback::InvalidPayloadData,
+                    )
+                    .await?;
+                    return Err(Error::InvalidPayload(
+                        "Payload does not contain a single transaction info!".into(),
+                    ));
+                }
+            }
+        } else {
+            self.terminate_active_stream(
+                notification_id,
+                NotificationFeedback::PayloadTypeIsIncorrect,
+            )
+            .await?;
+            return Err(Error::InvalidPayload(
+                "Did not receive transaction outputs with proof!".into(),
+            ));
+        }
+
+        Ok(())
+    }
+
     /// Verifies the first payload version matches the version we wish to sync
     async fn verify_payload_start_version(
         &mut self,
         notification_id: NotificationId,
         payload_start_version: Option<Version>,
+        expected_start_version: Version,
     ) -> Result<Version, Error> {
-        // Compare the payload start version with the expected version
-        let expected_version = self
-            .get_speculative_stream_state()
-            .expected_next_version()?;
         if let Some(payload_start_version) = payload_start_version {
-            if payload_start_version != expected_version {
+            if payload_start_version != expected_start_version {
                 self.terminate_active_stream(
                     notification_id,
                     NotificationFeedback::InvalidPayloadData,
@@ -695,7 +1055,7 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
                 .await?;
                 Err(Error::VerificationError(format!(
                     "The payload start version does not match the expected version! Start: {:?}, expected: {:?}",
-                    payload_start_version, expected_version
+                    payload_start_version, expected_start_version
                 )))
             } else {
                 Ok(payload_start_version)
@@ -819,6 +1179,31 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
         .await
     }
 
+    /// Handles a notification from the driver that new accounts have been
+    /// committed to storage.
+    pub fn handle_committed_accounts(
+        &mut self,
+        committed_accounts: CommittedAccounts,
+    ) -> Result<(), Error> {
+        // Update the last committed account index
+        self.account_state_syncer.next_account_index_to_commit = committed_accounts
+            .last_committed_account_index
+            .checked_add(1)
+            .ok_or_else(|| {
+                Error::IntegerOverflow("The next account index to commit has overflown!".into())
+            })?;
+
+        // Check if we've downloaded all account states
+        if committed_accounts.all_accounts_synced {
+            info!("Successfully synced all account states at version: {:?}. Last committed account index: {:?}",
+                  self.account_state_syncer.ledger_info_to_sync,
+                  committed_accounts.last_committed_account_index);
+            self.account_state_syncer.is_sync_complete = true;
+        }
+
+        Ok(())
+    }
+
     /// Returns the speculative stream state. Assumes that the state exists.
     fn get_speculative_stream_state(&mut self) -> &mut SpeculativeStreamState {
         self.speculative_stream_state
@@ -828,6 +1213,7 @@ impl<StorageSyncer: StorageSynchronizerInterface + Clone> Bootstrapper<StorageSy
 
     /// Resets the currently active data stream and speculative state
     fn reset_active_stream(&mut self) {
+        self.account_state_syncer.reset_speculative_state();
         self.speculative_stream_state = None;
         self.active_data_stream = None;
     }
