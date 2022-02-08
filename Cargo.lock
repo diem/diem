@@ -153,9 +153,9 @@ checksum = "db55d72333851e17d572bec876e390cd3b11eb1ef53ae821dd9f3b653d2b4569"
 
 [[package]]
 name = "arc-swap"
-version = "1.2.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4d7d63395147b81a9e570bcc6243aaf71c017bd666d4909cfef0085bdda8d73"
+checksum = "c5d78ce20460b82d3fa150275ed9d55e21064fc7951177baacf86a145c4a4b1f"
 
 [[package]]
 name = "array_tool"
@@ -1162,6 +1162,16 @@ checksum = "0f260e2fc850179ef410018660006951c1b55b79e8087e87111a2c388994b9b5"
 dependencies = [
  "ahash 0.3.8",
  "cfg-if 0.1.10",
+ "num_cpus",
+]
+
+[[package]]
+name = "dashmap"
+version = "4.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e77a43b28d0668df09411cb0bc9a8c2adc40f9a048afe863e05fd43251e8e39c"
+dependencies = [
+ "cfg-if 1.0.0",
  "num_cpus",
 ]
 
@@ -3996,7 +4006,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84361d019110e87ee0b527edae8cba07feb78a09c53d8579e5411005d0ad5065"
 dependencies = [
- "dashmap",
+ "dashmap 3.11.10",
  "hashbrown 0.9.1",
  "once_cell",
 ]
@@ -5173,12 +5183,12 @@ dependencies = [
 name = "mvhashmap"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
+ "crossbeam",
+ "dashmap 4.0.2",
  "diem-workspace-hack",
- "num_cpus",
- "once_cell",
  "proptest",
  "proptest-derive",
- "rayon",
 ]
 
 [[package]]
