@@ -31,22 +31,6 @@ pub struct Accesses<K> {
     pub keys_written: Vec<K>,
 }
 
-/// Trait for inferencing the read and write set of a transaction.
-pub trait ReadWriteSetInferencer: Sync {
-    /// Type of transaction and its associated key.
-    type T: Transaction;
-
-    /// Get the read and write set of a transaction.
-    ///
-    /// Read set estimation is used simply to improve the performance by exposing the read
-    /// dependencies. Imprecise estimation won't cause execution failure.
-    ///
-    /// Write set estimation is crucial to the execution correctness as there's no way to resolve
-    /// read-after-write conflict where a write is unexpected. Thus we require write to be an over
-    /// approximation for now.
-    fn infer_reads_writes(&self, txn: &Self::T) -> Result<Accesses<<Self::T as Transaction>::Key>>;
-}
-
 /// Trait for single threaded transaction executor.
 // TODO: Sync should not be required. Sync is only introduced because this trait occurs as a phantom type of executor struct.
 pub trait ExecutorTask: Sync {
