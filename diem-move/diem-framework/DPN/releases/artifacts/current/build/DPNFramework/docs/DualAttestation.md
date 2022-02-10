@@ -1463,3 +1463,9 @@ resource struct <code><a href="DualAttestation.md#0x1_DualAttestation_Credential
 <pre><code><b>invariant</b>&lt;CoinType&gt; <b>update</b> <b>forall</b> a: <b>address</b>:
     <b>old</b>(<a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(a)) ==&gt; <a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(a);
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
+[ACCESS_CONTROL]: https://github.com/diem/dip/blob/main/dips/dip-2.md
+[ROLE]: https://github.com/diem/dip/blob/main/dips/dip-2.md#roles
+[PERMISSION]: https://github.com/diem/dip/blob/main/dips/dip-2.md#permissions

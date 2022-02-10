@@ -178,3 +178,9 @@ Only "set" can modify the DiemConsensusConfig config [[H12]][PERMISSION]
 
 <pre><code><b>apply</b> <a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig_DiemConsensusConfigRemainsSame">DiemConsensusConfigRemainsSame</a> <b>to</b> * <b>except</b> set;
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
+[ACCESS_CONTROL]: https://github.com/diem/dip/blob/main/dips/dip-2.md
+[ROLE]: https://github.com/diem/dip/blob/main/dips/dip-2.md#roles
+[PERMISSION]: https://github.com/diem/dip/blob/main/dips/dip-2.md#permissions

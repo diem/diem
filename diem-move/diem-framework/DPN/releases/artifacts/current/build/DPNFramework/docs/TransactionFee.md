@@ -472,3 +472,9 @@ If time has started ticking, then <code><a href="TransactionFee.md#0x1_Transacti
    <b>borrow_global</b>&lt;<a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt;&gt;(@TreasuryCompliance)
 }
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
+[ACCESS_CONTROL]: https://github.com/diem/dip/blob/main/dips/dip-2.md
+[ROLE]: https://github.com/diem/dip/blob/main/dips/dip-2.md#roles
+[PERMISSION]: https://github.com/diem/dip/blob/main/dips/dip-2.md#permissions

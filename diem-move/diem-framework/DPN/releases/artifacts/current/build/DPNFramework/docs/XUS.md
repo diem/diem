@@ -351,3 +351,9 @@ PreburnQueue<XUS> is not copiable, and once it's published, it's not removed.
         <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">Diem::PreburnQueue</a>&lt;<a href="XUS.md#0x1_XUS">XUS</a>&gt;&gt;(a)):
             <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">Diem::PreburnQueue</a>&lt;<a href="XUS.md#0x1_XUS">XUS</a>&gt;&gt;(a);
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
+[ACCESS_CONTROL]: https://github.com/diem/dip/blob/main/dips/dip-2.md
+[ROLE]: https://github.com/diem/dip/blob/main/dips/dip-2.md#roles
+[PERMISSION]: https://github.com/diem/dip/blob/main/dips/dip-2.md#permissions

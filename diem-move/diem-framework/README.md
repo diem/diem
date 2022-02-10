@@ -17,9 +17,9 @@ files. See the [Layout](#layout) section for a more detailed overview of the str
 ## Documentation
 
 Each of the main components of the Diem Framework and contributing guidelines are documented separately. Particularly:
-* Documentation for the set of allowed transaction scripts in DPN can be found in [script_documentation.md](DPN/releases/artifacts/current/build/DiemCoreFramework/docs/script_documentation.md).
-* The overview documentation for the Move modules can be found in [overview.md](DPN/releases/artifacts/current/build/DiemCoreFramework/docs/overview.md).
-* An overview of the approach to formal verification of the framework can be found in [spec_documentation.md](DPN/releases/artifacts/current/build/DiemCoreFramework/docs/spec_documentation.md).
+* Documentation for the set of allowed transaction scripts in DPN can be found in [script_documentation.md](DPN/releases/artifacts/current/build/DPNFramework/docs/script_documentation.md).
+* The overview documentation for the Move modules can be found in [overview.md](DPN/releases/artifacts/current/build/DPNFramework/docs/overview.md).
+* An overview of the approach to formal verification of the framework can be found in [spec_documentation.md](DPN/releases/artifacts/current/build/DPNFramework/docs/spec_documentation.md).
 * Contributing guidelines and basic coding standards for the Diem Framework can be found in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Compilation and Generation
@@ -35,19 +35,7 @@ mode (`cargo run --release`).
 The overall structure of the Diem Framework is as follows:
 
 ```
-├── compiled                                # Generated files and public rust interface to the Diem Framework
-│   ├── error_descriptions/*.errmap         # Generated error descriptions for use by the Move Explain tool
-│   ├── src                                 # External Rust interface/library to use the Diem Framework
-│   ├── stdlib                              # The compiled Move bytecode of the Diem Framework source modules
-│   ├── script_abis                         # Generated ABIs for script function transactions, and all new transactions
-│   └── legacy/transaction_scripts          # Legacy generated ABIs and bytecode for each transaction script in the allowlist
-│       ├── abi/*.abi                       # Directory containing generated ABIs for legacy transaction scripts
-│       └── *.mv
-├── modules                                 # Diem Framework source modules, script modules, and generated documentation
-│   ├── *.move
-│   └── doc/*.md                            # Generated documentation for the Diem Framework modules
-├── nursery/*.move                          # Move modules that are not published on-chain, but are used for testing and debugging locally
-├── src                                     # Compilation and generation of information from Move source files in the Diem Framework. Not designed to be used as a Rust library
-├── tests
-└── script_documentation/*.md               # Generated documentation for allowed transaction scripts
+├── DPN          # Diem Framework source modules, script modules, and generated documentation
+├── core         # Minimal core configuration and Move files needed for a running Diem node
+└── experimental # An example usage of the `core` modules and how they can be used to define a chain
 ```
