@@ -84,20 +84,16 @@ use crate::sparse_merkle::{
     metrics::{LATEST_GENERATION, OLDEST_GENERATION, TIMER},
     node::{NodeInner, SubTree},
     updater::SubTreeUpdater,
-    utils::partition,
 };
 use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
 use diem_infallible::Mutex;
-use diem_types::{
-    nibble::{nibble_path::NibblePath, ROOT_NIBBLE_HEIGHT},
-    proof::SparseMerkleProof,
-};
+use diem_types::{nibble::nibble_path::NibblePath, proof::SparseMerkleProof, vec_bool::VecBool};
 use std::{
     borrow::Borrow,
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, HashMap},
     sync::{Arc, Weak},
 };
 
@@ -321,7 +317,7 @@ where
         let base_generation = base_smt.inner.generation;
 
         FrozenSparseMerkleTree {
-            _base_smt: base_smt,
+            base_smt,
             base_generation,
             smt: self,
         }
@@ -341,6 +337,14 @@ where
     /// Returns the root hash of this tree.
     pub fn root_hash(&self) -> HashValue {
         self.inner.root.hash()
+    }
+
+    fn generation(&self) -> u64 {
+        self.inner.generation
+    }
+
+    fn is_the_same(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.inner, &other.inner)
     }
 }
 
@@ -412,7 +416,7 @@ pub enum AccountStatus<V> {
 /// SMT is held inside.
 #[derive(Clone, Debug)]
 pub struct FrozenSparseMerkleTree<V> {
-    _base_smt: SparseMerkleTree<V>,
+    base_smt: SparseMerkleTree<V>,
     base_generation: u64,
     smt: SparseMerkleTree<V>,
 }
@@ -423,7 +427,7 @@ where
 {
     fn spawn(&self, child_root: SubTree<V>) -> Self {
         Self {
-            _base_smt: self._base_smt.clone(),
+            base_smt: self.base_smt.clone(),
             base_generation: self.base_generation,
             smt: SparseMerkleTree {
                 inner: self.smt.inner.spawn(child_root),
@@ -451,116 +455,70 @@ where
         update_batch: Vec<Vec<(HashValue, &V)>>,
         proof_reader: &impl ProofRead<V>,
     ) -> Result<(Vec<(HashValue, HashMap<NibblePath, HashValue>)>, Self), UpdateError> {
-        let mut current_state_tree = self.clone();
+        let mut cur = self.clone();
         let mut result = Vec::with_capacity(update_batch.len());
         for updates in update_batch {
-            // sort and dedup the accounts
-            let accounts = updates
-                .iter()
-                .map(|(account, _)| *account)
-                .collect::<BTreeSet<_>>()
-                .into_iter()
-                .collect::<Vec<_>>();
-            current_state_tree = current_state_tree.batch_update(updates, proof_reader)?;
-            result.push((
-                current_state_tree.smt.root_hash(),
-                current_state_tree.generate_node_hashes(accounts),
-            ));
+            let new = cur.batch_update(updates, proof_reader)?;
+            result.push((new.smt.root_hash(), new.new_node_hashes_since(&cur)));
+            cur = new;
         }
-        Ok((result, current_state_tree))
+        Ok((result, cur))
     }
 
-    /// This is a helper function that compares an updated in-memory sparse merkle with the
-    /// current on-disk jellyfish sparse merkle to get the hashes of newly generated nodes.
-    pub fn generate_node_hashes(
-        &self,
-        // must be sorted
-        touched_accounts: Vec<HashValue>,
-    ) -> HashMap<NibblePath, HashValue> {
+    /// Compares an old and a new SMTs and return the newly created node hashes in between.
+    pub fn new_node_hashes_since(&self, since_smt: &Self) -> HashMap<NibblePath, HashValue> {
         let _timer = TIMER
-            .with_label_values(&["generate_node_hashes"])
+            .with_label_values(&["new_node_hashes_since"])
             .start_timer();
+
+        assert!(self.base_smt.is_the_same(&since_smt.base_smt));
         let mut node_hashes = HashMap::new();
-        let mut nibble_path = NibblePath::new(vec![]);
-        self.collect_new_hashes(
-            touched_accounts.as_slice(),
+        Self::new_node_hashes_since_impl(
             self.smt.root_weak(),
-            0, /* depth in nibble */
-            0, /* level within a nibble*/
-            &mut nibble_path,
+            since_smt.smt.generation() + 1,
+            VecBool::new(),
             &mut node_hashes,
         );
         node_hashes
     }
 
     /// Recursively generate the partial node update batch of jellyfish merkle
-    fn collect_new_hashes(
-        &self,
-        keys: &[HashValue],
+    fn new_node_hashes_since_impl(
         subtree: SubTree<V>,
-        depth_in_nibble: usize,
-        level_within_nibble: usize,
-        cur_nibble_path: &mut NibblePath,
+        since_generation: u64,
+        pos: VecBool,
         node_hashes: &mut HashMap<NibblePath, HashValue>,
     ) {
-        assert!(depth_in_nibble <= ROOT_NIBBLE_HEIGHT);
-        if keys.is_empty() {
-            return;
-        }
-
-        if level_within_nibble == 0 {
-            if depth_in_nibble != 0 {
-                cur_nibble_path
-                    .push(NibblePath::new(keys[0].to_vec()).get_nibble(depth_in_nibble - 1));
-            }
-            node_hashes.insert(cur_nibble_path.clone(), subtree.hash());
-        }
-        match subtree
-            .get_node_if_in_mem(self.base_generation)
-            .expect("must exist")
-            .inner()
-            .borrow()
-        {
-            NodeInner::Internal(internal_node) => {
-                let (next_nibble_depth, next_level_within_nibble) = if level_within_nibble == 3 {
-                    (depth_in_nibble + 1, 0)
-                } else {
-                    (depth_in_nibble, level_within_nibble + 1)
-                };
-                let pivot = partition(
-                    &keys.iter().map(|k| (*k, ())).collect::<Vec<_>>()[..],
-                    depth_in_nibble * 4 + level_within_nibble,
-                );
-                self.collect_new_hashes(
-                    &keys[..pivot],
-                    internal_node.left.weak(),
-                    next_nibble_depth,
-                    next_level_within_nibble,
-                    cur_nibble_path,
-                    node_hashes,
-                );
-                self.collect_new_hashes(
-                    &keys[pivot..],
-                    internal_node.right.weak(),
-                    next_nibble_depth,
-                    next_level_within_nibble,
-                    cur_nibble_path,
-                    node_hashes,
-                );
-            }
-            NodeInner::Leaf(leaf_node) => {
-                assert_eq!(keys.len(), 1);
-                assert_eq!(keys[0], leaf_node.key);
-                if level_within_nibble != 0 {
-                    let mut leaf_nibble_path = cur_nibble_path.clone();
-                    leaf_nibble_path
-                        .push(NibblePath::new(keys[0].to_vec()).get_nibble(depth_in_nibble));
-                    node_hashes.insert(leaf_nibble_path, subtree.hash());
+        if let Some(node) = subtree.get_node_if_in_mem(since_generation) {
+            let is_nibble = if let Some(path) = pos.try_to_nibble_path() {
+                node_hashes.insert(path, subtree.hash());
+                true
+            } else {
+                false
+            };
+            match node.inner().borrow() {
+                NodeInner::Internal(internal_node) => {
+                    Self::new_node_hashes_since_impl(
+                        internal_node.left.weak(),
+                        since_generation,
+                        pos.clone().with_pushed(false),
+                        node_hashes,
+                    );
+                    Self::new_node_hashes_since_impl(
+                        internal_node.right.weak(),
+                        since_generation,
+                        pos.with_pushed(true),
+                        node_hashes,
+                    );
+                }
+                NodeInner::Leaf(leaf_node) => {
+                    let mut path = NibblePath::new(leaf_node.key.to_vec());
+                    if !is_nibble {
+                        path.truncate(pos.len() as usize / 4 + 1);
+                    }
+                    node_hashes.insert(path, subtree.hash());
                 }
             }
-        }
-        if level_within_nibble == 0 && depth_in_nibble != 0 {
-            cur_nibble_path.pop();
         }
     }
 

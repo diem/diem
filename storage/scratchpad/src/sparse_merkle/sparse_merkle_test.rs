@@ -153,18 +153,18 @@ fn test_insert_at_persisted_empty() {
 
 #[test]
 fn test_update_256_siblings_in_proof() {
-    //                   root
+    // level 0           root
     //                  /    \
-    //                 o      placeholder
+    //       1         o      placeholder
     //                / \
-    //               o   placeholder
+    //       2       o   placeholder
     //              / \
-    //             .   placeholder
-    //             .
-    //             . (256 levels)
-    //             o
+    //       .     .   placeholder
+    //       .     .
+    //       .     .
+    //     255     o
     //            / \
-    //        key1   key2
+    //     256 key1   key2
     let key1 = HashValue::new([0; HashValue::LENGTH]);
     let key2 = {
         let mut buf = key1.to_vec();
@@ -195,19 +195,39 @@ fn test_update_256_siblings_in_proof() {
     assert!(proof_of_key1
         .verify(old_root_hash, key1, Some(&blob1))
         .is_ok());
+    let proof_reader = ProofReader::new(vec![(key1, proof_of_key1)]);
 
     let new_blob1 = AccountStateBlob::from(b"value1111111111111".to_vec());
-    let proof_reader = ProofReader::new(vec![(key1, proof_of_key1)]);
-    let smt = SparseMerkleTree::new(old_root_hash);
+    let new_blob1_hash = new_blob1.hash();
+    let new_leaf1_hash = hash_leaf(key1, new_blob1_hash);
+
+    let smt = SparseMerkleTree::new(old_root_hash).freeze();
     let new_smt = smt
         .batch_update(vec![(key1, &new_blob1)], &proof_reader)
         .unwrap();
+    let new_node_hashes = new_smt.new_node_hashes_since(&smt);
 
-    let new_blob1_hash = new_blob1.hash();
-    let new_leaf1_hash = hash_leaf(key1, new_blob1_hash);
-    let new_root_hash = siblings.iter().fold(new_leaf1_hash, |previous_hash, hash| {
-        hash_internal(previous_hash, *hash)
-    });
+    assert_eq!(
+        new_node_hashes.get(&NibblePath::new(key1.to_vec())),
+        Some(&new_leaf1_hash),
+    );
+    assert!(new_node_hashes
+        .get(&NibblePath::new(key2.to_vec()))
+        .is_none());
+
+    let new_root_hash = {
+        let mut cur = new_leaf1_hash;
+        let mut path = NibblePath::new(key1.to_vec());
+        for (i, sibling) in siblings.into_iter().enumerate() {
+            cur = hash_internal(cur, sibling);
+            let level = 255 - i;
+            if level % 4 == 0 {
+                path.pop();
+                assert_eq!(new_node_hashes.get(&path), Some(&cur));
+            }
+        }
+        cur
+    };
     assert_eq!(new_smt.root_hash(), new_root_hash);
 
     assert_eq!(
@@ -488,7 +508,7 @@ fn test_get_oldest_ancestor() {
 }
 
 fn assert_eq_pointee(left: &SparseMerkleTree, right: &SparseMerkleTree) {
-    assert!(Arc::ptr_eq(&left.inner, &right.inner,))
+    assert!(Arc::ptr_eq(&left.inner, &right.inner))
 }
 
 #[test]
