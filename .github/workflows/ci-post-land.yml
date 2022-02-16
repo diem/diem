@@ -4,7 +4,7 @@ on:
   create:
     branches: [main, release-*]
   push:
-    branches: [main, release-*] # gha-test-*
+    branches: [main, canary, release-*] # gha-test-*
 
 defaults:
   run:
@@ -54,177 +54,268 @@ jobs:
   # NOTE: update-sscache-osx removed as cost savings effort. It strongly resembled update-sccache-ubuntu
   # except for a 'runs-on: macos-11', and no container.  Restore when there are more osx contributors.
 
-  update-sccache-ubuntu:
+  # update-sccache-ubuntu:
+  #   needs: prepare
+  #   if: ${{ needs.prepare.outputs.rust-changes == 'true' }}
+  #   environment:
+  #     name: Sccache
+  #   runs-on: ubuntu-20.04-xl
+  #   container:
+  #     image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+  #     volumes:
+  #       - "${{github.workspace}}:/opt/git/diem"
+  #   steps:
+  #     - uses: actions/checkout@v2.4.0
+  #       with:
+  #         # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+  #         # On `push` this value will be empty and will "do-the-right-thing"
+  #         ref: ${{ github.event.pull_request.head.sha }}
+  #         fetch-depth: 0 #get all the history!!!
+  #     - uses: ./.github/actions/build-setup
+  #     - uses: actions/cache@v2.1.6
+  #       with:
+  #         path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+  #         key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+  #         restore-keys: "crates-${{ runner.os }}"
+  #     - name: build all unit test code.
+  #       run: |
+  #         $pre_command && cargo x test --no-run --jobs ${max_threads} --unit
+  #       env:
+  #         TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+  #         SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
+  #         SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
+  #     - uses: ./.github/actions/build-teardown
+
+  # # In the future when the script can differentiate between target branches for each auto run then we'll
+  # # update this report to differentiate branches.
+  # unit-test-allure-report:
+  #   name: Unit Test Reports
+  #   runs-on: ubuntu-20.04
+  #   if: ${{ github.ref == 'refs/heads/main' }}
+  #   environment:
+  #     name: Sccache
+  #   container:
+  #     image: ghcr.io/diem/diem_build_environment:main
+  #     volumes:
+  #       - "${{github.workspace}}:/opt/git/diem"
+  #   steps:
+  #     - uses: actions/checkout@v2.4.0
+  #       with:
+  #         # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+  #         # On `push` this value will be empty and will "do-the-right-thing"
+  #         ref: ${{ github.event.pull_request.head.sha }}
+  #         fetch-depth: 0 #get all the history!!!
+  #     - uses: ./.github/actions/build-setup
+  #       # build setup is called to ensure the latest docker image tooling is in place and the ~/.profile is called.
+  #     - name: Publish unit test results
+  #       uses: diem/actions/process-test-results@faadd16607b77dfa2231a8f366883e01717b3225
+  #       with:
+  #         #used to read artifacts, annoying to need one.
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         artifacts: "unit-test-results codegen-unit-test-results"
+  #         workflow_file: ci-test.yml
+  #         branch: auto
+  #         history: 20
+  #         recreate: false
+  #         allure_configuration: ./allure-configuration
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
+  #         AWS_DEFAULT_REGION: ${{ secrets.ENV_DIEM_S3_AWS_REGION }}
+
+  # build_ci_base_docker_image:
+  #   needs: prepare
+  #   runs-on: ubuntu-20.04-xl
+  #   if: ${{ needs.prepare.outputs.base-image-changes == 'true' || github.event_name == 'create' }}
+  #   env:
+  #     REGISTRY: ghcr.io
+  #     IMAGE_NAME: ${{ github.repository }}_build_environment
+  #     IMAGE_TAG: ${{ needs.prepare.outputs.changes-target-branch }}
+  #   steps:
+  #     - uses: actions/checkout@v2.4.0
+  #       with:
+  #         # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+  #         # On `push` this value will be empty and will "do-the-right-thing"
+  #         ref: ${{ github.event.pull_request.head.sha }}
+  #         fetch-depth: 0 #get all the history!!!
+  #     - name: Log in to the Container registry
+  #       uses: docker/login-action@v1
+  #       with:
+  #         registry: ${{ env.REGISTRY }}
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: build image
+  #       run: docker build -f docker/ci/github/Dockerfile -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
+  #     - name: Push to ghcr
+  #       run: |
+  #         docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+  # run-forge-test-pre-release-suite-NOVI:
+  #   needs: prepare
+  #   name: Run the pre-release suite of Forge Test
+  #   runs-on: [self-hosted, NOVI]
+  #   # if: ${{  startsWith(needs.prepare.outputs.changes-target-branch, 'release') }}
+  #   # The pre-release suite run time varies 1~1.5 hr.
+  #   timeout-minutes: 120
+  #   steps:
+  #     - uses: actions/checkout@v2.4.0
+  #       with:
+  #         fetch-depth: 0 #get all the history!!!
+  #     - name: set_env
+  #       id: set_env
+  #       run: |
+  #         HEAD_GIT_REV=$(git rev-parse --short=8 HEAD)
+  #         echo "HEAD_GIT_REV=$HEAD_GIT_REV" >> $GITHUB_ENV
+  #         IMAGE_TAG=$(echo ${GITHUB_REF#refs/heads/})_$HEAD_GIT_REV
+  #         echo $IMAGE_TAG
+  #         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+  #     - name: poll_images
+  #       # Poll until images are ready
+  #       env:
+  #         AWS_REGION: us-west-2
+  #         RETRIES: 210
+  #       run: |
+  #         set +e
+  #         retry=0
+  #         status=1
+  #         while [[ $status != 0 && $retry -lt $RETRIES ]]; do
+  #           status=0
+  #           for image in diem/validator diem/validator_tcb diem/init diem/forge; do
+  #             aws ecr describe-images --region $AWS_REGION --repository-name $image --image-ids=imageTag=$IMAGE_TAG
+  #             status=$((status + $?))
+  #           done
+  #           retry=$((retry + 1))
+  #           if [[ $status != 0 ]] ; then
+  #             echo "CI has not pushed all images to ECR."
+  #             echo "Wait $((1*$retry)) of $((1*$RETRIES)) minutes before retry."
+  #             sleep 1m
+  #           fi
+  #         done
+  #         exit $status
+  #     - name: Run Forge Test
+  #       run: |
+  #         date
+  #         BASE_GIT_REV=$(git rev-parse $HEAD_GIT_REV^)
+  #         ./scripts/fgi/run --tag $IMAGE_TAG --timeout-secs 7200 --suite pre_release
+  #           # --env SLACK_CHANGELOG_URL=${{ secrets.WEBHOOK_FORGE }} \
+  #           # --changelog $BASE_GIT_REV $HEAD_GIT_REV \
+  #     - name: Push alert
+  #       if: ${{ failure() }}
+  #       run: |
+  #         jq -n \
+  #           --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed with $IMAGE_TAG." \
+  #           --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+  #           '{
+  #             "attachments": [
+  #               {
+  #                 "text": $msg,
+  #                 "actions": [
+  #                   {
+  #                     "type": "button",
+  #                     "text": "Visit Job",
+  #                     "url": $url
+  #                   }
+  #                 ]
+  #               }
+  #             ]
+  #           }' > /tmp/payload
+  #         curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FORGE }}
+  #
+  # build-release-images-NOVI:
+  #   needs: prepare
+  #   runs-on: ubuntu-20.04-xl
+  #   continue-on-error: true
+  #   env:
+  #     TAG: github-1
+  #     CHANGES_TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+  #   environment:
+  #     name: Docker
+  #     url: https://hub.docker.com/u/diem
+  #   steps:
+  #     - uses: actions/checkout@v2.4.0
+  #       with:
+  #         fetch-depth: 0 #get all the history!!!
+  #     - name: setup_aws_ecr_login
+  #       run: |
+  #         echo 'AWS_ECR_ACCOUNT_URL=${{ secrets.ENV_NOVI_ECR_AWS_ACCOUNT_NUM }}.dkr.ecr.${{ secrets.ENV_NOVI_ECR_AWS_REGION }}.amazonaws.com' >> $GITHUB_ENV
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v1
+  #       with:
+  #         aws-access-key-id: ${{ secrets.ENV_NOVI_ECR_AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.ENV_NOVI_ECR_AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.ENV_NOVI_ECR_AWS_REGION }}
+  #     - name: Login to Amazon ECR
+  #       id: login-ecr
+  #       uses: aws-actions/amazon-ecr-login@v1.3.3
+  #     - name: Sign in to dockerhub, install image signing cert.
+  #       uses: ./.github/actions/dockerhub_login
+  #       with:
+  #         username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+  #         password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
+  #         key_material: ${{ secrets.ENV_DOCKERHUB_KEY_MATERIAL }}
+  #         key_name: ${{ secrets.ENV_DOCKERHUB_KEY_NAME }}
+  #         key_password: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
+  #     - name: should pre build docker images (targeting a release branch)?
+  #       if: ${{ github.ref == 'refs/heads/auto' }}
+  #       run: |
+  #         if  [[ ! "$CHANGES_TARGET_BRANCH" =~ "^release-[0-9|.]+$" ]] && [[ ! "$CHANGES_TARGET_BRANCH" =~ "^gha-test-[0-9|.]+$" ]] ; then
+  #           echo Targeting branch $CHANGES_TARGET_BRANCH will not pre-publish docker images.
+  #         fi
+  #     - name: pre-release docker images
+  #       if: ${{ github.ref == 'refs/heads/auto' }}
+  #       run: |
+  #         BRANCH="$CHANGES_TARGET_BRANCH"
+  #         success=0
+  #         tmpfile=$(mktemp)
+  #         echo "Failed to push:" > "${tmpfile}"
+  #         docker/build_push.sh -u -p -b ${BRANCH} -n client || success=$(echo "client" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -p -b ${BRANCH} -n init || success=$(echo "init" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -p -b ${BRANCH} -n faucet || success=$(echo "faucet" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -p -b ${BRANCH} -n tools || success=$(echo "tools" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -p -b ${BRANCH} -n validator || success=$(echo "validator" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb || success=$(echo "validator-tcb" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -p -b ${BRANCH} -n forge || success=$(echo "forge" >> "${tmpfile}"; echo 1)
+  #         if [[ "$success" == "1" ]]; then
+  #           cat "${tmpfile}"
+  #         fi
+  #         exit $success
+  #       env:
+  #         DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
+  #     - name: pull pre images (or build if not pullable) and push release docker images if not on auto branch.
+  #       if: ${{ github.ref != 'refs/heads/auto' }}
+  #       run: |
+  #         set -x
+  #         BRANCH=$(echo "$GITHUB_REF" | sed 's|.*/||' )
+  #         success=0
+  #         tmpfile=$(mktemp)
+  #         echo "Failed to push:" >> "${tmpfile}"
+  #         # docker/build_push.sh -u -b ${BRANCH} -n client || success=$(echo "client" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -b ${BRANCH} -n init ||  success=$(echo "init" >> "${tmpfile}"; echo 1)
+  #         # docker/build_push.sh -u -b ${BRANCH} -n faucet ||  success=$(echo "faucet" >> "${tmpfile}"; echo 1)
+  #         # docker/build_push.sh -u -b ${BRANCH} -n tools ||  success=$(echo "tools" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -b ${BRANCH} -n validator || success=$(echo "validator" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -b ${BRANCH} -n validator-tcb || success=$(echo "validator-tcb" >> "${tmpfile}"; echo 1)
+  #         docker/build_push.sh -u -b ${BRANCH} -n forge || success=$(echo "forge" >> "${tmpfile}"; echo 1)
+  #         if [[ "$success" == "1" ]]; then
+  #           cat "${tmpfile}"
+  #         fi
+  #         exit $success
+  #       env:
+  #         DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
+  #     - name: push to novi ecr
+  #       if: ${{ always() && github.ref != 'refs/heads/auto' }}
+  #       run: |
+  #         #push to novi ecr with standard names
+  #         BRANCH=$(echo "$GITHUB_REF" | sed 's|.*/||' )
+  #         GIT_REV=$(git rev-parse --short=8 HEAD)
+  #         aws ecr get-login-password --region ${{ secrets.ENV_NOVI_ECR_AWS_REGION }} | \
+  #         docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
+  #         docker/docker_republish.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d
+
+  build-release-images-ACP:
     needs: prepare
-    if: ${{ needs.prepare.outputs.rust-changes == 'true' }}
-    environment:
-      name: Sccache
     runs-on: ubuntu-20.04-xl
-    container:
-      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
-      volumes:
-        - "${{github.workspace}}:/opt/git/diem"
-    steps:
-      - uses: actions/checkout@v2.4.0
-        with:
-          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
-          # On `push` this value will be empty and will "do-the-right-thing"
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0 #get all the history!!!
-      - uses: ./.github/actions/build-setup
-      - uses: actions/cache@v2.1.6
-        with:
-          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
-          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: "crates-${{ runner.os }}"
-      - name: build all unit test code.
-        run: |
-          $pre_command && cargo x test --no-run --jobs ${max_threads} --unit
-        env:
-          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
-          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
-          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
-      - uses: ./.github/actions/build-teardown
-
-  # In the future when the script can differentiate between target branches for each auto run then we'll
-  # update this report to differentiate branches.
-  unit-test-allure-report:
-    name: Unit Test Reports
-    runs-on: ubuntu-20.04
-    if: ${{ github.ref == 'refs/heads/main' }}
-    environment:
-      name: Sccache
-    container:
-      image: ghcr.io/diem/diem_build_environment:main
-      volumes:
-        - "${{github.workspace}}:/opt/git/diem"
-    steps:
-      - uses: actions/checkout@v2.4.0
-        with:
-          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
-          # On `push` this value will be empty and will "do-the-right-thing"
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0 #get all the history!!!
-      - uses: ./.github/actions/build-setup
-        # build setup is called to ensure the latest docker image tooling is in place and the ~/.profile is called.
-      - name: Publish unit test results
-        uses: diem/actions/process-test-results@faadd16607b77dfa2231a8f366883e01717b3225
-        with:
-          #used to read artifacts, annoying to need one.
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "unit-test-results codegen-unit-test-results"
-          workflow_file: ci-test.yml
-          branch: auto
-          history: 20
-          recreate: false
-          allure_configuration: ./allure-configuration
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.ENV_DIEM_S3_AWS_REGION }}
-
-  build_ci_base_docker_image:
-    needs: prepare
-    runs-on: ubuntu-20.04-xl
-    if: ${{ needs.prepare.outputs.base-image-changes == 'true' || github.event_name == 'create' }}
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}_build_environment
-      IMAGE_TAG: ${{ needs.prepare.outputs.changes-target-branch }}
-    steps:
-      - uses: actions/checkout@v2.4.0
-        with:
-          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
-          # On `push` this value will be empty and will "do-the-right-thing"
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0 #get all the history!!!
-      - name: Log in to the Container registry
-        uses: docker/login-action@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: build image
-        run: docker build -f docker/ci/github/Dockerfile -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
-      - name: Push to ghcr
-        run: |
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-
-  run-forge-test-pre-release-suite:
-    needs: prepare
-    name: Run the pre-release suite of Forge Test
-    runs-on: [self-hosted, ACP]
-    if: ${{  startsWith(needs.prepare.outputs.changes-target-branch, 'release') }}
-    # The pre-release suite run time varies 1~1.5 hr.
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@v2.4.0
-        with:
-          fetch-depth: 0 #get all the history!!!
-      - name: set_env
-        id: set_env
-        run: |
-          HEAD_GIT_REV=$(git rev-parse --short=8 HEAD)
-          echo "HEAD_GIT_REV=$HEAD_GIT_REV" >> $GITHUB_ENV
-          IMAGE_TAG=$(echo ${GITHUB_REF#refs/heads/})_$HEAD_GIT_REV
-          echo $IMAGE_TAG
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-      - name: poll_images
-        # Poll until images are ready
-        env:
-          AWS_REGION: us-west-2
-          RETRIES: 75
-        run: |
-          set +e
-          retry=0
-          status=1
-          while [[ $status != 0 && $retry -lt $RETRIES ]]; do
-            status=0
-            for image in diem/validator diem/validator_tcb diem/init diem/forge; do
-              aws ecr describe-images --region $AWS_REGION --repository-name $image --image-ids=imageTag=$IMAGE_TAG
-              status=$((status + $?))
-            done
-            retry=$((retry + 1))
-            if [[ $status != 0 ]] ; then
-              echo "CI has not pushed all images to ECR."
-              echo "Wait $((1*$retry)) of $((1*$RETRIES)) minutes before retry."
-              sleep 1m
-            fi
-          done
-          exit $status
-      - name: Run Forge Test
-        run: |
-          date
-          BASE_GIT_REV=$(git rev-parse $HEAD_GIT_REV^)
-          ./scripts/fgi/run --tag $IMAGE_TAG --timeout-secs 7200 \
-            --env SLACK_CHANGELOG_URL=${{ secrets.WEBHOOK_FORGE }} \
-            --changelog $BASE_GIT_REV $HEAD_GIT_REV \
-            --suite pre_release
-      - name: Push alert
-        if: ${{ failure() }}
-        run: |
-          jq -n \
-            --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed with $IMAGE_TAG." \
-            --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
-            '{
-              "attachments": [
-                {
-                  "text": $msg,
-                  "actions": [
-                    {
-                      "type": "button",
-                      "text": "Visit Job",
-                      "url": $url
-                    }
-                  ]
-                }
-              ]
-            }' > /tmp/payload
-          curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FORGE }}
-
-  build-release-images:
-    needs: prepare
-    runs-on: ubuntu-20.04-xl
+    # runs-on: [self-hosted, ACP]
     continue-on-error: false
     env:
       TAG: github-1
@@ -289,6 +380,7 @@ jobs:
           success=0
           tmpfile=$(mktemp)
           echo "Failed to push:" >> "${tmpfile}"
+          docker/build_push.sh -u -b ${BRANCH} -n client || success=$(echo "client" >> "${tmpfile}"; echo 1)
           docker/build_push.sh -u -b ${BRANCH} -n init ||  success=$(echo "init" >> "${tmpfile}"; echo 1)
           docker/build_push.sh -u -b ${BRANCH} -n faucet ||  success=$(echo "faucet" >> "${tmpfile}"; echo 1)
           docker/build_push.sh -u -b ${BRANCH} -n tools ||  success=$(echo "tools" >> "${tmpfile}"; echo 1)
@@ -301,49 +393,122 @@ jobs:
           exit $success
         env:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
-      - name: push to acp ecr
+      - name: push to ACP ecr
         if: ${{ always() && github.ref != 'refs/heads/auto' }}
         run: |
-          #push to acp ecr with standard names
+          #push to ACP ecr with standard names
           BRANCH=$(echo "$GITHUB_REF" | sed 's|.*/||' )
           GIT_REV=$(git rev-parse --short=8 HEAD)
           aws ecr get-login-password --region ${{ secrets.ENV_ACP_ECR_AWS_REGION }} | \
           docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
           docker/docker_republish.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d
 
-  rustdoc:
+  run-forge-test-pre-release-suite-ACP:
     needs: prepare
-    if: ${{ needs.prepare.outputs.changes-target-branch == 'main' && needs.prepare.outputs.rust-changes == 'true'}}
-    runs-on: ubuntu-20.04
-    container:
-      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
-      volumes:
-        - "${{github.workspace}}:/opt/git/diem"
+    name: Run the pre-release suite of Forge Test
+    runs-on: [self-hosted, ACP]
+    # if: ${{  startsWith(needs.prepare.outputs.changes-target-branch, 'release') }}
+    # The pre-release suite run time varies 1~1.5 hr.
+    timeout-minutes: 120
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2.4.0
-      - uses: ./.github/actions/build-setup
-      - uses: actions/cache@v2.1.6
+      - uses: actions/checkout@v2.4.0
         with:
-          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
-          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: "crates-${{ runner.os }}"
-      - name: Build Documentation
-        # Build the rust crate docs
-        # Use `RUSTC_BOOTSTRAP` in order to use the `--enable-index-page` flag of rustdoc
-        # This is needed in order to generate a landing page `index.html` for workspaces
-        run: cargo doc --no-deps --workspace --lib
+          fetch-depth: 0 #get all the history!!!
+      - name: set_env
+        id: set_env
+        run: |
+          HEAD_GIT_REV=$(git rev-parse --short=8 HEAD)
+          echo "HEAD_GIT_REV=$HEAD_GIT_REV" >> $GITHUB_ENV
+          # IMAGE_TAG=$(echo ${GITHUB_REF#refs/heads/})_$HEAD_GIT_REV
+          IMAGE_TAG=devnet
+          echo $IMAGE_TAG
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+      - name: poll_images
+        # Poll until images are ready
         env:
-          RUSTC_BOOTSTRAP: 1
-          RUSTDOCFLAGS: "-Z unstable-options --enable-index-page"
-          CARGO_INCREMENTAL: 0
-          RUSTFLAGS: -D warnings
-      - name: copy API specification doc into target/doc/diem_api
-        run : cp api/doc/openapi.yaml target/doc/diem_api/openapi.yaml && cp api/doc/spec.html target/doc/diem_api/spec.html
-      - name: Deploy Docs
-        uses: peaceiris/actions-gh-pages@v3.8.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: ./target/doc
-          force_orphan: true
+          AWS_REGION: us-west-2
+          RETRIES: 75
+        run: |
+          set +e
+          retry=0
+          status=1
+          while [[ $status != 0 && $retry -lt $RETRIES ]]; do
+            status=0
+            for image in diem/validator diem/validator_tcb diem/init diem/forge; do
+              aws ecr describe-images --region $AWS_REGION --repository-name $image --image-ids=imageTag=$IMAGE_TAG
+              status=$((status + $?))
+            done
+            retry=$((retry + 1))
+            if [[ $status != 0 ]] ; then
+              echo "CI has not pushed all images to ECR."
+              echo "Wait $((1*$retry)) of $((1*$RETRIES)) minutes before retry."
+              sleep 1m
+            fi
+          done
+          exit $status
+      - name: Run Forge Test
+        run: |
+          date
+          BASE_GIT_REV=$(git rev-parse $HEAD_GIT_REV^)
+          ./scripts/fgi/run --tag $IMAGE_TAG --timeout-secs 7200 \
+            --env SLACK_CHANGELOG_URL=${{ secrets.WEBHOOK_FORGE }} \
+            --changelog $BASE_GIT_REV $HEAD_GIT_REV \
+            --suite pre_release
+      - name: Push alert
+        if: ${{ failure() }}
+        run: |
+          jq -n \
+            --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed with $IMAGE_TAG." \
+            --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+            '{
+              "attachments": [
+                {
+                  "text": $msg,
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "Visit Job",
+                      "url": $url
+                    }
+                  ]
+                }
+              ]
+            }' > /tmp/payload
+          curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FORGE }}
+
+  # rustdoc:
+  #   needs: prepare
+  #   if: ${{ needs.prepare.outputs.changes-target-branch == 'main' && needs.prepare.outputs.rust-changes == 'true'}}
+  #   runs-on: ubuntu-20.04
+  #   container:
+  #     image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+  #     volumes:
+  #       - "${{github.workspace}}:/opt/git/diem"
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v2.4.0
+  #     - uses: ./.github/actions/build-setup
+  #     - uses: actions/cache@v2.1.6
+  #       with:
+  #         path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+  #         key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+  #         restore-keys: "crates-${{ runner.os }}"
+  #     - name: Build Documentation
+  #       # Build the rust crate docs
+  #       # Use `RUSTC_BOOTSTRAP` in order to use the `--enable-index-page` flag of rustdoc
+  #       # This is needed in order to generate a landing page `index.html` for workspaces
+  #       run: cargo doc --no-deps --workspace --lib
+  #       env:
+  #         RUSTC_BOOTSTRAP: 1
+  #         RUSTDOCFLAGS: "-Z unstable-options --enable-index-page"
+  #         CARGO_INCREMENTAL: 0
+  #         RUSTFLAGS: -D warnings
+  #     - name: copy API specification doc into target/doc/diem_api
+  #       run : cp api/doc/openapi.yaml target/doc/diem_api/openapi.yaml && cp api/doc/spec.html target/doc/diem_api/spec.html
+  #     - name: Deploy Docs
+  #       uses: peaceiris/actions-gh-pages@v3.8.0
+  #       with:
+  #         github_token: ${{ secrets.GITHUB_TOKEN }}
+  #         publish_branch: gh-pages
+  #         publish_dir: ./target/doc
+  #         force_orphan: true
