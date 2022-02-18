@@ -70,8 +70,6 @@ pub fn arb_smt_correctness_case() -> impl Strategy<Value = Vec<Action>> {
 pub fn test_smt_correctness_impl(input: Vec<Action>) {
     let mut naive_q = VecDeque::new();
     naive_q.push_back(NaiveSmt::new::<AccountStateBlob>(&[]));
-    let mut serial_q = VecDeque::new();
-    serial_q.push_back(SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH));
     let mut batches_q = VecDeque::new();
     batches_q.push_back(SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH));
     let mut updater_q = VecDeque::new();
@@ -82,7 +80,6 @@ pub fn test_smt_correctness_impl(input: Vec<Action>) {
             Action::Commit => {
                 if naive_q.len() > 1 {
                     naive_q.pop_front();
-                    serial_q.pop_front();
                     batches_q.pop_front();
                     updater_q.pop_front();
                 }
@@ -103,14 +100,6 @@ pub fn test_smt_correctness_impl(input: Vec<Action>) {
 
                 let mut naive_smt = naive_q.back().unwrap().clone().update(&updates_flat_batch);
 
-                let serial_smt = serial_q
-                    .back()
-                    .unwrap()
-                    .serial_update(updates.clone(), &proof_reader)
-                    .unwrap()
-                    .1;
-                serial_q.back().unwrap().assert_no_external_strong_ref();
-
                 let batches_smt = batches_q
                     .back()
                     .unwrap()
@@ -126,12 +115,10 @@ pub fn test_smt_correctness_impl(input: Vec<Action>) {
                     .unwrap();
                 updater_q.back().unwrap().assert_no_external_strong_ref();
 
-                assert_eq!(serial_smt.root_hash(), naive_smt.get_root_hash());
                 assert_eq!(batches_smt.root_hash(), naive_smt.get_root_hash());
                 assert_eq!(updater_smt.root_hash(), naive_smt.get_root_hash());
 
                 naive_q.push_back(naive_smt);
-                serial_q.push_back(serial_smt);
                 batches_q.push_back(batches_smt);
                 updater_q.push_back(updater_smt);
             }

@@ -32,6 +32,7 @@ mod transaction_store;
 #[cfg(any(test, feature = "fuzzing"))]
 #[allow(dead_code)]
 mod diemdb_test;
+mod state_store_binary;
 
 #[cfg(feature = "fuzzing")]
 pub use diemdb_test::test_save_blocks_impl;
@@ -51,7 +52,7 @@ use crate::{
     },
     pruner::Pruner,
     schema::*,
-    state_store::StateStore,
+    state_store_binary::StateStore,
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
@@ -230,7 +231,8 @@ impl DiemDB {
             EVENT_BY_KEY_CF_NAME,
             EVENT_BY_VERSION_CF_NAME,
             EVENT_CF_NAME,
-            JELLYFISH_MERKLE_NODE_CF_NAME,
+            // FIXME(aldenhu): remove
+            // JELLYFISH_MERKLE_NODE_CF_NAME,
             LEDGER_COUNTERS_CF_NAME,
             STALE_NODE_INDEX_CF_NAME,
             TRANSACTION_CF_NAME,
@@ -239,17 +241,20 @@ impl DiemDB {
             TRANSACTION_BY_HASH_CF_NAME,
             TRANSACTION_INFO_CF_NAME,
             WRITE_SET_CF_NAME,
+            // FIXME(aldenhu): sort properly
+            ACCOUNT_STATE_BLOB_CF_NAME,
+            STATE_TREE_CF_NAME,
         ]
     }
 
-    fn new_with_db(db: DB, prune_window: Option<u64>, account_count_migration: bool) -> Self {
+    fn new_with_db(db: DB, prune_window: Option<u64>, _account_count_migration: bool) -> Self {
         let db = Arc::new(db);
 
         DiemDB {
             db: Arc::clone(&db),
             event_store: Arc::new(EventStore::new(Arc::clone(&db))),
             ledger_store: Arc::new(LedgerStore::new(Arc::clone(&db))),
-            state_store: Arc::new(StateStore::new(Arc::clone(&db), account_count_migration)),
+            state_store: Arc::new(StateStore::new(Arc::clone(&db))),
             transaction_store: Arc::new(TransactionStore::new(Arc::clone(&db))),
             system_store: SystemStore::new(Arc::clone(&db)),
             rocksdb_property_reporter: RocksdbPropertyReporter::new(Arc::clone(&db)),
@@ -465,12 +470,15 @@ impl DiemDB {
 
     /// Gets an instance of `BackupHandler` for data backup purpose.
     pub fn get_backup_handler(&self) -> BackupHandler {
+        todo!()
+        /*
         BackupHandler::new(
             Arc::clone(&self.ledger_store),
             Arc::clone(&self.transaction_store),
             Arc::clone(&self.state_store),
             Arc::clone(&self.event_store),
         )
+         */
     }
 
     /// Creates new physical DB checkpoint in directory specified by `path`.
@@ -603,8 +611,8 @@ impl DiemDB {
 
             let node_hashes = txns_to_commit
                 .iter()
-                .map(|txn_to_commit| txn_to_commit.jf_node_hashes())
-                .collect::<Option<Vec<_>>>();
+                .map(|txn_to_commit| txn_to_commit.state_tree_nodes())
+                .collect::<Vec<_>>();
             self.state_store.put_account_state_sets(
                 account_state_sets,
                 node_hashes,
@@ -1061,8 +1069,11 @@ impl DbReader for DiemDB {
         SparseMerkleProof<AccountStateBlob>,
     )> {
         gauged_api("get_account_state_with_proof_by_version", || {
-            self.state_store
+            let ret = self
+                .state_store
                 .get_account_state_with_proof_by_version(address, version)
+                .unwrap();
+            Ok(ret)
         })
     }
 
@@ -1392,6 +1403,8 @@ pub trait GetRestoreHandler {
 
 impl GetRestoreHandler for Arc<DiemDB> {
     fn get_restore_handler(&self) -> RestoreHandler {
+        todo!()
+        /*
         RestoreHandler::new(
             Arc::clone(&self.db),
             Arc::clone(self),
@@ -1400,6 +1413,7 @@ impl GetRestoreHandler for Arc<DiemDB> {
             Arc::clone(&self.state_store),
             Arc::clone(&self.event_store),
         )
+         */
     }
 }
 

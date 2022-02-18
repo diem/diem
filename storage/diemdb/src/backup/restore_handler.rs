@@ -1,6 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// FIXME(aldenhu): remove
+#![allow(dead_code)]
+
 use crate::{
     change_set::ChangeSet, event_store::EventStore, ledger_store::LedgerStore,
     schema::transaction_accumulator::TransactionAccumulatorSchema, state_store::StateStore,

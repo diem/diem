@@ -25,7 +25,10 @@ use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
+use diem_types::{
+    proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
+    transaction::StateTreeNodeType,
+};
 use std::sync::{Arc, Weak};
 
 #[derive(Clone, Debug)]
@@ -37,6 +40,13 @@ pub(crate) struct InternalNode<V> {
 impl<V: CryptoHash> InternalNode<V> {
     pub fn calc_hash(&self) -> HashValue {
         SparseMerkleInternalNode::new(self.left.hash(), self.right.hash()).hash()
+    }
+
+    pub fn store_node_type(&self) -> StateTreeNodeType {
+        StateTreeNodeType::Internal {
+            left_empty: self.left.is_empty(),
+            right_empty: self.right.is_empty(),
+        }
     }
 }
 
@@ -265,7 +275,6 @@ impl<V: CryptoHash> SubTree<V> {
         )
     }
 
-    #[cfg(test)]
     pub fn is_empty(&self) -> bool {
         matches!(self, SubTree::Empty)
     }

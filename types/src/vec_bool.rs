@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::nibble::nibble_path::NibblePath;
+use serde::{Deserialize, Serialize};
 
 /// An space efficient Vec<Bool>, with each bit representing one boolean value.
 ///
 /// This is used to represent the position of an node in a binary tree.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct VecBool {
     len: usize,
     buckets: Vec<u8>,
@@ -18,6 +19,14 @@ impl VecBool {
         Self {
             len: 0,
             buckets: Vec::new(),
+        }
+    }
+
+    // FIXME(aldenhu): refactor
+    pub fn new_hack(len: usize, bytes: Vec<u8>) -> Self {
+        Self {
+            len,
+            buckets: bytes,
         }
     }
 
@@ -69,6 +78,10 @@ impl VecBool {
 
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        &self.buckets
     }
 
     pub fn try_to_nibble_path(&self) -> Option<NibblePath> {

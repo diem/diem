@@ -6,6 +6,7 @@
 //!
 //! All schemas are `pub(crate)` so not shown in rustdoc, refer to the source code to see details.
 
+pub(crate) mod account_state_blob;
 pub(crate) mod epoch_by_version;
 pub(crate) mod event;
 pub(crate) mod event_accumulator;
@@ -15,6 +16,7 @@ pub(crate) mod jellyfish_merkle_node;
 pub(crate) mod ledger_counters;
 pub(crate) mod ledger_info;
 pub(crate) mod stale_node_index;
+pub(crate) mod state_tree;
 pub(crate) mod transaction;
 pub(crate) mod transaction_accumulator;
 pub(crate) mod transaction_by_account;
@@ -39,6 +41,10 @@ pub const TRANSACTION_BY_ACCOUNT_CF_NAME: ColumnFamilyName = "transaction_by_acc
 pub const TRANSACTION_BY_HASH_CF_NAME: ColumnFamilyName = "transaction_by_hash";
 pub const TRANSACTION_INFO_CF_NAME: ColumnFamilyName = "transaction_info";
 pub const WRITE_SET_CF_NAME: ColumnFamilyName = "write_set";
+
+// FIXME(aldenhu): sort
+pub const STATE_TREE_CF_NAME: ColumnFamilyName = "state_tree";
+pub const ACCOUNT_STATE_BLOB_CF_NAME: ColumnFamilyName = "account_state_blob";
 
 fn ensure_slice_len_eq(data: &[u8], len: usize) -> Result<()> {
     ensure!(

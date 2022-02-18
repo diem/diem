@@ -62,7 +62,7 @@ impl ExecutedChunk {
                     txn.clone(),
                     txn_data.txn_info.clone(),
                     txn_data.account_blobs().clone(),
-                    Some(txn_data.jf_node_hashes().clone()),
+                    txn_data.state_tree_nodes.clone(),
                     txn_data.write_set().clone(),
                     txn_data.events().to_vec(),
                 ))

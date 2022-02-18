@@ -21,12 +21,12 @@ use diem_types::{
     contract_event::ContractEvent,
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
-    nibble::nibble_path::NibblePath,
     proof::{accumulator::InMemoryAccumulator, AccumulatorExtensionProof},
     transaction::{
-        Transaction, TransactionInfo, TransactionListWithProof, TransactionOutputListWithProof,
-        TransactionStatus, Version,
+        StateTreeNode, Transaction, TransactionInfo, TransactionListWithProof,
+        TransactionOutputListWithProof, TransactionStatus, Version,
     },
+    vec_bool::VecBool,
     write_set::WriteSet,
 };
 use scratchpad::ProofRead;
@@ -396,7 +396,7 @@ pub struct TransactionData {
 
     /// Each entry in this map represents the the hash of a newly generated jellyfish node
     /// and its corresponding nibble path.
-    jf_node_hashes: HashMap<NibblePath, HashValue>,
+    state_tree_nodes: Vec<(VecBool, StateTreeNode)>,
 
     /// The writeset generated from this transaction.
     write_set: WriteSet,
@@ -426,7 +426,7 @@ pub struct TransactionData {
 impl TransactionData {
     pub fn new(
         account_blobs: HashMap<AccountAddress, AccountStateBlob>,
-        jf_node_hashes: HashMap<NibblePath, HashValue>,
+        state_tree_nodes: Vec<(VecBool, StateTreeNode)>,
         write_set: WriteSet,
         events: Vec<ContractEvent>,
         reconfig_events: Vec<ContractEvent>,
@@ -438,7 +438,7 @@ impl TransactionData {
     ) -> Self {
         TransactionData {
             account_blobs,
-            jf_node_hashes,
+            state_tree_nodes,
             write_set,
             events,
             reconfig_events,
@@ -454,8 +454,8 @@ impl TransactionData {
         &self.account_blobs
     }
 
-    pub fn jf_node_hashes(&self) -> &HashMap<NibblePath, HashValue> {
-        &self.jf_node_hashes
+    pub fn state_tree_nodes(&self) -> &[(VecBool, StateTreeNode)] {
+        &self.state_tree_nodes
     }
 
     pub fn write_set(&self) -> &WriteSet {

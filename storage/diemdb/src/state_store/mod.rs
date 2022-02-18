@@ -3,8 +3,13 @@
 
 //! This file defines state store APIs that are related account state Merkle tree.
 
+// FIXME(aldenhu): remove
+#![allow(dead_code)]
+
+/*
 #[cfg(test)]
 mod state_store_test;
+ */
 
 use crate::{
     change_set::ChangeSet,

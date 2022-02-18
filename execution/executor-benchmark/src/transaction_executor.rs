@@ -50,6 +50,7 @@ impl TransactionExecutor {
             .executor
             .execute_block((block_id, transactions), self.parent_block_id)
             .unwrap();
+        assert_eq!(output.version(), self.version, "num_txns: {}", num_txns);
 
         self.parent_block_id = block_id;
 

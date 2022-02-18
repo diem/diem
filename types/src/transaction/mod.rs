@@ -9,7 +9,6 @@ use crate::{
     chain_id::ChainId,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
-    nibble::nibble_path::NibblePath,
     proof::{
         accumulator::InMemoryAccumulator, TransactionInfoListWithProof, TransactionInfoWithProof,
     },
@@ -52,6 +51,7 @@ pub use script::{
     TypeArgumentABI,
 };
 
+use crate::vec_bool::VecBool;
 use std::{collections::BTreeSet, hash::Hash, ops::Deref};
 pub use transaction_argument::{parse_transaction_argument, TransactionArgument, VecBytes};
 
@@ -1113,11 +1113,23 @@ impl Display for TransactionInfo {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub enum StateTreeNodeType {
+    Internal { left_empty: bool, right_empty: bool },
+    Leaf { key: HashValue },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StateTreeNode {
+    pub hash: HashValue,
+    pub node_type: StateTreeNodeType,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct TransactionToCommit {
     transaction: Transaction,
     transaction_info: TransactionInfo,
     account_states: HashMap<AccountAddress, AccountStateBlob>,
-    jf_node_hashes: Option<HashMap<NibblePath, HashValue>>,
+    state_tree_nodes: Vec<(VecBool, StateTreeNode)>,
     write_set: WriteSet,
     events: Vec<ContractEvent>,
 }
@@ -1127,7 +1139,7 @@ impl TransactionToCommit {
         transaction: Transaction,
         transaction_info: TransactionInfo,
         account_states: HashMap<AccountAddress, AccountStateBlob>,
-        jf_node_hashes: Option<HashMap<NibblePath, HashValue>>,
+        state_tree_nodes: Vec<(VecBool, StateTreeNode)>,
         write_set: WriteSet,
         events: Vec<ContractEvent>,
     ) -> Self {
@@ -1135,7 +1147,7 @@ impl TransactionToCommit {
             transaction,
             transaction_info,
             account_states,
-            jf_node_hashes,
+            state_tree_nodes,
             write_set,
             events,
         }
@@ -1158,8 +1170,8 @@ impl TransactionToCommit {
         &self.account_states
     }
 
-    pub fn jf_node_hashes(&self) -> Option<&HashMap<NibblePath, HashValue>> {
-        self.jf_node_hashes.as_ref()
+    pub fn state_tree_nodes(&self) -> &[(VecBool, StateTreeNode)] {
+        &self.state_tree_nodes
     }
 
     pub fn write_set(&self) -> &WriteSet {

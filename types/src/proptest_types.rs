@@ -843,7 +843,7 @@ impl TransactionToCommitGen {
             TransactionInfo::new_placeholder(self.gas_used, self.status),
             // account states will be dealt with in BlockGen at a state checkpoint
             HashMap::new(),
-            None,
+            Vec::new(),
             self.write_set,
             events,
         )
@@ -1147,7 +1147,7 @@ impl BlockGen {
             Transaction::StateCheckpoint,
             TransactionInfo::new_placeholder(0, KeptVMStatus::Executed),
             account_states,
-            None,
+            Vec::new(), // FIXME(aldenhu)
             WriteSet::default(),
             Vec::new(),
         ));

@@ -50,6 +50,7 @@ rand = "0.8.3"
 diem-jellyfish-merkle = { path = "../jellyfish-merkle", features = ["fuzzing"] }
 diem-proptest-helpers = { path = "../../crates/diem-proptest-helpers" }
 diem-temppath = { path = "../../crates/diem-temppath" }
+diem-state-view = {path = "../state-view"}
 diem-types = { path = "../../types", features = ["fuzzing"] }
 executor-types = { path = "../../execution/executor-types", features = ["fuzzing"] }
 schemadb = { path = "../schemadb", features = ["fuzzing"] }

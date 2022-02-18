@@ -23,6 +23,7 @@ use std::{
     fs,
     path::Path,
     sync::{mpsc, Arc},
+    time::Duration,
 };
 use storage_interface::DbReaderWriter;
 
@@ -86,6 +87,7 @@ pub fn run(
             );
             while let Ok(transactions) = block_receiver.recv() {
                 exe.execute_block(transactions);
+                std::thread::sleep(Duration::from_millis(100));
             }
         })
         .expect("Failed to spawn transaction executor thread.");
@@ -104,7 +106,7 @@ pub fn run(
     exe_thread.join().unwrap();
     commit_thread.join().unwrap();
     // Do a sanity check on the sequence number to make sure all transactions are committed.
-    generator.verify_sequence_number(db.as_ref());
+    // generator.verify_sequence_number(db.as_ref());
 
     let final_version = generator.version();
     // Write metadata

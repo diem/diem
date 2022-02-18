@@ -205,8 +205,10 @@ fn test_update_256_siblings_in_proof() {
     let new_smt = smt
         .batch_update(vec![(key1, &new_blob1)], &proof_reader)
         .unwrap();
-    let new_node_hashes = new_smt.new_node_hashes_since(&smt);
+    // FIXME(aldenhu): remove test code for node_hashes
+    // let new_node_hashes = new_smt.new_nodes_since(&smt);
 
+    /*
     assert_eq!(
         new_node_hashes.get(&NibblePath::new(key1.to_vec())),
         Some(&new_leaf1_hash),
@@ -214,16 +216,17 @@ fn test_update_256_siblings_in_proof() {
     assert!(new_node_hashes
         .get(&NibblePath::new(key2.to_vec()))
         .is_none());
+     */
 
     let new_root_hash = {
         let mut cur = new_leaf1_hash;
-        let mut path = NibblePath::new(key1.to_vec());
+        // let mut path = NibblePath::new(key1.to_vec());
         for (i, sibling) in siblings.into_iter().enumerate() {
             cur = hash_internal(cur, sibling);
             let level = 255 - i;
             if level % 4 == 0 {
-                path.pop();
-                assert_eq!(new_node_hashes.get(&path), Some(&cur));
+                // path.pop();
+                // assert_eq!(new_node_hashes.get(&path), Some(&cur));
             }
         }
         cur

@@ -28,13 +28,13 @@ use diem_types::{
     contract_event::ContractEvent,
     epoch_state::EpochState,
     event::EventKey,
-    nibble::nibble_path::NibblePath,
     on_chain_config,
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount},
     transaction::{
-        Transaction, TransactionInfo, TransactionOutput, TransactionPayload, TransactionStatus,
-        Version,
+        StateTreeNode, Transaction, TransactionInfo, TransactionOutput, TransactionPayload,
+        TransactionStatus, Version,
     },
+    vec_bool::VecBool,
     write_set::{WriteOp, WriteSet},
 };
 use executor_types::{ExecutedChunk, ExecutedTrees, ProofReader, TransactionData};
@@ -64,24 +64,19 @@ impl ApplyChunkOutput {
             Self::sort_transactions(transactions, transaction_outputs)?;
 
         // Apply the write set, get the latest state.
-        let (
-            account_blobs,
-            new_node_hashes_vec,
-            state_checkpoint_hashes,
-            result_state,
-            next_epoch_state,
-        ) = InMemoryStateCalculator::new(
-            base_view.state(),
-            state_cache,
-            base_view.txn_accumulator().num_leaves(),
-        )
-        .run_for_transaction_chunk(&to_keep, new_epoch)?;
+        let (account_blobs, new_nodes_vec, state_checkpoint_hashes, result_state, next_epoch_state) =
+            InMemoryStateCalculator::new(
+                base_view.state(),
+                state_cache,
+                base_view.txn_accumulator().num_leaves(),
+            )
+            .run_for_transaction_chunk(&to_keep, new_epoch)?;
 
         // Calculate TransactionData and TransactionInfo, i.e. the ledger history diff.
         let (to_commit, transaction_info_hashes) = Self::assemble_ledger_diff(
             to_keep,
             account_blobs,
-            new_node_hashes_vec,
+            new_nodes_vec,
             state_checkpoint_hashes,
         );
         let result_view = ExecutedTrees::new(
@@ -179,17 +174,15 @@ impl ApplyChunkOutput {
     fn assemble_ledger_diff(
         to_keep: Vec<(Transaction, ParsedTransactionOutput)>,
         account_blobs: Vec<HashMap<AccountAddress, AccountStateBlob>>,
-        new_node_hashes_vec: Vec<HashMap<NibblePath, HashValue>>,
+        new_nodes_vec: Vec<Vec<(VecBool, StateTreeNode)>>,
         state_checkpoint_hashes: Vec<Option<HashValue>>,
     ) -> (Vec<(Transaction, TransactionData)>, Vec<HashValue>) {
         let mut to_commit = vec![];
         let mut txn_info_hashes = vec![];
-        for (((txn, txn_output), state_checkpoint_hash), (new_node_hashes, blobs)) in
-            itertools::zip_eq(
-                itertools::zip_eq(to_keep, state_checkpoint_hashes),
-                itertools::zip_eq(new_node_hashes_vec, account_blobs),
-            )
-        {
+        for (((txn, txn_output), state_checkpoint_hash), (new_nodes, blobs)) in itertools::zip_eq(
+            itertools::zip_eq(to_keep, state_checkpoint_hashes),
+            itertools::zip_eq(new_nodes_vec, account_blobs),
+        ) {
             let (write_set, events, reconfig_events, gas_used, status) = txn_output.unpack();
             let event_tree = {
                 let event_hashes: Vec<_> = events.iter().map(CryptoHash::hash).collect();
@@ -216,7 +209,7 @@ impl ApplyChunkOutput {
                 txn,
                 TransactionData::new(
                     blobs,
-                    new_node_hashes,
+                    new_nodes,
                     write_set,
                     events,
                     reconfig_events,
@@ -382,7 +375,7 @@ impl InMemoryStateCalculator {
         new_epoch: bool,
     ) -> Result<(
         Vec<HashMap<AccountAddress, AccountStateBlob>>,
-        Vec<HashMap<NibblePath, HashValue>>,
+        Vec<Vec<(VecBool, StateTreeNode)>>,
         Vec<Option<HashValue>>,
         InMemoryState,
         Option<EpochState>,
@@ -421,7 +414,7 @@ impl InMemoryStateCalculator {
         txn_output: &ParsedTransactionOutput,
     ) -> Result<(
         HashMap<AccountAddress, AccountStateBlob>,
-        HashMap<NibblePath, HashValue>,
+        Vec<(VecBool, StateTreeNode)>,
         Option<HashValue>,
     )> {
         let updated_accounts = process_write_set(
@@ -438,7 +431,7 @@ impl InMemoryStateCalculator {
         } else {
             match txn {
                 Transaction::BlockMetadata(_) | Transaction::UserTransaction(_) => {
-                    Ok((HashMap::new(), HashMap::new(), None))
+                    Ok((HashMap::new(), Vec::new(), None))
                 }
                 Transaction::GenesisTransaction(_) | Transaction::StateCheckpoint => {
                     self.checkpoint()
@@ -451,7 +444,7 @@ impl InMemoryStateCalculator {
         &mut self,
     ) -> Result<(
         HashMap<AccountAddress, AccountStateBlob>,
-        HashMap<NibblePath, HashValue>,
+        Vec<(VecBool, StateTreeNode)>,
         Option<HashValue>,
     )> {
         // Update SMT.
@@ -461,8 +454,7 @@ impl InMemoryStateCalculator {
             .map(|(addr, blob)| (HashAccountAddress::hash(addr), blob))
             .collect();
         let new_checkpoint = self.latest.batch_update(smt_updates, &self.proof_reader)?;
-        let new_node_hashes =
-            new_checkpoint.new_node_hashes_since(&self.checkpoint.clone().freeze());
+        let new_nodes = new_checkpoint.new_nodes_since(&self.checkpoint.clone().freeze());
         let root_hash = new_checkpoint.root_hash();
 
         // Calculate the set of accounts that got changed since last checkpoint.
@@ -488,7 +480,7 @@ impl InMemoryStateCalculator {
         self.updated_between_checkpoint_and_latest = HashSet::new();
         self.updated_after_latest = HashSet::new();
 
-        Ok((account_blobs, new_node_hashes, Some(root_hash)))
+        Ok((account_blobs, new_nodes, Some(root_hash)))
     }
 
     fn parse_validator_set(accounts: &HashMap<AccountAddress, AccountState>) -> Result<EpochState> {

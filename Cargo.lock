@@ -2665,6 +2665,7 @@ dependencies = [
  "diem-logger",
  "diem-metrics",
  "diem-proptest-helpers",
+ "diem-state-view",
  "diem-temppath",
  "diem-types",
  "diem-workspace-hack",

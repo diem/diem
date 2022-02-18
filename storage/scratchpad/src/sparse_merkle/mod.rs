@@ -90,10 +90,14 @@ use diem_crypto::{
     HashValue,
 };
 use diem_infallible::Mutex;
-use diem_types::{nibble::nibble_path::NibblePath, proof::SparseMerkleProof, vec_bool::VecBool};
+use diem_types::{
+    proof::SparseMerkleProof,
+    transaction::{StateTreeNode, StateTreeNodeType},
+    vec_bool::VecBool,
+};
 use std::{
     borrow::Borrow,
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     sync::{Arc, Weak},
 };
 use thiserror::Error;
@@ -361,17 +365,6 @@ impl<V> SparseMerkleTree<V>
 where
     V: Clone + CryptoHash + Send + Sync,
 {
-    pub fn serial_update(
-        &self,
-        update_batch: Vec<Vec<(HashValue, &V)>>,
-        proof_reader: &impl ProofRead<V>,
-    ) -> Result<(Vec<(HashValue, HashMap<NibblePath, HashValue>)>, Self), UpdateError> {
-        self.clone()
-            .freeze()
-            .serial_update(update_batch, proof_reader)
-            .map(|(hashes, smt)| (hashes, smt.unfreeze()))
-    }
-
     pub fn batch_update(
         &self,
         updates: Vec<(HashValue, &V)>,
@@ -450,80 +443,60 @@ where
         self.smt.root_hash()
     }
 
-    /// Constructs a new Sparse Merkle Tree as if we are updating the existing tree multiple
-    /// times with the `batch_update`. The function will return the root hash after each
-    /// update and a Sparse Merkle Tree of the final state.
-    ///
-    /// The `serial_update` applies `batch_update' method many times, unlike a more optimized
-    /// (and parallelizable) `batches_update' implementation below. It takes in a reference of
-    /// value instead of an owned instance to be consistent with the `batches_update' interface.
-    pub fn serial_update(
-        &self,
-        update_batch: Vec<Vec<(HashValue, &V)>>,
-        proof_reader: &impl ProofRead<V>,
-    ) -> Result<(Vec<(HashValue, HashMap<NibblePath, HashValue>)>, Self), UpdateError> {
-        let mut cur = self.clone();
-        let mut result = Vec::with_capacity(update_batch.len());
-        for updates in update_batch {
-            let new = cur.batch_update(updates, proof_reader)?;
-            result.push((new.smt.root_hash(), new.new_node_hashes_since(&cur)));
-            cur = new;
-        }
-        Ok((result, cur))
-    }
-
     /// Compares an old and a new SMTs and return the newly created node hashes in between.
-    pub fn new_node_hashes_since(&self, since_smt: &Self) -> HashMap<NibblePath, HashValue> {
+    pub fn new_nodes_since(&self, since_smt: &Self) -> Vec<(VecBool, StateTreeNode)> {
         let _timer = TIMER
             .with_label_values(&["new_node_hashes_since"])
             .start_timer();
-
         assert!(self.base_smt.is_the_same(&since_smt.base_smt));
-        let mut node_hashes = HashMap::new();
-        Self::new_node_hashes_since_impl(
+        let mut store_nodes = Vec::new();
+        Self::new_nodes_since_impl(
             self.smt.root_weak(),
             since_smt.smt.generation() + 1,
             VecBool::new(),
-            &mut node_hashes,
+            &mut store_nodes,
         );
-        node_hashes
+        store_nodes
     }
 
     /// Recursively generate the partial node update batch of jellyfish merkle
-    fn new_node_hashes_since_impl(
+    fn new_nodes_since_impl(
         subtree: SubTree<V>,
         since_generation: u64,
         pos: VecBool,
-        node_hashes: &mut HashMap<NibblePath, HashValue>,
+        store_nodes: &mut Vec<(VecBool, StateTreeNode)>,
     ) {
         if let Some(node) = subtree.get_node_if_in_mem(since_generation) {
-            let is_nibble = if let Some(path) = pos.try_to_nibble_path() {
-                node_hashes.insert(path, subtree.hash());
-                true
-            } else {
-                false
-            };
             match node.inner().borrow() {
                 NodeInner::Internal(internal_node) => {
-                    Self::new_node_hashes_since_impl(
+                    store_nodes.push((
+                        pos.clone(),
+                        StateTreeNode {
+                            hash: subtree.hash(),
+                            node_type: internal_node.store_node_type(),
+                        },
+                    ));
+                    Self::new_nodes_since_impl(
                         internal_node.left.weak(),
                         since_generation,
                         pos.clone().with_pushed(false),
-                        node_hashes,
+                        store_nodes,
                     );
-                    Self::new_node_hashes_since_impl(
+                    Self::new_nodes_since_impl(
                         internal_node.right.weak(),
                         since_generation,
                         pos.with_pushed(true),
-                        node_hashes,
+                        store_nodes,
                     );
                 }
                 NodeInner::Leaf(leaf_node) => {
-                    let mut path = NibblePath::new(leaf_node.key.to_vec());
-                    if !is_nibble {
-                        path.truncate(pos.len() as usize / 4 + 1);
-                    }
-                    node_hashes.insert(path, subtree.hash());
+                    store_nodes.push((
+                        pos,
+                        StateTreeNode {
+                            hash: subtree.hash(),
+                            node_type: StateTreeNodeType::Leaf { key: leaf_node.key },
+                        },
+                    ));
                 }
             }
         }

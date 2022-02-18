@@ -369,9 +369,9 @@ impl fmt::LowerHex for HashValue {
 
 impl fmt::Debug for HashValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "HashValue(")?;
-        <Self as fmt::LowerHex>::fmt(self, f)?;
-        write!(f, ")")?;
+        for byte in self.hash.iter().take(4) {
+            write!(f, "{:02x}", byte)?;
+        }
         Ok(())
     }
 }
