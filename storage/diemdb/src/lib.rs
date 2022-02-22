@@ -84,7 +84,7 @@ use move_core_types::{
     resolver::{ModuleResolver, ResourceResolver},
 };
 use once_cell::sync::Lazy;
-use schemadb::{ColumnFamilyName, Options, DB, DEFAULT_CF_NAME};
+use schemadb::{ColumnFamilyName, DiemRocksDbOptions, Options, DB, DEFAULT_CF_NAME};
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -145,7 +145,7 @@ fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<(
 }
 
 fn gen_rocksdb_options(config: &RocksdbConfig) -> Options {
-    let mut db_opts = Options::default();
+    let mut db_opts = Options::new_diem_rocksdb_options();
     db_opts.set_max_open_files(config.max_open_files);
     db_opts.set_max_total_wal_size(config.max_total_wal_size);
     db_opts

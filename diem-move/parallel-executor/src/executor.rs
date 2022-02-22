@@ -69,6 +69,7 @@ where
     pub fn new(inferencer: I) -> Self {
         Self {
             num_cpus: num_cpus::get(),
+            // num_cpus: 100,
             inferencer,
             phantom: PhantomData,
         }

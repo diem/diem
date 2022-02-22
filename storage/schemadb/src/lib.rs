@@ -28,6 +28,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Result};
 use diem_logger::prelude::*;
+use rocksdb::{BlockBasedOptions, Cache};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::Iterator,
@@ -43,6 +44,16 @@ pub type Options = rocksdb::Options;
 
 /// Type alias to improve readability.
 pub type ColumnFamilyName = &'static str;
+
+pub trait DiemRocksDbOptions {
+    fn new_diem_rocksdb_options() -> Self;
+}
+
+impl DiemRocksDbOptions for Options {
+    fn new_diem_rocksdb_options() -> Self {
+        Self::default()
+    }
+}
 
 /// Name for the `default` column family that's always open by RocksDB. We use it to store
 /// [`LedgerInfo`](../types/ledger_info/struct.LedgerInfo.html).
@@ -264,6 +275,30 @@ impl DB {
             column_families.iter().map(|cf_name| {
                 let mut cf_opts = rocksdb::Options::default();
                 cf_opts.set_compression_type(rocksdb::DBCompressionType::Lz4);
+                /*
+                if *cf_name == "state_tree"
+                    || *cf_name == "jellyfish_merkle_node"
+                    || *cf_name == "account_state_blob"
+                {
+                    let (cache1, cache2) = if *cf_name == "jellyfish_merkle_node" {
+                        (
+                        Cache::new_lru_cache(1024 * 1024 * 1024 * 2).unwrap(),
+                        Cache::new_lru_cache(1024 * 1024 * 1024 * 2).unwrap()
+                        )
+                    } else {
+                        (
+                        Cache::new_lru_cache(1024 * 1024 * 1024).unwrap(),
+                        Cache::new_lru_cache(1024 * 1024 * 1024).unwrap()
+                        )
+                    };
+                    let mut block_opt = BlockBasedOptions::default();
+                    block_opt.set_block_cache(&cache1);
+                    block_opt.set_block_cache_compressed(&cache2);
+                    cf_opts.set_block_based_table_factory(&block_opt);
+                    cf_opts.set_table_cache_num_shard_bits(8);
+                    cf_opts.set_use_direct_reads(true);
+                }
+                */
                 rocksdb::ColumnFamilyDescriptor::new((*cf_name).to_string(), cf_opts)
             }),
         )?;

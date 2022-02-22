@@ -29,7 +29,7 @@ pub fn init_db_and_executor(config: &NodeConfig) -> (Arc<dyn DbReader>, BlockExe
         DiemDB::open(
             &config.storage.dir(),
             false, /* readonly */
-            None,  /* pruner */
+            Some(20_000), // FIXME(aldenhu): make configurable
             RocksdbConfig::default(),
             true, /* account_count_migration */
         )

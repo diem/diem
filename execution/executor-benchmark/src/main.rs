@@ -60,6 +60,7 @@ fn main() {
 
     rayon::ThreadPoolBuilder::new()
         .thread_name(|index| format!("rayon-global-{}", index))
+        // .num_threads(100)
         .build_global()
         .expect("Failed to build rayon global thread pool.");
 
