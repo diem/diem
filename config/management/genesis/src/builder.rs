@@ -231,7 +231,7 @@ impl<S: KVStorage> GenesisBuilder<S> {
             consensus_config,
             chain_id,
             // TODO: Make this flag configurable via cli command.
-            false,
+            true,
         );
 
         Ok(genesis)
