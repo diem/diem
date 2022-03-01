@@ -7,7 +7,10 @@
 #![allow(dead_code)]
 
 use crate::{
-    account_state_blob::AccountStateBlobSchema, state_tree::StateTreeSchema, ChangeSet, DiemDbError,
+    account_state_blob::AccountStateBlobSchema,
+    bsmt_update_log::{BsmtKey, BsmtUpdateLogSchema},
+    state_tree::StateTreeSchema,
+    ChangeSet, DiemDbError,
 };
 use anyhow::Result;
 use diem_crypto::{
@@ -29,8 +32,12 @@ use schemadb::DB;
 use std::{collections::HashMap, sync::Arc};
 use storage_interface::StateSnapshotReceiver;
 
+/*
 #[cfg(test)]
 mod state_store_test;
+ */
+
+pub(crate) mod pruner;
 
 #[derive(Debug)]
 pub(crate) struct StateStore {
@@ -170,14 +177,21 @@ impl StateStore {
             for (addr, blob) in account_state_set {
                 // FIXME(aldenhu): addr.hash() doesn't need to be in value?
                 // FIXME(aldenhu): pass hashes along?
-                // FIXME(aldenhu): addr.hash() as input directly insteawd of addr?
+                // FIXME(aldenhu): addr.hash() as input directly instead of addr?
+                let key = addr.hash();
                 cs.batch
-                    .put::<AccountStateBlobSchema>(&(addr.hash(), version), &blob)?;
+                    .put::<AccountStateBlobSchema>(&(key, version), &blob)?;
+                cs.batch
+                    .put::<BsmtUpdateLogSchema>(&(version, BsmtKey::Value(key)), &())?;
             }
 
             for (node_addr, node) in nodes_vec {
                 cs.batch
                     .put::<StateTreeSchema>(&(node_addr.clone(), version), node)?;
+                cs.batch.put::<BsmtUpdateLogSchema>(
+                    &(version, BsmtKey::Node(node_addr.clone())),
+                    &(),
+                )?;
             }
         }
         Ok(())

@@ -7,6 +7,7 @@
 //! All schemas are `pub(crate)` so not shown in rustdoc, refer to the source code to see details.
 
 pub(crate) mod account_state_blob;
+pub(crate) mod bsmt_update_log;
 pub(crate) mod epoch_by_version;
 pub(crate) mod event;
 pub(crate) mod event_accumulator;
@@ -45,6 +46,7 @@ pub const WRITE_SET_CF_NAME: ColumnFamilyName = "write_set";
 // FIXME(aldenhu): sort
 pub const STATE_TREE_CF_NAME: ColumnFamilyName = "state_tree";
 pub const ACCOUNT_STATE_BLOB_CF_NAME: ColumnFamilyName = "account_state_blob";
+pub const BSMT_UPDATE_LOG_CF_NAME: ColumnFamilyName = "bsmt_update_log";
 
 fn ensure_slice_len_eq(data: &[u8], len: usize) -> Result<()> {
     ensure!(

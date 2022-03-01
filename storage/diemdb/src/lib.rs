@@ -50,9 +50,8 @@ use crate::{
         DIEM_STORAGE_LEDGER_VERSION, DIEM_STORAGE_NEXT_BLOCK_EPOCH,
         DIEM_STORAGE_OTHER_TIMERS_SECONDS, DIEM_STORAGE_ROCKSDB_PROPERTIES,
     },
-    pruner::Pruner,
     schema::*,
-    state_store_binary::StateStore,
+    state_store_binary::{pruner::Pruner, StateStore},
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
@@ -244,6 +243,7 @@ impl DiemDB {
             // FIXME(aldenhu): sort properly
             ACCOUNT_STATE_BLOB_CF_NAME,
             STATE_TREE_CF_NAME,
+            BSMT_UPDATE_LOG_CF_NAME,
         ]
     }
 

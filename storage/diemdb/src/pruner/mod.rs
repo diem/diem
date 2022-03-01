@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(dead_code)]
+
 //! This module provides `Pruner` which manages a thread pruning old data in the background and is
 //! meant to be triggered by other threads as they commit new data to the DB.
 

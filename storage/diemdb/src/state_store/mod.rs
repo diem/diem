@@ -3,7 +3,6 @@
 
 //! This file defines state store APIs that are related account state Merkle tree.
 
-// FIXME(aldenhu): remove
 #![allow(dead_code)]
 
 /*
