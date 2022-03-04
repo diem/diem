@@ -28,7 +28,7 @@ pub fn init_db_and_executor(config: &NodeConfig) -> (Arc<dyn DbReader>, BlockExe
     let (db, dbrw) = DbReaderWriter::wrap(
         DiemDB::open(
             &config.storage.dir(),
-            false, /* readonly */
+            false,        /* readonly */
             Some(20_000), // FIXME(aldenhu): make configurable
             RocksdbConfig::default(),
             true, /* account_count_migration */

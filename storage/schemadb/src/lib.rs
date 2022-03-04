@@ -28,7 +28,6 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Result};
 use diem_logger::prelude::*;
-use rocksdb::{BlockBasedOptions, Cache};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::Iterator,

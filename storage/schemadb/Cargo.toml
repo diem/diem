@@ -22,7 +22,7 @@ diem-workspace-hack = { version = "0.1", path = "../../crates/diem-workspace-hac
 [dependencies.rocksdb]
 version = "0.17.0"
 default-features = false
-features = ["lz4"]
+features = ["lz4", "multi-threaded-cf"]
 
 [dev-dependencies]
 byteorder = "1.4.3"

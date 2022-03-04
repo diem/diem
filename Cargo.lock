@@ -1813,6 +1813,7 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "rand 0.8.4",
+ "rayon",
  "serde 1.0.130",
  "storage-interface",
  "thiserror",
