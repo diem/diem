@@ -28,6 +28,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Result};
 use diem_logger::prelude::*;
+use rocksdb::{BlockBasedOptions, Cache};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::Iterator,
@@ -35,7 +36,6 @@ use std::{
     path::Path,
     sync::Arc,
 };
-use rocksdb::{BlockBasedOptions, Cache};
 
 /// Type alias to `rocksdb::ReadOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ReadOptions = rocksdb::ReadOptions;
@@ -103,6 +103,10 @@ impl SchemaBatch {
             .insert(key, WriteOp::Deletion);
 
         Ok(())
+    }
+
+    pub fn combine(&mut self, rhs: Self) {
+        self.rows.extend(rhs.rows.into_iter())
     }
 }
 
@@ -282,13 +286,13 @@ impl DB {
                 {
                     let (cache1, cache2) = if *cf_name == "jellyfish_merkle_node" {
                         (
-                        Cache::new_lru_cache(1024 * 1024 * 1024 * 2).unwrap(),
-                        Cache::new_lru_cache(1024 * 1024 * 1024 * 2).unwrap()
+                            Cache::new_lru_cache(1024 * 1024 * 1024 * 2).unwrap(),
+                            Cache::new_lru_cache(1024 * 1024 * 1024 * 2).unwrap(),
                         )
                     } else {
                         (
-                        Cache::new_lru_cache(1024 * 1024 * 1024).unwrap(),
-                        Cache::new_lru_cache(1024 * 1024 * 1024).unwrap()
+                            Cache::new_lru_cache(1024 * 1024 * 1024).unwrap(),
+                            Cache::new_lru_cache(1024 * 1024 * 1024).unwrap(),
                         )
                     };
                     let mut block_opt = BlockBasedOptions::default();

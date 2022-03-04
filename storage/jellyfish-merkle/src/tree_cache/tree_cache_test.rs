@@ -29,14 +29,14 @@ fn test_get_node() {
 fn test_root_node() {
     let next_version = 0;
     let db = MockTreeStore::default();
-    let mut cache = TreeCache::new(&db, next_version).unwrap();
-    assert_eq!(*cache.get_root_node_key(), NodeKey::new_empty_path(0));
+    let cache = TreeCache::new(&db, next_version).unwrap();
+    assert_eq!(cache.get_root_node_key(), NodeKey::new_empty_path(0));
 
     let (node, node_key) = random_leaf_with_key(next_version);
     db.put_node(node_key.clone(), node).unwrap();
     cache.set_root_node_key(node_key.clone());
 
-    assert_eq!(*cache.get_root_node_key(), node_key);
+    assert_eq!(cache.get_root_node_key(), node_key);
 }
 
 #[test]
@@ -49,16 +49,16 @@ fn test_pre_genesis() {
         .unwrap();
 
     let cache = TreeCache::new(&db, next_version).unwrap();
-    assert_eq!(*cache.get_root_node_key(), pre_genesis_root_key);
+    assert_eq!(cache.get_root_node_key(), pre_genesis_root_key);
 }
 
 #[test]
 fn test_freeze_with_delete() {
     let next_version = 0;
     let db = MockTreeStore::default();
-    let mut cache = TreeCache::new(&db, next_version).unwrap();
+    let cache = TreeCache::new(&db, next_version).unwrap();
 
-    assert_eq!(*cache.get_root_node_key(), NodeKey::new_empty_path(0));
+    assert_eq!(cache.get_root_node_key(), NodeKey::new_empty_path(0));
 
     let (node1, node1_key) = random_leaf_with_key(next_version);
     cache.put_node(node1_key.clone(), node1.clone()).unwrap();

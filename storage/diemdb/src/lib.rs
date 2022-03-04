@@ -99,7 +99,7 @@ use storage_interface::{
 };
 
 pub static IO_POOL: Lazy<ThreadPool> =
-    Lazy::new(|| ThreadPoolBuilder::new().num_threads(4).breadth_first().build().unwrap());
+    Lazy::new(|| ThreadPoolBuilder::new().num_threads(32).build().unwrap());
 
 const MAX_LIMIT: u64 = 5000;
 
@@ -594,67 +594,80 @@ impl DiemDB {
     ) -> Result<HashValue> {
         let last_version = first_version + txns_to_commit.len() as u64 - 1;
 
-        // Account state updates. Gather account state root hashes
-        {
-            let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-                .with_label_values(&["save_transactions_state"])
-                .start_timer();
+        let (r1, r2) = rayon::join(
+            || {
+                // Account state updates. Gather account state root hashes
+                let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+                    .with_label_values(&["save_transactions_state"])
+                    .start_timer();
 
-            let account_state_sets = txns_to_commit
-                .iter()
-                .map(|txn_to_commit| txn_to_commit.account_states().clone())
-                .collect::<Vec<_>>();
+                let account_state_sets = txns_to_commit
+                    .iter()
+                    .map(|txn_to_commit| txn_to_commit.account_states().clone())
+                    .collect::<Vec<_>>();
 
-            let node_hashes = txns_to_commit
-                .iter()
-                .map(|txn_to_commit| txn_to_commit.jf_node_hashes())
-                .collect::<Option<Vec<_>>>();
-            self.state_store.put_account_state_sets(
-                account_state_sets,
-                node_hashes,
-                first_version,
-                &mut cs,
-            )?;
-        }
+                let node_hashes = txns_to_commit
+                    .iter()
+                    .map(|txn_to_commit| txn_to_commit.jf_node_hashes())
+                    .collect::<Option<Vec<_>>>();
+                self.state_store.put_account_state_sets(
+                    account_state_sets,
+                    node_hashes,
+                    first_version,
+                    &mut cs,
+                )?;
+                Result::<()>::Ok(())
+            },
+            || {
+                let mut cs = ChangeSet::new();
+                // Event updates. Gather event accumulator root hashes.
+                {
+                    let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+                        .with_label_values(&["save_transactions_events"])
+                        .start_timer();
+                    zip_eq(first_version..=last_version, txns_to_commit)
+                        .map(|(ver, txn_to_commit)| {
+                            self.event_store
+                                .put_events(ver, txn_to_commit.events(), &mut cs)
+                        })
+                        .collect::<Result<Vec<_>>>()?;
+                }
 
-        // Event updates. Gather event accumulator root hashes.
-        {
-            let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-                .with_label_values(&["save_transactions_events"])
-                .start_timer();
-            zip_eq(first_version..=last_version, txns_to_commit)
-                .map(|(ver, txn_to_commit)| {
-                    self.event_store
-                        .put_events(ver, txn_to_commit.events(), &mut cs)
-                })
-                .collect::<Result<Vec<_>>>()?;
-        }
-
-        let new_root_hash = {
-            let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-                .with_label_values(&["save_transactions_txn_infos"])
-                .start_timer();
-            zip_eq(first_version..=last_version, txns_to_commit).try_for_each(
-                |(ver, txn_to_commit)| {
-                    // Transaction updates. Gather transaction hashes.
-                    self.transaction_store.put_transaction(
-                        ver,
-                        txn_to_commit.transaction(),
-                        &mut cs,
+                let new_root_hash = {
+                    let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+                        .with_label_values(&["save_transactions_txn_infos"])
+                        .start_timer();
+                    zip_eq(first_version..=last_version, txns_to_commit).try_for_each(
+                        |(ver, txn_to_commit)| {
+                            // Transaction updates. Gather transaction hashes.
+                            self.transaction_store.put_transaction(
+                                ver,
+                                txn_to_commit.transaction(),
+                                &mut cs,
+                            )?;
+                            self.transaction_store.put_write_set(
+                                ver,
+                                txn_to_commit.write_set(),
+                                &mut cs,
+                            )
+                        },
                     )?;
-                    self.transaction_store
-                        .put_write_set(ver, txn_to_commit.write_set(), &mut cs)
-                },
-            )?;
-            // Transaction accumulator updates. Get result root hash.
-            let txn_infos: Vec<_> = txns_to_commit
-                .iter()
-                .map(|t| t.transaction_info())
-                .cloned()
-                .collect();
-            self.ledger_store
-                .put_transaction_infos(first_version, &txn_infos, &mut cs)?
-        };
+                    // Transaction accumulator updates. Get result root hash.
+                    let txn_infos: Vec<_> = txns_to_commit
+                        .iter()
+                        .map(|t| t.transaction_info())
+                        .cloned()
+                        .collect();
+                    self.ledger_store
+                        .put_transaction_infos(first_version, &txn_infos, &mut cs)?
+                };
+                Result::<_>::Ok((cs, new_root_hash))
+            },
+        );
+
+        r1?;
+        let (cs2, new_root_hash) = r2?;
+        cs.combine(cs2);
 
         Ok(new_root_hash)
     }

@@ -82,7 +82,6 @@ mod tree_cache;
 
 use anyhow::{bail, ensure, format_err, Result};
 use diem_crypto::{hash::CryptoHash, HashValue};
-use diem_infallible::Mutex;
 use diem_types::{
     nibble::{
         nibble_path::{skip_common_prefix, NibbleIterator, NibblePath},
@@ -289,7 +288,7 @@ where
         node_hashes: Option<Vec<&HashMap<NibblePath, HashValue>>>,
         first_version: Version,
     ) -> Result<(Vec<HashValue>, TreeUpdateBatch<V>)> {
-        let tree_cache = Mutex::new(TreeCache::new(self.reader, first_version)?);
+        let tree_cache = TreeCache::new(self.reader, first_version)?;
         let hash_sets: Vec<_> = match node_hashes {
             Some(hashes) => hashes.into_iter().map(Some).collect(),
             None => (0..value_sets.len()).map(|_| None).collect(),
@@ -299,7 +298,7 @@ where
             itertools::zip_eq(value_sets.into_iter(), hash_sets.into_iter()).enumerate()
         {
             if value_set.is_empty() {
-                tree_cache.lock().freeze();
+                tree_cache.freeze();
                 continue;
             }
             let version = first_version + idx as u64;
@@ -308,7 +307,7 @@ where
                 .collect::<BTreeMap<_, _>>()
                 .into_iter()
                 .collect::<Vec<_>>();
-            let root_node_key = tree_cache.lock().get_root_node_key().clone();
+            let root_node_key = tree_cache.get_root_node_key().clone();
             let (new_root_node_key, _) = self.batch_insert_at(
                 root_node_key,
                 version,
@@ -317,15 +316,12 @@ where
                 &hash_set,
                 &tree_cache,
             )?;
-            {
-                let mut locked = tree_cache.lock();
-                locked.set_root_node_key(new_root_node_key);
-                // Freezes the current cache to make all contents in the current cache immutable.
-                locked.freeze();
-            }
+            tree_cache.set_root_node_key(new_root_node_key);
+            // Freezes the current cache to make all contents in the current cache immutable.
+            tree_cache.freeze();
         }
 
-        Ok(tree_cache.into_inner().into())
+        Ok(tree_cache.into())
     }
 
     fn batch_insert_at(
@@ -335,20 +331,18 @@ where
         kvs: &[(HashValue, V)],
         depth: usize,
         hash_cache: &Option<&HashMap<NibblePath, HashValue>>,
-        tree_cache: &Mutex<TreeCache<R, V>>,
+        tree_cache: &TreeCache<R, V>,
     ) -> Result<(NodeKey, Node<V>)> {
         /*
         assert!(!kvs.is_empty());
          */
 
-        let node = tree_cache.lock().get_node(&node_key)?;
+        let node = tree_cache.get_node(&node_key)?;
         Ok(match node {
             Node::Internal(internal_node) => {
                 // We always delete the existing internal node here because it will not be referenced anyway
                 // since this version.
-                tree_cache
-                    .lock()
-                    .delete_node(&node_key, false /* is_leaf */);
+                tree_cache.delete_node(&node_key, false /* is_leaf */);
 
                 // Reuse the current `InternalNode` in memory to create a new internal node.
                 let mut children: Children = internal_node.clone().into();
@@ -470,16 +464,14 @@ where
                 node_key.set_version(version);
 
                 // Cache this new internal node.
-                tree_cache
-                    .lock()
-                    .put_node(node_key.clone(), new_internal_node.clone().into())?;
+                tree_cache.put_node(node_key.clone(), new_internal_node.clone().into())?;
                 (node_key, new_internal_node.into())
             }
             Node::Leaf(leaf_node) => {
                 // We are on a leaf node but trying to insert another node, so we may diverge.
                 // We always delete the existing leaf node here because it will not be referenced anyway
                 // since this version.
-                tree_cache.lock().delete_node(&node_key, true /* is_leaf */);
+                tree_cache.delete_node(&node_key, true /* is_leaf */);
                 node_key.set_version(version);
                 self.batch_create_subtree_with_existing_leaf(
                     node_key, version, leaf_node, kvs, depth, hash_cache, tree_cache,
@@ -494,9 +486,7 @@ where
                 }
 
                 if node_key.version() == version {
-                    tree_cache
-                        .lock()
-                        .delete_node(&node_key, false /* is_leaf */);
+                    tree_cache.delete_node(&node_key, false /* is_leaf */);
                 }
                 self.batch_create_subtree(
                     NodeKey::new_empty_path(version),
@@ -518,15 +508,13 @@ where
         kvs: &[(HashValue, V)],
         depth: usize,
         hash_cache: &Option<&HashMap<NibblePath, HashValue>>,
-        tree_cache: &Mutex<TreeCache<R, V>>,
+        tree_cache: &TreeCache<R, V>,
     ) -> Result<(NodeKey, Node<V>)> {
         let existing_leaf_key = existing_leaf_node.account_key();
 
         if kvs.len() == 1 && kvs[0].0 == existing_leaf_key {
             let new_leaf_node = Node::new_leaf(existing_leaf_key, kvs[0].1.clone());
-            tree_cache
-                .lock()
-                .put_node(node_key.clone(), new_leaf_node.clone())?;
+            tree_cache.put_node(node_key.clone(), new_leaf_node.clone())?;
             Ok((node_key, new_leaf_node))
         } else {
             let existing_leaf_bucket = existing_leaf_key.get_nibble(depth);
@@ -573,17 +561,13 @@ where
                     Child::new(existing_leaf_node.hash(), version, NodeType::Leaf),
                 );
 
-                tree_cache
-                    .lock()
-                    .put_node(existing_leaf_node_key, existing_leaf_node.into())?;
+                tree_cache.put_node(existing_leaf_node_key, existing_leaf_node.into())?;
             }
 
             let new_internal_node =
                 InternalNode::new_migration(children, self.leaf_count_migration);
 
-            tree_cache
-                .lock()
-                .put_node(node_key.clone(), new_internal_node.clone().into())?;
+            tree_cache.put_node(node_key.clone(), new_internal_node.clone().into())?;
             Ok((node_key, new_internal_node.into()))
         }
     }
@@ -595,13 +579,11 @@ where
         kvs: &[(HashValue, V)],
         depth: usize,
         hash_cache: &Option<&HashMap<NibblePath, HashValue>>,
-        tree_cache: &Mutex<TreeCache<R, V>>,
+        tree_cache: &TreeCache<R, V>,
     ) -> Result<(NodeKey, Node<V>)> {
         if kvs.len() == 1 {
             let new_leaf_node = Node::new_leaf(kvs[0].0, kvs[0].1.clone());
-            tree_cache
-                .lock()
-                .put_node(node_key.clone(), new_leaf_node.clone())?;
+            tree_cache.put_node(node_key.clone(), new_leaf_node.clone())?;
             Ok((node_key, new_leaf_node))
         } else {
             let mut children = Children::new();
@@ -628,9 +610,7 @@ where
             let new_internal_node =
                 InternalNode::new_migration(children, self.leaf_count_migration);
 
-            tree_cache
-                .lock()
-                .put_node(node_key.clone(), new_internal_node.clone().into())?;
+            tree_cache.put_node(node_key.clone(), new_internal_node.clone().into())?;
             Ok((node_key, new_internal_node.into()))
         }
     }
@@ -734,13 +714,8 @@ where
         let mut nibble_iter = nibble_path.nibbles();
 
         // Start insertion from the root node.
-        let (new_root_node_key, _) = self.insert_at(
-            root_node_key.clone(),
-            version,
-            &mut nibble_iter,
-            value,
-            tree_cache,
-        )?;
+        let (new_root_node_key, _) =
+            self.insert_at(root_node_key, version, &mut nibble_iter, value, tree_cache)?;
 
         tree_cache.set_root_node_key(new_root_node_key);
         Ok(())
