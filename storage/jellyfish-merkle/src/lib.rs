@@ -82,7 +82,6 @@ mod tree_cache;
 
 use anyhow::{bail, ensure, format_err, Result};
 use diem_crypto::{hash::CryptoHash, HashValue};
-use diem_infallible::Mutex;
 use diem_types::{
     nibble::{
         nibble_path::{skip_common_prefix, NibbleIterator, NibblePath},
@@ -93,6 +92,7 @@ use diem_types::{
 };
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey, NodeType};
 use once_cell::sync::Lazy;
+use diem_infallible::Mutex;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::arbitrary::Arbitrary;
 #[cfg(any(test, feature = "fuzzing"))]

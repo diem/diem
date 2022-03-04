@@ -33,6 +33,7 @@ use std::{
     iter::Iterator,
     marker::PhantomData,
     path::Path,
+    sync::Arc,
 };
 
 /// Type alias to `rocksdb::ReadOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
@@ -360,7 +361,7 @@ impl DB {
         let k = <S::Key as KeyCodec<S>>::encode_key(schema_key)?;
         let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
 
-        let result = self.inner.get_cf(cf_handle, &k)?;
+        let result = self.inner.get_cf(&cf_handle, &k)?;
         DIEM_SCHEMADB_GET_BYTES
             .with_label_values(&[S::COLUMN_FAMILY_NAME])
             .observe(result.as_ref().map_or(0.0, |v| v.len() as f64));
@@ -393,7 +394,7 @@ impl DB {
         let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
 
         self.inner
-            .delete_range_cf(cf_handle, &raw_begin, &raw_end)?;
+            .delete_range_cf(&cf_handle, &raw_begin, &raw_end)?;
         Ok(())
     }
 
@@ -404,7 +405,7 @@ impl DB {
     ) -> Result<SchemaIterator<S>> {
         let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
         Ok(SchemaIterator::new(
-            self.inner.raw_iterator_cf_opt(cf_handle, opts),
+            self.inner.raw_iterator_cf_opt(&cf_handle, opts),
             direction,
         ))
     }
@@ -430,8 +431,8 @@ impl DB {
             let cf_handle = self.get_cf_handle(cf_name)?;
             for (key, write_op) in rows {
                 match write_op {
-                    WriteOp::Value(value) => db_batch.put_cf(cf_handle, key, value),
-                    WriteOp::Deletion => db_batch.delete_cf(cf_handle, key),
+                    WriteOp::Value(value) => db_batch.put_cf(&cf_handle, key, value),
+                    WriteOp::Deletion => db_batch.delete_cf(&cf_handle, key),
                 }
             }
         }
@@ -461,7 +462,7 @@ impl DB {
         Ok(())
     }
 
-    fn get_cf_handle(&self, cf_name: &str) -> Result<&rocksdb::ColumnFamily> {
+    fn get_cf_handle(&self, cf_name: &str) -> Result<Arc<rocksdb::BoundColumnFamily>> {
         self.inner.cf_handle(cf_name).ok_or_else(|| {
             format_err!(
                 "DB::cf_handle not found for column family name: {}",
@@ -475,14 +476,14 @@ impl DB {
     pub fn flush_all(&self) -> Result<()> {
         for cf_name in &self.column_families {
             let cf_handle = self.get_cf_handle(cf_name)?;
-            self.inner.flush_cf(cf_handle)?;
+            self.inner.flush_cf(&cf_handle)?;
         }
         Ok(())
     }
 
     pub fn get_property(&self, cf_name: &str, property_name: &str) -> Result<u64> {
         self.inner
-            .property_int_value_cf(self.get_cf_handle(cf_name)?, property_name)?
+            .property_int_value_cf(&self.get_cf_handle(cf_name)?, property_name)?
             .ok_or_else(|| {
                 format_err!(
                     "Unable to get property \"{}\" of  column family \"{}\".",
