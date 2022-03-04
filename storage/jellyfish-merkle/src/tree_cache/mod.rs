@@ -76,6 +76,7 @@ use crate::{
 };
 use anyhow::{anyhow, bail, Result};
 use diem_crypto::HashValue;
+use diem_infallible::Mutex;
 use diem_types::transaction::{Version, PRE_GENESIS_VERSION};
 use std::collections::{hash_map::Entry, BTreeMap, BTreeSet, HashMap, HashSet};
 
@@ -109,7 +110,7 @@ impl<V> FrozenTreeCache<V> {
 }
 
 /// `TreeCache` is a in-memory cache for per-transaction updates of sparse Merkle nodes and values.
-pub struct TreeCache<'a, R, V> {
+pub struct Inner<V> {
     /// `NodeKey` of the current root node in cache.
     root_node_key: NodeKey,
 
@@ -130,6 +131,94 @@ pub struct TreeCache<'a, R, V> {
 
     /// The immutable part of this cache, which will be committed to the underlying storage.
     frozen_cache: FrozenTreeCache<V>,
+}
+
+impl<V> Inner<V>
+where
+    V: crate::Value,
+{
+    /// Gets a node with given node key. If it doesn't exist in node cache, read from `reader`.
+    pub fn get_node(&self, node_key: &NodeKey) -> Option<Node<V>> {
+        return if let Some(node) = self.node_cache.get(node_key) {
+            Some(node.clone())
+        } else if let Some(node) = self.frozen_cache.node_cache.get(node_key) {
+            Some(node.clone())
+        } else {
+            None
+        };
+    }
+
+    /// Gets the current root node key.
+    pub fn get_root_node_key(&self) -> NodeKey {
+        self.root_node_key.clone()
+    }
+
+    /// Set roots `node_key`.
+    pub fn set_root_node_key(&mut self, root_node_key: NodeKey) {
+        self.root_node_key = root_node_key;
+    }
+
+    pub fn put_node(&mut self, node_key: NodeKey, new_node: Node<V>) -> Result<()> {
+        match self.node_cache.entry(node_key) {
+            Entry::Vacant(o) => {
+                if new_node.is_leaf() {
+                    self.num_new_leaves += 1
+                }
+                o.insert(new_node);
+            }
+            Entry::Occupied(o) => bail!("Node with key {:?} already exists in NodeBatch", o.key()),
+        };
+        Ok(())
+    }
+
+    pub fn delete_node(&mut self, old_node_key: &NodeKey, is_leaf: bool) {
+        // If node cache doesn't have this node, it means the node is in the previous version of
+        // the tree on the disk.
+        if self.node_cache.remove(old_node_key).is_none() {
+            let is_new_entry = self.stale_node_index_cache.insert(old_node_key.clone());
+            assert!(is_new_entry, "Node gets stale twice unexpectedly.");
+            if is_leaf {
+                self.num_stale_leaves += 1;
+            }
+        } else if is_leaf {
+            self.num_new_leaves -= 1;
+        }
+    }
+
+    pub fn freeze(&mut self, root_hash: HashValue) {
+        self.frozen_cache.root_hashes.push(root_hash);
+        let node_stats = NodeStats {
+            new_nodes: self.node_cache.len(),
+            new_leaves: self.num_new_leaves,
+            stale_nodes: self.stale_node_index_cache.len(),
+            stale_leaves: self.num_stale_leaves,
+        };
+        self.frozen_cache.node_stats.push(node_stats);
+        self.frozen_cache.node_cache.extend(self.node_cache.drain());
+        let stale_since_version = self.next_version;
+        self.frozen_cache
+            .stale_node_index_cache
+            .extend(
+                self.stale_node_index_cache
+                    .drain()
+                    .map(|node_key| StaleNodeIndex {
+                        stale_since_version,
+                        node_key,
+                    }),
+            );
+
+        // Clean up
+        self.num_stale_leaves = 0;
+        self.num_new_leaves = 0;
+
+        // Prepare for the next version after freezing
+        self.next_version += 1;
+    }
+}
+
+/// `TreeCache` is a in-memory cache for per-transaction updates of sparse Merkle nodes and values.
+pub struct TreeCache<'a, R, V> {
+    inner: Mutex<Inner<V>>,
 
     /// The underlying persistent storage.
     reader: &'a R,
@@ -170,23 +259,23 @@ where
             NodeKey::new_empty_path(key.version())
         };
         Ok(Self {
-            node_cache,
-            stale_node_index_cache: HashSet::new(),
-            frozen_cache: FrozenTreeCache::new(),
-            root_node_key,
-            next_version,
+            inner: Mutex::new(Inner {
+                node_cache,
+                stale_node_index_cache: HashSet::new(),
+                frozen_cache: FrozenTreeCache::new(),
+                root_node_key,
+                next_version,
+                num_stale_leaves: 0,
+                num_new_leaves: 0,
+            }),
             reader,
-            num_stale_leaves: 0,
-            num_new_leaves: 0,
         })
     }
 
     /// Gets a node with given node key. If it doesn't exist in node cache, read from `reader`.
     pub fn get_node(&self, node_key: &NodeKey) -> Result<Node<V>> {
-        Ok(if let Some(node) = self.node_cache.get(node_key) {
-            node.clone()
-        } else if let Some(node) = self.frozen_cache.node_cache.get(node_key) {
-            node.clone()
+        Ok(if let Some(node) = self.inner.lock().get_node(node_key) {
+            node
         } else {
             DIEM_JELLYFISH_STORAGE_READS.inc();
             self.reader.get_node(node_key)?
@@ -194,78 +283,34 @@ where
     }
 
     /// Gets the current root node key.
-    pub fn get_root_node_key(&self) -> &NodeKey {
-        &self.root_node_key
+    pub fn get_root_node_key(&self) -> NodeKey {
+        self.inner.lock().get_root_node_key()
     }
 
     /// Set roots `node_key`.
-    pub fn set_root_node_key(&mut self, root_node_key: NodeKey) {
-        self.root_node_key = root_node_key;
+    pub fn set_root_node_key(&self, root_node_key: NodeKey) {
+        self.inner.lock().set_root_node_key(root_node_key)
     }
 
     /// Puts the node with given hash as key into node_cache.
-    pub fn put_node(&mut self, node_key: NodeKey, new_node: Node<V>) -> Result<()> {
-        match self.node_cache.entry(node_key) {
-            Entry::Vacant(o) => {
-                if new_node.is_leaf() {
-                    self.num_new_leaves += 1
-                }
-                o.insert(new_node);
-            }
-            Entry::Occupied(o) => bail!("Node with key {:?} already exists in NodeBatch", o.key()),
-        };
-        Ok(())
+    pub fn put_node(&self, node_key: NodeKey, new_node: Node<V>) -> Result<()> {
+        self.inner.lock().put_node(node_key, new_node)
     }
 
     /// Deletes a node with given hash.
-    pub fn delete_node(&mut self, old_node_key: &NodeKey, is_leaf: bool) {
-        // If node cache doesn't have this node, it means the node is in the previous version of
-        // the tree on the disk.
-        if self.node_cache.remove(old_node_key).is_none() {
-            let is_new_entry = self.stale_node_index_cache.insert(old_node_key.clone());
-            assert!(is_new_entry, "Node gets stale twice unexpectedly.");
-            if is_leaf {
-                self.num_stale_leaves += 1;
-            }
-        } else if is_leaf {
-            self.num_new_leaves -= 1;
-        }
+    pub fn delete_node(&self, old_node_key: &NodeKey, is_leaf: bool) {
+        self.inner.lock().delete_node(old_node_key, is_leaf)
     }
 
     /// Freezes all the contents in cache to be immutable and clear `node_cache`.
-    pub fn freeze(&mut self) {
-        let root_node_key = self.get_root_node_key();
+    pub fn freeze(&self) {
+        // FIXME(aldenhu):
+        let root_node_key = self.inner.lock().get_root_node_key();
         let root_hash = self
-            .get_node(root_node_key)
+            .get_node(&root_node_key)
             .unwrap_or_else(|_| unreachable!("Root node with key {:?} must exist", root_node_key))
             .hash();
-        self.frozen_cache.root_hashes.push(root_hash);
-        let node_stats = NodeStats {
-            new_nodes: self.node_cache.len(),
-            new_leaves: self.num_new_leaves,
-            stale_nodes: self.stale_node_index_cache.len(),
-            stale_leaves: self.num_stale_leaves,
-        };
-        self.frozen_cache.node_stats.push(node_stats);
-        self.frozen_cache.node_cache.extend(self.node_cache.drain());
-        let stale_since_version = self.next_version;
-        self.frozen_cache
-            .stale_node_index_cache
-            .extend(
-                self.stale_node_index_cache
-                    .drain()
-                    .map(|node_key| StaleNodeIndex {
-                        stale_since_version,
-                        node_key,
-                    }),
-            );
-
-        // Clean up
-        self.num_stale_leaves = 0;
-        self.num_new_leaves = 0;
-
-        // Prepare for the next version after freezing
-        self.next_version += 1;
+        self.inner.lock().freeze(root_hash)
     }
 }
 
@@ -274,6 +319,7 @@ where
     R: 'a + TreeReader<V>,
 {
     fn from(tree_cache: TreeCache<'a, R, V>) -> Self {
+        let tree_cache = tree_cache.inner.into_inner();
         (
             tree_cache.frozen_cache.root_hashes,
             TreeUpdateBatch {

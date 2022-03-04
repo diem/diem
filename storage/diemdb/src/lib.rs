@@ -98,8 +98,12 @@ use storage_interface::{
     DbReader, DbWriter, MoveDbReader, Order, StartupInfo, StateSnapshotReceiver, TreeState,
 };
 
-pub static IO_POOL: Lazy<ThreadPool> =
-    Lazy::new(|| ThreadPoolBuilder::new().num_threads(4).breadth_first().build().unwrap());
+pub static IO_POOL: Lazy<ThreadPool> = Lazy::new(|| {
+    ThreadPoolBuilder::new()
+        .num_threads(1)
+        .build()
+        .unwrap()
+});
 
 const MAX_LIMIT: u64 = 5000;
 
