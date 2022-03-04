@@ -35,6 +35,7 @@ use std::{
     path::Path,
     sync::Arc,
 };
+use rocksdb::{BlockBasedOptions, Cache};
 
 /// Type alias to `rocksdb::ReadOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ReadOptions = rocksdb::ReadOptions;
@@ -275,7 +276,6 @@ impl DB {
             column_families.iter().map(|cf_name| {
                 let mut cf_opts = rocksdb::Options::default();
                 cf_opts.set_compression_type(rocksdb::DBCompressionType::Lz4);
-                /*
                 if *cf_name == "state_tree"
                     || *cf_name == "jellyfish_merkle_node"
                     || *cf_name == "account_state_blob"
@@ -298,7 +298,6 @@ impl DB {
                     cf_opts.set_table_cache_num_shard_bits(8);
                     cf_opts.set_use_direct_reads(true);
                 }
-                */
                 rocksdb::ColumnFamilyDescriptor::new((*cf_name).to_string(), cf_opts)
             }),
         )?;

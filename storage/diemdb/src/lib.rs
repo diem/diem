@@ -83,6 +83,7 @@ use move_core_types::{
     resolver::{ModuleResolver, ResourceResolver},
 };
 use once_cell::sync::Lazy;
+use rayon::{ThreadPool, ThreadPoolBuilder};
 use schemadb::{ColumnFamilyName, DiemRocksDbOptions, Options, DB, DEFAULT_CF_NAME};
 use std::{
     collections::HashMap,
@@ -96,6 +97,9 @@ use std::{
 use storage_interface::{
     DbReader, DbWriter, MoveDbReader, Order, StartupInfo, StateSnapshotReceiver, TreeState,
 };
+
+pub static IO_POOL: Lazy<ThreadPool> =
+    Lazy::new(|| ThreadPoolBuilder::new().num_threads(4).breadth_first().build().unwrap());
 
 const MAX_LIMIT: u64 = 5000;
 
@@ -1303,8 +1307,8 @@ impl DbWriter for DiemDB {
             // Gather db mutations to `batch`.
             let mut cs = ChangeSet::new();
 
-            let new_root_hash =
-                self.save_transactions_impl(txns_to_commit, first_version, &mut cs)?;
+            let new_root_hash = IO_POOL
+                .install(|| self.save_transactions_impl(txns_to_commit, first_version, &mut cs))?;
 
             // If expected ledger info is provided, verify result root hash and save the ledger info.
             if let Some(x) = ledger_info_with_sigs {

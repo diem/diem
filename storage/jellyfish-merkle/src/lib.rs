@@ -82,6 +82,7 @@ mod tree_cache;
 
 use anyhow::{bail, ensure, format_err, Result};
 use diem_crypto::{hash::CryptoHash, HashValue};
+use diem_infallible::Mutex;
 use diem_types::{
     nibble::{
         nibble_path::{skip_common_prefix, NibbleIterator, NibblePath},
@@ -91,8 +92,6 @@ use diem_types::{
     transaction::Version,
 };
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey, NodeType};
-use once_cell::sync::Lazy;
-use diem_infallible::Mutex;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::arbitrary::Arbitrary;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -105,10 +104,7 @@ use std::{
 use thiserror::Error;
 use tree_cache::TreeCache;
 
-use rayon::{prelude::*, ThreadPool, ThreadPoolBuilder};
-
-pub static IO_POOL: Lazy<ThreadPool> =
-    Lazy::new(|| ThreadPoolBuilder::new().num_threads(4).build().unwrap());
+use rayon::prelude::*;
 
 #[derive(Error, Debug)]
 #[error("Missing state root node at version {version}, probably pruned.")]
@@ -359,62 +355,59 @@ where
                 let ranges = NibbleRangeIterator::new(kvs, depth).collect::<Vec<_>>();
 
                 if depth < 2 {
-                    IO_POOL.install(|| {
-                        children.extend(
-                            // Traverse all the path touched by `kvs` from this internal node.
-                            ranges
-                                .into_par_iter()
-                                .map(|(left, right)| {
-                                    // Traverse downwards from this internal node recursively by splitting the updates into
-                                    // each child index
-                                    let child_index = kvs[left].0.get_nibble(depth);
+                    children.extend(
+                        // Traverse all the path touched by `kvs` from this internal node.
+                        ranges
+                            .par_iter()
+                            .map(|(left, right)| {
+                                // Traverse downwards from this internal node recursively by splitting the updates into
+                                // each child index
+                                let child_index = kvs[*left].0.get_nibble(depth);
 
-                                    let (new_child_node_key, new_child_node) =
-                                        match internal_node.child(child_index) {
-                                            Some(child) => {
-                                                let child_node_key = node_key
-                                                    .gen_child_node_key(child.version, child_index);
-                                                self.batch_insert_at(
-                                                    child_node_key,
-                                                    version,
-                                                    &kvs[left..=right],
-                                                    depth + 1,
-                                                    hash_cache,
-                                                    tree_cache,
-                                                )?
-                                            }
-                                            None => {
-                                                let new_child_node_key = node_key
-                                                    .gen_child_node_key(version, child_index);
-                                                self.batch_create_subtree(
-                                                    new_child_node_key,
-                                                    version,
-                                                    &kvs[left..=right],
-                                                    depth + 1,
-                                                    hash_cache,
-                                                    tree_cache,
-                                                )?
-                                            }
-                                        };
-
-                                    Ok((
-                                        child_index,
-                                        Child::new(
-                                            Self::get_hash(
-                                                &new_child_node_key,
-                                                &new_child_node,
+                                let (new_child_node_key, new_child_node) =
+                                    match internal_node.child(child_index) {
+                                        Some(child) => {
+                                            let child_node_key = node_key
+                                                .gen_child_node_key(child.version, child_index);
+                                            self.batch_insert_at(
+                                                child_node_key,
+                                                version,
+                                                &kvs[*left..=*right],
+                                                depth + 1,
                                                 hash_cache,
-                                            ),
-                                            version,
-                                            new_child_node.node_type(),
+                                                tree_cache,
+                                            )?
+                                        }
+                                        None => {
+                                            let new_child_node_key =
+                                                node_key.gen_child_node_key(version, child_index);
+                                            self.batch_create_subtree(
+                                                new_child_node_key,
+                                                version,
+                                                &kvs[*left..=*right],
+                                                depth + 1,
+                                                hash_cache,
+                                                tree_cache,
+                                            )?
+                                        }
+                                    };
+
+                                Ok((
+                                    child_index,
+                                    Child::new(
+                                        Self::get_hash(
+                                            &new_child_node_key,
+                                            &new_child_node,
+                                            hash_cache,
                                         ),
-                                    ))
-                                })
-                                .collect::<Result<Vec<_>>>()?
-                                .into_iter(),
-                        );
-                        Ok::<(), anyhow::Error>(())
-                    })?;
+                                        version,
+                                        new_child_node.node_type(),
+                                    ),
+                                ))
+                            })
+                            .collect::<Result<Vec<_>>>()?
+                            .into_iter(),
+                    );
                 } else {
                     children.extend(
                         // Traverse all the path touched by `kvs` from this internal node.
