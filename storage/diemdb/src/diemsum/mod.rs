@@ -76,7 +76,7 @@ impl Diemsum {
     ) -> Result<Option<AccountStateBlob>> {
         self.db
             .state_store
-            .get_account_state_with_proof_by_version(address, version)
+            .get_account_state_with_partial_proof_by_version(address, version, 0)
             .map(|blob_and_proof| blob_and_proof.0)
     }
 

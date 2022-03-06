@@ -424,6 +424,18 @@ pub trait DbReader: Send + Sync {
         version: Version,
         ledger_version: Version,
     ) -> Result<AccountStateWithProof> {
+        self.get_account_state_with_partial_proof(address, version, 0, ledger_version)
+    }
+
+    /// Returns the account state corresponding to the given version and account address with proof
+    /// based on `ledger_version`
+    fn get_account_state_with_partial_proof(
+        &self,
+        address: AccountAddress,
+        version: Version,
+        starting_depth: usize,
+        ledger_version: Version,
+    ) -> Result<AccountStateWithProof> {
         unimplemented!()
     }
 
@@ -439,6 +451,18 @@ pub trait DbReader: Send + Sync {
         &self,
         address: AccountAddress,
         version: Version,
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
+        self.get_account_state_with_partial_proof_by_version(address, version, 0)
+    }
+
+    fn get_account_state_with_partial_proof_by_version(
+        &self,
+        address: AccountAddress,
+        version: Version,
+        starting_depth: usize,
     ) -> Result<(
         Option<AccountStateBlob>,
         SparseMerkleProof<AccountStateBlob>,

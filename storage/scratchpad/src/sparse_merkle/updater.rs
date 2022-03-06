@@ -126,13 +126,19 @@ impl<'a, V: Clone + CryptoHash> SubTreeInfo<'a, V> {
     }
 
     fn new_on_proof_path(proof: &'a SparseMerkleProof<V>, depth: usize) -> Self {
-        match proof.siblings().len().cmp(&depth) {
+        match proof.bottom_depth().cmp(&depth) {
             Ordering::Greater => Self::Persisted(PersistedSubTreeInfo::ProofPathInternal { proof }),
             Ordering::Equal => match proof.leaf() {
                 Some(leaf) => Self::new_proof_leaf(leaf),
                 None => Self::new_empty(),
             },
-            _ => unreachable!(),
+            _ => unreachable!(
+                "depth {}, proof: starting_depth:{} siblings_len:{} leaf_is_some:{}",
+                depth,
+                proof.starting_depth(),
+                proof.siblings().len(),
+                proof.leaf().is_some()
+            ),
         }
     }
 
@@ -144,13 +150,6 @@ impl<'a, V: Clone + CryptoHash> SubTreeInfo<'a, V> {
         let proof = proof_reader
             .get_proof(a_descendant_key)
             .ok_or(UpdateError::MissingProof)?;
-        if depth > proof.siblings().len() {
-            return Err(UpdateError::ShortProof {
-                key: a_descendant_key,
-                num_siblings: proof.siblings().len(),
-                depth,
-            });
-        }
         Ok(Self::new_on_proof_path(proof, depth))
     }
 
@@ -237,10 +236,15 @@ impl<'a, V: Clone + CryptoHash> SubTreeInfo<'a, V> {
                     swap_if(myself, SubTreeInfo::new_empty(), key.bit(depth))
                 }
                 PersistedSubTreeInfo::ProofPathInternal { proof } => {
-                    let siblings = proof.siblings();
-                    assert!(siblings.len() > depth);
                     let sibling_child =
-                        SubTreeInfo::new_proof_sibling(siblings[siblings.len() - depth - 1]);
+                        SubTreeInfo::new_proof_sibling(proof.sibling_at_depth(depth + 1).map_err(
+                            |_| UpdateError::BadProof {
+                                key: a_descendent_key,
+                                depth: depth + 1,
+                                proof_starting_depth: proof.starting_depth(),
+                                proof_siblings: proof.siblings().len(),
+                            },
+                        )?);
                     let on_path_child = SubTreeInfo::new_on_proof_path(proof, depth + 1);
                     swap_if(on_path_child, sibling_child, a_descendent_key.bit(depth))
                 }

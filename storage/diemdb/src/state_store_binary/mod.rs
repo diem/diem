@@ -10,7 +10,7 @@ use crate::{
     account_state_blob::AccountStateBlobSchema,
     bsmt_update_log::{BsmtKey, BsmtUpdateLogSchema},
     state_tree::StateTreeSchema,
-    ChangeSet, DiemDbError,
+    ChangeSet, DiemDbError, DIEM_STORAGE_OTHER_TIMERS_SECONDS,
 };
 use anyhow::Result;
 use diem_crypto::{
@@ -49,19 +49,49 @@ impl StateStore {
         Self { db }
     }
 
-    /// Get the account state blob given account address and root hash of state Merkle tree
-    pub fn get_account_state_with_proof_by_version(
+    pub fn get_account_state_with_partial_proof_by_version(
         &self,
         address: AccountAddress,
         version: Version,
+        starting_depth: usize,
     ) -> Result<(
         Option<AccountStateBlob>,
         SparseMerkleProof<AccountStateBlob>,
     )> {
+        self.get_account_state_with_partial_proof_by_version_impl(address, version, starting_depth)
+            .map(|(blob, proof)| {
+                DIEM_STORAGE_OTHER_TIMERS_SECONDS
+                    .with_label_values(&["get_partial_proof_starting_depth"])
+                    .observe(starting_depth as f64);
+                DIEM_STORAGE_OTHER_TIMERS_SECONDS
+                    .with_label_values(&["get_partial_proof_bottom_depth"])
+                    .observe(proof.bottom_depth() as f64);
+                (blob, proof)
+            })
+    }
+
+    pub fn get_account_state_with_partial_proof_by_version_impl(
+        &self,
+        address: AccountAddress,
+        version: Version,
+        starting_depth: usize,
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
+        assert!(starting_depth <= 256);
         let target_key = address.hash();
 
-        let root = self.get_root_node(version)?;
+        let mut pos = VecBool::new();
+        let mut bit_iter = target_key.iter_bits();
+        for _ in 0..starting_depth {
+            let bit = bit_iter.next().unwrap();
+            pos.push(bit)
+        }
+
+        let root = self.get_node_before(version, &pos)?;
         let (mut left_empty, mut right_empty) = match &root.node_type {
+            // FIXME(aldenhu): for separate blob and proof fetches, store value hash in leaf, to avoid a blob read
             StateTreeNodeType::Leaf { key: leaf_key } => {
                 let blob = self.leaf(*leaf_key, version)?;
                 let value_hash = blob.hash();
@@ -71,9 +101,10 @@ impl StateStore {
                     } else {
                         None
                     },
-                    SparseMerkleProof::new(
+                    SparseMerkleProof::new_partial(
                         Some(SparseMerkleLeafNode::new(*leaf_key, value_hash)),
                         Vec::new(),
+                        starting_depth,
                     ),
                 ));
             }
@@ -84,8 +115,7 @@ impl StateStore {
         };
 
         let mut siblings = Vec::new();
-        let mut pos = VecBool::new();
-        for bit in target_key.iter_bits() {
+        for bit in bit_iter {
             let (me_empty, sibling_empty) = swap_if(left_empty, right_empty, bit);
             siblings.push(if sibling_empty {
                 *SPARSE_MERKLE_PLACEHOLDER_HASH
@@ -99,10 +129,14 @@ impl StateStore {
             if me_empty {
                 return Ok((
                     None,
-                    SparseMerkleProof::new(None, {
-                        siblings.reverse();
-                        siblings
-                    }),
+                    SparseMerkleProof::new_partial(
+                        None,
+                        {
+                            siblings.reverse();
+                            siblings
+                        },
+                        starting_depth,
+                    ),
                 ));
             }
 
@@ -114,12 +148,13 @@ impl StateStore {
                     let value_hash = blob.hash();
                     return Ok((
                         if *key == target_key { Some(blob) } else { None },
-                        SparseMerkleProof::new(
+                        SparseMerkleProof::new_partial(
                             Some(SparseMerkleLeafNode::new(*key, value_hash)),
                             {
                                 siblings.reverse();
                                 siblings
                             },
+                            starting_depth,
                         ),
                     ));
                 }

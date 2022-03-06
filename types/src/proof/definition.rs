@@ -148,6 +148,9 @@ pub struct SparseMerkleProof<V> {
     /// level to the root level.
     siblings: Vec<HashValue>,
 
+    // FIXME(aldenhu): doc
+    starting_depth: usize,
+
     phantom: PhantomData<V>,
 }
 
@@ -160,6 +163,20 @@ where
         SparseMerkleProof {
             leaf,
             siblings,
+            starting_depth: 0,
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn new_partial(
+        leaf: Option<SparseMerkleLeafNode>,
+        siblings: Vec<HashValue>,
+        starting_depth: usize,
+    ) -> Self {
+        SparseMerkleProof {
+            leaf,
+            siblings,
+            starting_depth,
             phantom: PhantomData,
         }
     }
@@ -172,6 +189,33 @@ where
     /// Returns the list of siblings in this proof.
     pub fn siblings(&self) -> &[HashValue] {
         &self.siblings
+    }
+
+    pub fn starting_depth(&self) -> usize {
+        self.starting_depth
+    }
+
+    pub fn bottom_depth(&self) -> usize {
+        self.starting_depth + self.siblings.len()
+    }
+
+    pub fn sibling_at_depth(&self, depth: usize) -> Result<HashValue> {
+        ensure!(depth > 0, "There's no sibling at depth 0.");
+        ensure!(
+            depth <= self.starting_depth + self.siblings.len(),
+            "Sibling at depth {} not in proof. My starting depth: {}, I have {} siblings.",
+            depth,
+            self.starting_depth,
+            self.siblings.len(),
+        );
+        ensure!(
+            depth > self.starting_depth,
+            "Partial proof missing sibling at depth {}, starting depth: {}",
+            depth,
+            self.starting_depth,
+        );
+        let depth_my_siblings = depth - self.starting_depth;
+        Ok(self.siblings[self.siblings.len() - depth_my_siblings])
     }
 
     /// If `element_value` is present, verifies an element whose key is `element_key` and value is

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::DbReader;
-use anyhow::{format_err, Result};
+use anyhow::Result;
 use diem_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use diem_state_view::{StateView, StateViewId};
 use diem_types::{
@@ -97,7 +97,7 @@ impl InMemoryState {
 impl Drop for InMemoryState {
     fn drop(&mut self) {
         static SMT_CACHE: Lazy<Mutex<VecDeque<Option<SparseMerkleTree<AccountStateBlob>>>>> =
-            Lazy::new(|| Mutex::new(VecDeque::from(vec![None; 31])));
+            Lazy::new(|| Mutex::new(VecDeque::from(vec![None; 63])));
         let mut locked = SMT_CACHE.lock();
         locked.pop_front();
         locked.push_back(Some(self.checkpoint.clone()));
@@ -118,7 +118,7 @@ pub struct VerifiedStateView {
     latest_persistent_version: Option<Version>,
 
     /// The most recent state checkpoint root hash in persistent storage.
-    latest_persistent_state_root: HashValue,
+    _latest_persistent_state_root: HashValue,
 
     /// Speculative state.
     speculative_state: FrozenSparseMerkleTree<AccountStateBlob>,
@@ -188,7 +188,7 @@ impl VerifiedStateView {
             id,
             reader,
             latest_persistent_version,
-            latest_persistent_state_root,
+            _latest_persistent_state_root: latest_persistent_state_root,
             speculative_state: speculative_state.freeze(),
             account_to_state_cache: RwLock::new(HashMap::new()),
             account_to_proof_cache: RwLock::new(HashMap::new()),
@@ -248,13 +248,15 @@ impl StateView for VerifiedStateView {
             AccountStatus::DoesNotExist => None,
             // No matter it is in db or unknown, we have to query from db since even the
             // former case, we don't have the blob data but only its hash.
-            AccountStatus::ExistsInDB | AccountStatus::Unknown => {
+            AccountStatus::ExistsInDB(depth) | AccountStatus::Unknown(depth) => {
                 let (blob, proof) = match self.latest_persistent_version {
                     Some(version) => self
                         .reader
-                        .get_account_state_with_proof_by_version(address, version)?,
+                        .get_account_state_with_partial_proof_by_version(address, version, depth)?,
                     None => (None, SparseMerkleProof::new(None, vec![])),
                 };
+                // FIXME(aldenhu): decide correct thing to do
+                /*
                 proof
                     .verify(
                         self.latest_persistent_state_root,
@@ -269,6 +271,7 @@ impl StateView for VerifiedStateView {
                             err
                         )
                     })?;
+                 */
 
                 // multiple threads may enter this code, and another thread might add
                 // an address before this one. Thus the insertion might return a None here.

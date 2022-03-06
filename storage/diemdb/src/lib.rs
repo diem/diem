@@ -613,6 +613,9 @@ impl DiemDB {
                 .iter()
                 .map(|txn_to_commit| txn_to_commit.state_tree_nodes())
                 .collect::<Vec<_>>();
+            let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+                .with_label_values(&["save_transactions_state"])
+                .start_timer();
             self.state_store.put_account_state_sets(
                 account_state_sets,
                 node_hashes,
@@ -701,7 +704,7 @@ impl DbReader for DiemDB {
             let version = ledger_info_with_sigs.ledger_info().version();
             let (blob, _proof) = self
                 .state_store
-                .get_account_state_with_proof_by_version(address, version)?;
+                .get_account_state_with_partial_proof_by_version(address, version, 0)?;
             Ok(blob)
         })
     }
@@ -999,13 +1002,14 @@ impl DbReader for DiemDB {
         })
     }
 
-    fn get_account_state_with_proof(
+    fn get_account_state_with_partial_proof(
         &self,
         address: AccountAddress,
         version: Version,
+        starting_depth: usize,
         ledger_version: Version,
     ) -> Result<AccountStateWithProof> {
-        gauged_api("get_account_state_with_proof", || {
+        gauged_api("get_account_state_with_partial_proof", || {
             ensure!(
                 version <= ledger_version,
                 "The queried version {} should be equal to or older than ledger version {}.",
@@ -1027,7 +1031,11 @@ impl DbReader for DiemDB {
                 .get_transaction_info_with_proof(version, ledger_version)?;
             let (account_state_blob, sparse_merkle_proof) = self
                 .state_store
-                .get_account_state_with_proof_by_version(address, version)?;
+                .get_account_state_with_partial_proof_by_version(
+                    address,
+                    version,
+                    starting_depth,
+                )?;
             Ok(AccountStateWithProof::new(
                 version,
                 account_state_blob,
@@ -1060,18 +1068,19 @@ impl DbReader for DiemDB {
         })
     }
 
-    fn get_account_state_with_proof_by_version(
+    fn get_account_state_with_partial_proof_by_version(
         &self,
         address: AccountAddress,
         version: Version,
+        starting_depth: usize,
     ) -> Result<(
         Option<AccountStateBlob>,
         SparseMerkleProof<AccountStateBlob>,
     )> {
-        gauged_api("get_account_state_with_proof_by_version", || {
+        gauged_api("get_account_state_with_partial_proof_by_version", || {
             let ret = self
                 .state_store
-                .get_account_state_with_proof_by_version(address, version)
+                .get_account_state_with_partial_proof_by_version(address, version, starting_depth)
                 .unwrap();
             Ok(ret)
         })

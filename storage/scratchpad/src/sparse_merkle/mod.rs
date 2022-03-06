@@ -401,7 +401,7 @@ pub enum AccountStatus<V> {
     /// because it was loaded into memory as part of a non-inclusion proof. When we go to DB we
     /// don't need to traverse the tree to find the same leaf, instead we can use the value hash to
     /// look up the account content directly.
-    ExistsInDB,
+    ExistsInDB(usize),
 
     /// The account does not exist in either the tree or DB. This happens when the search reaches
     /// an empty node, or a leaf node that has a different account.
@@ -409,7 +409,7 @@ pub enum AccountStatus<V> {
 
     /// We do not know if this account exists or not and need to go to DB to find out. This happens
     /// when the search reaches a subtree node.
-    Unknown,
+    Unknown(usize),
 }
 
 /// In the entire lifetime of this, in-mem nodes won't be dropped because a reference to the oldest
@@ -539,6 +539,7 @@ where
         let mut cur = self.smt.root_weak();
         let mut bits = key.iter_bits();
 
+        let mut depth = 0;
         loop {
             if let Some(node) = cur.get_node_if_in_mem(self.base_generation) {
                 if let NodeInner::Internal(internal_node) = node.inner() {
@@ -549,6 +550,7 @@ where
                             } else {
                                 internal_node.left.weak()
                             };
+                            depth += 1;
                             continue;
                         }
                         None => panic!("Tree is deeper than {} levels.", HashValue::LENGTH_IN_BITS),
@@ -561,7 +563,7 @@ where
         let ret = match cur {
             SubTree::Empty => AccountStatus::DoesNotExist,
             SubTree::NonEmpty { root, .. } => match root.get_if_in_mem() {
-                None => AccountStatus::Unknown,
+                None => AccountStatus::Unknown(depth),
                 Some(node) => match node.inner() {
                     NodeInner::Internal(_) => {
                         unreachable!("There is an internal node at the bottom of the tree.")
@@ -572,7 +574,7 @@ where
                                 Some(value) => {
                                     AccountStatus::ExistsInScratchPad(value.as_ref().clone())
                                 }
-                                None => AccountStatus::ExistsInDB,
+                                None => AccountStatus::ExistsInDB(depth),
                             }
                         } else {
                             AccountStatus::DoesNotExist
@@ -598,17 +600,20 @@ pub enum UpdateError {
     /// proof to get more information about the tree, but no proof is provided.
     #[error("Missing proof.")]
     MissingProof,
+    // FIXME(aldenhu): wording: now it can either short or partial
     /// At `depth` a persisted subtree was encountered and a proof was requested to assist finding
     /// details about the subtree, but the result proof indicates the subtree is empty.
     #[error(
-        "Short proof: key: {}, num_siblings: {}, depth: {}",
+        "Proof doesn't contain requested sibling: key: {}, depth: {}, proof_starting_depth: {}, proof_siblings: {}",
         key,
-        num_siblings,
-        depth
+        depth,
+    proof_starting_depth,
+    proof_siblings,
     )]
-    ShortProof {
+    BadProof {
         key: HashValue,
-        num_siblings: usize,
         depth: usize,
+        proof_starting_depth: usize,
+        proof_siblings: usize,
     },
 }
