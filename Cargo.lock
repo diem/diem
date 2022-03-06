@@ -7556,6 +7556,7 @@ dependencies = [
  "diem-workspace-hack",
  "itertools 0.10.1",
  "move-core-types",
+ "once_cell",
  "parking_lot",
  "scratchpad",
  "serde 1.0.130",

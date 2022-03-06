@@ -14,10 +14,11 @@ use diem_types::{
     transaction::{Version, PRE_GENESIS_VERSION},
     write_set::WriteSet,
 };
-use parking_lot::RwLock;
+use once_cell::sync::Lazy;
+use parking_lot::{Mutex, RwLock};
 use scratchpad::{AccountStatus, FrozenSparseMerkleTree, SparseMerkleTree};
 use std::{
-    collections::{hash_map::Entry, HashMap, HashSet},
+    collections::{hash_map::Entry, HashMap, HashSet, VecDeque},
     convert::TryInto,
     sync::Arc,
 };
@@ -74,6 +75,32 @@ impl InMemoryState {
 
     pub fn root_hash(&self) -> HashValue {
         self.current.root_hash()
+    }
+
+    pub fn clone_parts(
+        &self,
+    ) -> (
+        SparseMerkleTree<AccountStateBlob>,
+        LeafCount,
+        SparseMerkleTree<AccountStateBlob>,
+        HashSet<AccountAddress>,
+    ) {
+        (
+            self.checkpoint.clone(),
+            self.checkpoint_num_transactions,
+            self.current.clone(),
+            self.updated_since_checkpoint.clone(),
+        )
+    }
+}
+
+impl Drop for InMemoryState {
+    fn drop(&mut self) {
+        static SMT_CACHE: Lazy<Mutex<VecDeque<Option<SparseMerkleTree<AccountStateBlob>>>>> =
+            Lazy::new(|| Mutex::new(VecDeque::from(vec![None; 31])));
+        let mut locked = SMT_CACHE.lock();
+        locked.pop_front();
+        locked.push_back(Some(self.checkpoint.clone()));
     }
 }
 

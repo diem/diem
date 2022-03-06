@@ -349,12 +349,12 @@ impl InMemoryStateCalculator {
             accounts,
             proofs,
         } = state_cache;
-        let InMemoryState {
+        let (
             checkpoint,
             checkpoint_num_transactions,
             current,
-            updated_since_checkpoint: updated_addresses_since_checkpoint,
-        } = base.clone();
+            updated_between_checkpoint_and_latest,
+        ) = base.clone_parts();
 
         Self {
             _frozen_base,
@@ -364,7 +364,7 @@ impl InMemoryStateCalculator {
             checkpoint_num_transactions,
             latest: current.freeze(),
             next_version,
-            updated_between_checkpoint_and_latest: updated_addresses_since_checkpoint,
+            updated_between_checkpoint_and_latest,
             updated_after_latest: HashSet::new(),
         }
     }
