@@ -29,7 +29,7 @@ use crate::{
 use anyhow::{ensure, format_err, Result};
 use diem_logger::prelude::*;
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{hash_map::Entry, BTreeMap, HashMap, HashSet},
     iter::Iterator,
     marker::PhantomData,
     path::Path,
@@ -59,7 +59,7 @@ impl DiemRocksDbOptions for Options {
 pub const DEFAULT_CF_NAME: ColumnFamilyName = "default";
 
 #[derive(Debug)]
-enum WriteOp {
+pub enum WriteOp {
     Value(Vec<u8>),
     Deletion,
 }
@@ -68,7 +68,7 @@ enum WriteOp {
 /// will be applied in the order in which they are added to the `SchemaBatch`.
 #[derive(Debug, Default)]
 pub struct SchemaBatch {
-    rows: HashMap<ColumnFamilyName, BTreeMap<Vec<u8>, WriteOp>>,
+    pub rows: HashMap<ColumnFamilyName, BTreeMap<Vec<u8>, WriteOp>>,
 }
 
 impl SchemaBatch {
@@ -101,6 +101,19 @@ impl SchemaBatch {
             .insert(key, WriteOp::Deletion);
 
         Ok(())
+    }
+
+    pub fn combine(&mut self, rhs: Self) {
+        for (cf, ops) in rhs.rows.into_iter() {
+            match self.rows.entry(cf) {
+                Entry::Occupied(entry) => {
+                    entry.into_mut().extend(ops.into_iter());
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(ops);
+                }
+            }
+        }
     }
 }
 

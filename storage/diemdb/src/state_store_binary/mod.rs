@@ -28,6 +28,7 @@ use diem_types::{
 };
 use itertools::zip_eq;
 use move_core_types::account_address::AccountAddress;
+use rayon::prelude::*;
 use schemadb::DB;
 use std::{collections::HashMap, sync::Arc};
 use storage_interface::StateSnapshotReceiver;
@@ -202,34 +203,62 @@ impl StateStore {
         account_state_sets: Vec<HashMap<AccountAddress, AccountStateBlob>>,
         nodes_vecs: Vec<&[(VecBool, StateTreeNode)]>,
         first_version: Version,
-        cs: &mut ChangeSet,
-    ) -> Result<()> {
-        for (idx, (account_state_set, nodes_vec)) in
-            zip_eq(account_state_sets, nodes_vecs).enumerate()
-        {
-            let version = first_version + idx as LeafCount;
+    ) -> Result<ChangeSet> {
+        let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["state_store_put_account_state_sets"])
+            .start_timer();
 
-            for (addr, blob) in account_state_set {
-                // FIXME(aldenhu): addr.hash() doesn't need to be in value?
-                // FIXME(aldenhu): pass hashes along?
-                // FIXME(aldenhu): addr.hash() as input directly instead of addr?
-                let key = addr.hash();
-                cs.batch
-                    .put::<AccountStateBlobSchema>(&(key, version), &blob)?;
-                cs.batch
-                    .put::<BsmtUpdateLogSchema>(&(version, BsmtKey::Value(key)), &())?;
-            }
+        let cs_vec: Vec<_> = zip_eq(account_state_sets, nodes_vecs)
+            .enumerate()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .with_min_len(100)
+            .map(|(idx, (account_state_set, nodes_vec))| {
+                let cs = ChangeSet::new();
+                let version = first_version + idx as LeafCount;
 
-            for (node_addr, node) in nodes_vec {
-                cs.batch
-                    .put::<StateTreeSchema>(&(node_addr.clone(), version), node)?;
-                cs.batch.put::<BsmtUpdateLogSchema>(
-                    &(version, BsmtKey::Node(node_addr.clone())),
-                    &(),
-                )?;
-            }
-        }
-        Ok(())
+                let cs = account_state_set
+                    .into_iter()
+                    .collect::<Vec<_>>()
+                    .into_par_iter()
+                    .with_min_len(100)
+                    .map(|(addr, blob)| {
+                        let mut cs = ChangeSet::new();
+                        // FIXME(aldenhu): addr.hash() doesn't need to be in value?
+                        // FIXME(aldenhu): pass hashes along?
+                        // FIXME(aldenhu): addr.hash() as input directly instead of addr?
+                        let key = addr.hash();
+                        cs.batch
+                            .put::<AccountStateBlobSchema>(&(key, version), &blob)?;
+                        cs.batch
+                            .put::<BsmtUpdateLogSchema>(&(version, BsmtKey::Value(key)), &())?;
+                        Ok(cs)
+                    })
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter()
+                    .fold(cs, ChangeSet::fold);
+
+                let cs = nodes_vec
+                    .into_par_iter()
+                    .with_min_len(100)
+                    .map(|(node_addr, node)| {
+                        let mut cs = ChangeSet::new();
+                        cs.batch
+                            .put::<StateTreeSchema>(&(node_addr.clone(), version), node)?;
+                        cs.batch.put::<BsmtUpdateLogSchema>(
+                            &(version, BsmtKey::Node(node_addr.clone())),
+                            &(),
+                        )?;
+                        Ok(cs)
+                    })
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter()
+                    .fold(cs, ChangeSet::fold);
+                Ok(cs)
+            })
+            .collect::<Result<_>>()?;
+
+        Ok(cs_vec.into_iter().fold(ChangeSet::new(), ChangeSet::fold))
     }
 
     pub fn get_root_hash(&self, version: Version) -> Result<HashValue> {

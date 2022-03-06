@@ -598,72 +598,113 @@ impl DiemDB {
     ) -> Result<HashValue> {
         let last_version = first_version + txns_to_commit.len() as u64 - 1;
 
-        // Account state updates. Gather account state root hashes
-        {
-            let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-                .with_label_values(&["save_transactions_state"])
-                .start_timer();
+        info!(
+            write_set_size = txns_to_commit[0].write_set().len(),
+            node_hashes_size = txns_to_commit[0].state_tree_nodes().len(),
+            "before saving"
+        );
+        let (ret1, ret2) = rayon::join(
+            // Account state updates. Gather account state root hashes
+            || self.save_state(txns_to_commit, first_version),
+            || {
+                // Event updates. Gather event accumulator root hashes.
+                self.save_events(txns_to_commit, first_version, last_version, &mut cs)?;
+                self.save_transaction_infos(txns_to_commit, first_version, last_version, &mut cs)
+            },
+        );
 
-            let account_state_sets = txns_to_commit
+        let state_cs = ret1?;
+        info!(
+            cs = cs
+                .batch
+                .rows
                 .iter()
-                .map(|txn_to_commit| txn_to_commit.account_states().clone())
-                .collect::<Vec<_>>();
-
-            let node_hashes = txns_to_commit
+                .map(|(k, v)| (k, v.keys().count()))
+                .collect::<Vec<_>>(),
+            state_cs = state_cs
+                .batch
+                .rows
                 .iter()
-                .map(|txn_to_commit| txn_to_commit.state_tree_nodes())
-                .collect::<Vec<_>>();
-            let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-                .with_label_values(&["save_transactions_state"])
-                .start_timer();
-            self.state_store.put_account_state_sets(
-                account_state_sets,
-                node_hashes,
-                first_version,
-                &mut cs,
-            )?;
-        }
-
-        // Event updates. Gather event accumulator root hashes.
-        {
-            let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-                .with_label_values(&["save_transactions_events"])
-                .start_timer();
-            zip_eq(first_version..=last_version, txns_to_commit)
-                .map(|(ver, txn_to_commit)| {
-                    self.event_store
-                        .put_events(ver, txn_to_commit.events(), &mut cs)
-                })
-                .collect::<Result<Vec<_>>>()?;
-        }
-
-        let new_root_hash = {
-            let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-                .with_label_values(&["save_transactions_txn_infos"])
-                .start_timer();
-            zip_eq(first_version..=last_version, txns_to_commit).try_for_each(
-                |(ver, txn_to_commit)| {
-                    // Transaction updates. Gather transaction hashes.
-                    self.transaction_store.put_transaction(
-                        ver,
-                        txn_to_commit.transaction(),
-                        &mut cs,
-                    )?;
-                    self.transaction_store
-                        .put_write_set(ver, txn_to_commit.write_set(), &mut cs)
-                },
-            )?;
-            // Transaction accumulator updates. Get result root hash.
-            let txn_infos: Vec<_> = txns_to_commit
-                .iter()
-                .map(|t| t.transaction_info())
-                .cloned()
-                .collect();
-            self.ledger_store
-                .put_transaction_infos(first_version, &txn_infos, &mut cs)?
-        };
-
+                .map(|(k, v)| (k, v.keys().count()))
+                .collect::<Vec<_>>(),
+            "before combining"
+        );
+        let new_root_hash = ret2?;
+        cs.combine(state_cs);
         Ok(new_root_hash)
+    }
+
+    fn save_transaction_infos(
+        &self,
+        txns_to_commit: &[TransactionToCommit],
+        first_version: u64,
+        last_version: u64,
+        mut cs: &mut &mut ChangeSet,
+    ) -> Result<HashValue> {
+        let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["save_transactions_txn_infos"])
+            .start_timer();
+        zip_eq(first_version..=last_version, txns_to_commit).try_for_each(
+            |(ver, txn_to_commit)| {
+                // Transaction updates. Gather transaction hashes.
+                self.transaction_store.put_transaction(
+                    ver,
+                    txn_to_commit.transaction(),
+                    &mut cs,
+                )?;
+                self.transaction_store
+                    .put_write_set(ver, txn_to_commit.write_set(), &mut cs)
+            },
+        )?;
+        // Transaction accumulator updates. Get result root hash.
+        let txn_infos: Vec<_> = txns_to_commit
+            .iter()
+            .map(|t| t.transaction_info())
+            .cloned()
+            .collect();
+        self.ledger_store
+            .put_transaction_infos(first_version, &txn_infos, &mut cs)
+    }
+
+    fn save_events(
+        &self,
+        txns_to_commit: &[TransactionToCommit],
+        first_version: Version,
+        last_version: Version,
+        mut cs: &mut ChangeSet,
+    ) -> Result<()> {
+        let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["save_transactions_events"])
+            .start_timer();
+        zip_eq(first_version..=last_version, txns_to_commit)
+            .map(|(ver, txn_to_commit)| {
+                self.event_store
+                    .put_events(ver, txn_to_commit.events(), &mut cs)
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(())
+    }
+
+    fn save_state(
+        &self,
+        txns_to_commit: &[TransactionToCommit],
+        first_version: u64,
+    ) -> Result<ChangeSet> {
+        let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["save_transactions_state"])
+            .start_timer();
+
+        let account_state_sets = txns_to_commit
+            .iter()
+            .map(|txn_to_commit| txn_to_commit.account_states().clone())
+            .collect::<Vec<_>>();
+
+        let node_hashes = txns_to_commit
+            .iter()
+            .map(|txn_to_commit| txn_to_commit.state_tree_nodes())
+            .collect::<Vec<_>>();
+        self.state_store
+            .put_account_state_sets(account_state_sets, node_hashes, first_version)
     }
 
     /// Write the whole schema batch including all data necessary to mutate the ledger
