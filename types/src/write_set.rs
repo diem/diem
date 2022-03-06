@@ -64,6 +64,10 @@ impl WriteSet {
     pub fn into_mut(self) -> WriteSetMut {
         self.0
     }
+
+    pub fn len(&self) -> usize {
+        self.0.write_set.len()
+    }
 }
 
 /// A mutable version of `WriteSet`.

@@ -10,7 +10,7 @@ use proptest::{collection::hash_map, prelude::*};
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{btree_map::Entry, BTreeMap};
 
 /// Types of ledger counters.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, NumVariants)]
@@ -86,6 +86,19 @@ impl InnerLedgerCounters {
 
         self
     }
+
+    pub fn combine(&mut self, rhs: Self) {
+        for (k, v) in rhs.counters {
+            match self.counters.entry(k) {
+                Entry::Occupied(entry) => {
+                    *entry.into_mut() += v;
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(v);
+                }
+            }
+        }
+    }
 }
 
 /// Represents `LedgerCounter` bumps yielded by saving a batch of transactions.
@@ -108,6 +121,10 @@ impl LedgerCounterBumps {
         self.bumps.inc(counter, by);
 
         self
+    }
+
+    pub fn combine(&mut self, rhs: Self) {
+        self.bumps.combine(rhs.bumps)
     }
 
     /// Get the current value of the bump of `counter`.

@@ -4,7 +4,7 @@
 use crate::ledger_counters::LedgerCounterBumps;
 use diem_types::transaction::Version;
 use schemadb::SchemaBatch;
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 /// Structure that collects changes to be made to the DB in one transaction.
 ///
@@ -39,6 +39,25 @@ impl ChangeSet {
             batch: SchemaBatch::new(),
             counter_bumps,
         }
+    }
+
+    pub fn combine(&mut self, rhs: Self) {
+        self.batch.combine(rhs.batch);
+        for (ver, bumps) in rhs.counter_bumps {
+            match self.counter_bumps.entry(ver) {
+                Entry::Occupied(entry) => {
+                    entry.into_mut().combine(bumps);
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(bumps);
+                }
+            }
+        }
+    }
+
+    pub fn fold(mut self, rhs: Self) -> Self {
+        self.combine(rhs);
+        self
     }
 }
 
