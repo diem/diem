@@ -13,16 +13,11 @@ use crate::{
     ChangeSet, DiemDbError, DIEM_STORAGE_OTHER_TIMERS_SECONDS,
 };
 use anyhow::Result;
-use diem_crypto::{
-    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
-    HashValue,
-};
+use diem_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use diem_types::{
     account_address::HashAccountAddress,
     account_state_blob::{AccountStateBlob, AccountStatesChunkWithProof},
-    proof::{
-        definition::LeafCount, SparseMerkleLeafNode, SparseMerkleProof, SparseMerkleRangeProof,
-    },
+    proof::{definition::LeafCount, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{StateTreeNode, StateTreeNodeType, Version, PRE_GENESIS_VERSION},
     vec_bool::VecBool,
 };
@@ -91,28 +86,22 @@ impl StateStore {
         }
 
         let root = self.get_node_before(version, &pos)?;
-        let (mut left_empty, mut right_empty) = match &root.node_type {
+        let (mut left_empty, mut right_empty) = match root.node_type {
             // FIXME(aldenhu): for separate blob and proof fetches, store value hash in leaf, to avoid a blob read
-            StateTreeNodeType::Leaf { key: leaf_key } => {
-                let blob = self.leaf(*leaf_key, version)?;
-                let value_hash = blob.hash();
+            StateTreeNodeType::Leaf { leaf } => {
                 return Ok((
-                    if *leaf_key == target_key {
-                        Some(blob)
+                    if leaf.key() == target_key {
+                        Some(self.leaf(target_key, version)?)
                     } else {
                         None
                     },
-                    SparseMerkleProof::new_partial(
-                        Some(SparseMerkleLeafNode::new(*leaf_key, value_hash)),
-                        Vec::new(),
-                        starting_depth,
-                    ),
+                    SparseMerkleProof::new_partial(Some(leaf), Vec::new(), starting_depth),
                 ));
             }
             StateTreeNodeType::Internal {
                 left_empty,
                 right_empty,
-            } => (*left_empty, *right_empty),
+            } => (left_empty, right_empty),
         };
 
         let mut siblings = Vec::new();
@@ -143,14 +132,16 @@ impl StateStore {
 
             pos.push(bit);
             let node = self.get_node_before(version, &pos)?;
-            match &node.node_type {
-                StateTreeNodeType::Leaf { key } => {
-                    let blob = self.leaf(*key, version)?;
-                    let value_hash = blob.hash();
+            match node.node_type {
+                StateTreeNodeType::Leaf { leaf } => {
                     return Ok((
-                        if *key == target_key { Some(blob) } else { None },
+                        if leaf.key() == target_key {
+                            Some(self.leaf(target_key, version)?)
+                        } else {
+                            None
+                        },
                         SparseMerkleProof::new_partial(
-                            Some(SparseMerkleLeafNode::new(*key, value_hash)),
+                            Some(leaf),
                             {
                                 siblings.reverse();
                                 siblings
@@ -163,8 +154,8 @@ impl StateStore {
                     left_empty: l,
                     right_empty: r,
                 } => {
-                    left_empty = *l;
-                    right_empty = *r;
+                    left_empty = l;
+                    right_empty = r;
                 }
             }
         }

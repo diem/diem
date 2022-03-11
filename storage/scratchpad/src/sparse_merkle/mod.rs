@@ -91,7 +91,7 @@ use diem_crypto::{
 };
 use diem_infallible::Mutex;
 use diem_types::{
-    proof::SparseMerkleProof,
+    proof::{SparseMerkleLeafNode, SparseMerkleProof},
     transaction::{StateTreeNode, StateTreeNodeType},
     vec_bool::VecBool,
 };
@@ -494,7 +494,12 @@ where
                         pos,
                         StateTreeNode {
                             hash: subtree.hash(),
-                            node_type: StateTreeNodeType::Leaf { key: leaf_node.key },
+                            node_type: StateTreeNodeType::Leaf {
+                                leaf: SparseMerkleLeafNode::new(
+                                    leaf_node.key,
+                                    leaf_node.value.hash,
+                                ),
+                            },
                         },
                     ));
                 }
@@ -509,13 +514,15 @@ where
     /// new, returned tree.
     pub fn batch_update(
         &self,
-        updates: Vec<(HashValue, &V)>,
+        // updates: Vec<(HashValue, &V)>,
+        updates: &[(HashValue, V)],
         proof_reader: &impl ProofRead<V>,
     ) -> Result<Self, UpdateError> {
         // Flatten, dedup and sort the updates with a btree map since the updates between different
         // versions may overlap on the same address in which case the latter always overwrites.
         let kvs = updates
-            .into_iter()
+            .iter()
+            .map(|(h, v)| (*h, v))
             .collect::<BTreeMap<_, _>>()
             .into_iter()
             .collect::<Vec<_>>();

@@ -51,7 +51,7 @@ pub use script::{
     TypeArgumentABI,
 };
 
-use crate::vec_bool::VecBool;
+use crate::{proof::SparseMerkleLeafNode, vec_bool::VecBool};
 use std::{collections::BTreeSet, hash::Hash, ops::Deref};
 pub use transaction_argument::{parse_transaction_argument, TransactionArgument, VecBytes};
 
@@ -1115,7 +1115,7 @@ impl Display for TransactionInfo {
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum StateTreeNodeType {
     Internal { left_empty: bool, right_empty: bool },
-    Leaf { key: HashValue },
+    Leaf { leaf: SparseMerkleLeafNode },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]

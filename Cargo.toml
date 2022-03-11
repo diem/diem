@@ -121,6 +121,7 @@ members = [
     "storage/jellyfish-merkle",
     "storage/schemadb",
     "storage/scratchpad",
+    "storage/smt-bench",
     "storage/state-view",
     "storage/storage-client",
     "storage/storage-interface",

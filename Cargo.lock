@@ -7300,6 +7300,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "smt-bench"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "byteorder",
+ "diem-crypto",
+ "diem-infallible",
+ "diem-logger",
+ "diem-metrics",
+ "diem-secure-push-metrics",
+ "diem-temppath",
+ "diem-types",
+ "diem-workspace-hack",
+ "executor-types",
+ "itertools 0.10.1",
+ "num_cpus",
+ "once_cell",
+ "rayon",
+ "rocksdb",
+ "scratchpad",
+]
+
+[[package]]
 name = "socket-bench-server"
 version = "0.1.0"
 dependencies = [
