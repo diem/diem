@@ -23,7 +23,7 @@ jobs:
     env:
       AUDIT_SUMMARY_FILE: /tmp/summary
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ matrix.target-branch }}
       - uses: ./.github/actions/build-setup
@@ -67,7 +67,7 @@ jobs:
       CODECOV_OUTPUT: codecov
       MESSAGE_PAYLOAD_FILE: /tmp/message
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
       - uses: ./.github/actions/build-setup
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -113,7 +113,7 @@ jobs:
       matrix:
         target-branch: [main]
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ matrix.target-branch }}
       - uses: ./.github/actions/build-setup
@@ -141,7 +141,7 @@ jobs:
       name: Docker
       url: https://hub.docker.com/u/diem
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
       - name: sign in to DockerHub; install image signing cert
         uses: ./.github/actions/dockerhub_login
         with:
