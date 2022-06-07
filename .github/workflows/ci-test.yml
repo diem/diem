@@ -823,7 +823,7 @@ jobs:
       - uses: actions/cache@v2.1.6
       # Installs node and yarn
       - name: Use Node.js 14
-        uses: actions/setup-node@v2.4.1
+        uses: actions/setup-node@v3.3.0
         with:
           node-version: '14'
       # Install git
