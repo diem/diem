@@ -986,7 +986,7 @@ jobs:
           restore-keys: "crates-${{ runner.os }}"
       - name: Download the previous baseline
         continue-on-error: true
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: bench-baseline
       - name: Run performance benchamrks
