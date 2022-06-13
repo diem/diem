@@ -18,6 +18,7 @@ diem-metrics = { path = "../../common/metrics" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 [dependencies.rocksdb]
+# TODO: upgrade to > 0.16 for ARM compatability
 version = "0.15.0"
 default-features = false
 features = ["lz4"]
