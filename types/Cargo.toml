@@ -33,7 +33,7 @@ diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.0.2" }
 move-core-types = { path = "../language/move-core/types", version = "0.0.2" }
 
 [dev-dependencies]
-regex = "1.4.3"
+regex = "1.5.5"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 serde_json = "1.0.64"

@@ -11,4 +11,4 @@ diem-workspace-hack = { path = "../../../common/workspace-hack" }
 structopt = "0.3.21"
 move-lang = { path = ".." }
 move-lang-test-utils = { path = "../test-utils" }
-regex = "1.4.3"
+regex = "1.5.5"

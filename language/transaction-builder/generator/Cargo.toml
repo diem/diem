@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 heck = "0.3.2"
-regex = "1.4.3"
+regex = "1.5.5"
 structopt = "0.3.21"
 textwrap = "0.13.4"
 serde-reflection = "0.3.2"

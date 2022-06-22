@@ -24,7 +24,7 @@ env_logger = "0.8.3"
 log = "0.4.14"
 chrono = "0.4.19"
 globset = "0.4.6"
-regex = "1.4.3"
+regex = "1.5.5"
 rayon = "1.5.0"
 nextest-runner = { git = "https://github.com/diem/diem-devtools", rev = "1b61853016059b2dca577cefafff2825b49494a0" }
 indexmap = "1.6.2"

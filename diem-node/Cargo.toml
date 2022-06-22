@@ -16,8 +16,8 @@ hex = "0.4.3"
 jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
 rand = "0.8.3"
 structopt = "0.3.21"
-tokio = { version = "1.8.1", features = ["full"] }
-tokio-stream = "0.1.4"
+tokio = { version = "1.18.2", features = ["full"] }
+tokio-stream = "0.1.8"
 
 backup-service = { path = "../storage/backup/backup-service" }
 consensus = { path = "../consensus" }

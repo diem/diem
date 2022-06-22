@@ -23,7 +23,7 @@ diem-config = { path = "../../../config", features = ["fuzzing"] }
 diem-crypto = { path = "../../../crypto/crypto" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 once_cell = "1.7.2"
-regex = { version = "1.4.3", default-features = false, features = ["std", "perf"] }
+regex = { version = "1.5.5", default-features = false, features = ["std", "perf"] }
 thiserror = "1.0.24"
 aho-corasick = "0.7.14"
 termcolor = "1.1.2"

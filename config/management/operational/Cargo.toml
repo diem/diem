@@ -21,8 +21,8 @@ serde_json = "1.0.64"
 serde_yaml = "0.8.17"
 structopt = "0.3.21"
 thiserror = "1.0.24"
-tokio = { version = "1.8.1", features = ["full"] }
-tokio-util = { version = "0.6.4", features = ["compat"] }
+tokio = { version = "1.18.2", features = ["full"] }
+tokio-util = { version = "0.7.2", features = ["compat"] }
 toml = { version = "0.5.8", default-features = false }
 
 bcs = "0.1.2"

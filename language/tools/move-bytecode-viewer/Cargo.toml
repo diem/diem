@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 structopt = "0.3.21"
 anyhow = "1.0.38"
-regex = "1.1.9"
+regex = "1.5.5"
 termion = "1.5"
 tui = "0.14.0"
 
