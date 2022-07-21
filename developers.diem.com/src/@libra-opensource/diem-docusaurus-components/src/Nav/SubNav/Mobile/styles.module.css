@@ -1,7 +1,0 @@
-.mainContainer {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-  height: calc( var(--nav-height-mobile) - var(--nav-border-width) );
-  padding-top: 4px;
-}
