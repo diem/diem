@@ -894,6 +894,7 @@ jobs:
   developers-site:
     name: run-developer-site-build
     runs-on: ubuntu-20.04
+    needs: prepare
     if: ${{ needs.prepare.outputs.test-website-build == 'true' }}
     steps:
       # Checks-out the Diem website repository under $GITHUB_WORKSPACE, so job can access it
@@ -901,6 +902,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/cache@v2.1.6
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
       # Installs node and yarn
       - name: Use Node.js 14
         uses: actions/setup-node@v2.4.1

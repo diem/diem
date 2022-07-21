@@ -1,5 +1,4 @@
 > **Note to readers:** Silvergate Capital Corporation announced in January 2022 that it acquired intellectual property and other technology assets related to running a blockchain-based payment network from Diem, further investing in its platform and enhancing its existing stablecoin infrastructure.
-
 <a href="https://developers.diem.com">
 	<img width="200" src="./.assets/diem.png" alt="Diem Logo" />
 </a>
@@ -40,4 +39,4 @@ Diem Core implements a decentralized, programmable database which provides a fin
 
 ## License
 
-Diem Core is licensed as [Apache 2.0](https://github.com/diem/diem/blob/main/LICENSE).
+Diem Core is licensed as [Apache 2.0](https://github.com/diem/diem/blob/latest/LICENSE).

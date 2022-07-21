@@ -1,0 +1,17 @@
+.root {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  height: var(--primary-nav-height);
+  letter-spacing: .5px;
+}
+
+.root, .root a {
+  color: var(--nav-primary-text-color);
+}
+
+.right {
+  align-items: center;
+  display: flex;
+  margin-bottom: 0;
+}
