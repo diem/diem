@@ -18,6 +18,10 @@ Diem Core implements a decentralized, programmable database which provides a fin
 * The APIs are constantly evolving and designed to demonstrate types of functionality. Expect substantial changes before the release.
 * We’ve launched a testnet that is a live demonstration of an early prototype of the Diem Blockchain software.
 
+## Contributing
+
+To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can learn more about contributing to the Diem project by reading our [Contribution Guide](https://developers.diem.com/docs/community/contributing) and by viewing our [Code of Conduct](https://developers.diem.com/docs/policies/code-of-conduct).
+
 ## Getting Started
 
 ### Learn About Diem
@@ -37,6 +41,12 @@ Diem Core implements a decentralized, programmable database which provides a fin
 
 ### Blog
 * [Diem: The Path Forward](https://developers.diem.com/blog/2019/06/18/the-path-forward/)
+
+## Community
+
+* Join us on the [Diem Discourse](https://community.diem.com).
+* Ask a question on [Stack Overflow](https://stackoverflow.com/questions/tagged/diem).
+* Get the latest updates to our project by signing up for our [newsletter](https://developers.diem.com/newsletter_form).
 
 ## License
 
