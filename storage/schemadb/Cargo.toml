@@ -18,7 +18,7 @@ diem-metrics = { path = "../../common/metrics" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 [dependencies.rocksdb]
-version = "0.17.0"
+version = "0.19.0"
 default-features = false
 features = ["lz4"]
 
