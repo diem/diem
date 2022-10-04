@@ -72,7 +72,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
       - uses: ./.github/actions/build-setup
-      - uses: actions/cache@v2.1.6
+      - uses: actions/cache@v3.0.10
         with:
           path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
@@ -325,7 +325,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
       - uses: ./.github/actions/build-setup
-      - uses: actions/cache@v2.1.6
+      - uses: actions/cache@v3.0.10
         with:
           path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
