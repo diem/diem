@@ -45,8 +45,8 @@ Diem Core implements a decentralized, programmable database which provides a fin
 ### **1. Download the source code.**
 
 ```bash
-$ git clone https://github.com/diem/diem.git 
-$ cd diem 
+$ git clone https://github.com/diem/diem.git
+$ cd diem
 ```
 
 ### **2. Install dependencies.**
