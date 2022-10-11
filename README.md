@@ -40,6 +40,38 @@ Diem Core implements a decentralized, programmable database which provides a fin
 ### Blog
 * [Diem: The Path Forward](https://developers.diem.com/blog/2019/06/18/the-path-forward/)
 
+## Building The Source
+
+### **1. Download the source code.**
+
+```bash
+$ git clone https://github.com/diem/diem.git 
+$ cd diem 
+```
+
+### **2. Install dependencies.**
+
+Run the setup script to install the dependencies required by Diem Core. The setup script performs these actions:
+* Installs rustup, an installer for the Rust programming language, in which Diem Core is implemented.
+* Installs the required versions of the rust-toolchain.
+* Installs CMake to manage the build process.
+
+```bash
+$ ./scripts/dev_setup.sh
+```
+
+### **3. Build.**
+
+```bash
+$ cargo build
+```
+
+### **4. Run the test suite.**
+
+```bash
+$ cargo test
+```
+
 ## License
 
 Diem Core is licensed as [Apache 2.0](https://github.com/diem/diem/blob/main/LICENSE).
