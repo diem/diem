@@ -52,7 +52,7 @@ Decode Example ([source](https://diem.github.io/client-sdk-python/diem/testnet.h
 
 ```
 
-You should retry the mint API call if the returned transactions executed failed.
+You should retry the mint API call if the returned transactions executed failed..
 
 
 ## Example
