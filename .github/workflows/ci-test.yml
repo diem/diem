@@ -336,7 +336,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
-      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - uses: Swatinem/rust-cache@b894d59a8d236e2979b247b80dac8d053ab340dd
         with:
           key: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: cargo lint
@@ -369,7 +369,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
       - uses: ./.github/actions/build-setup
-      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - uses: Swatinem/rust-cache@b894d59a8d236e2979b247b80dac8d053ab340dd
         with:
           key: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: run unit tests
@@ -467,7 +467,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
       - uses: ./.github/actions/build-setup
-      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - uses: Swatinem/rust-cache@b894d59a8d236e2979b247b80dac8d053ab340dd
         with:
           key: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: run codegen unit tests
@@ -546,7 +546,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
       - uses: ./.github/actions/build-setup
-      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - uses: Swatinem/rust-cache@b894d59a8d236e2979b247b80dac8d053ab340dd
         with:
           key: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: split tests
@@ -689,7 +689,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
-      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - uses: Swatinem/rust-cache@b894d59a8d236e2979b247b80dac8d053ab340dd
         with:
           key: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: run crypto unit tests
@@ -719,7 +719,7 @@ jobs:
   #       with:
   #         ref: ${{ github.event.pull_request.head.sha }}
   #     - uses: ./.github/actions/build-setup
-  #     - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+  #     - uses: Swatinem/rust-cache@b894d59a8d236e2979b247b80dac8d053ab340dd
   #       with:
   #         key: ${{ needs.prepare.outputs.changes-target-branch }}
   #     - name: run coverage tests and verify coverage is calculated.
@@ -871,7 +871,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
-      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - uses: Swatinem/rust-cache@b894d59a8d236e2979b247b80dac8d053ab340dd
         with:
           key: ${{ needs.prepare.outputs.changes-target-branch }}
       - run: $pre_command && cargo xcheck -j ${max_threads} --members production
