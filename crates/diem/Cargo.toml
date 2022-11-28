@@ -1,0 +1,20 @@
+[package]
+name = "diem"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "CLI for interacting with the Diem blockchain"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1.53"
+clap = { version = "4.0.26", features = ["derive", "env"] }
+serde = { version = "1.0.137", features = ["derive", "rc"] }
+serde_json = { version = "1.0.81", features = ["preserve_order"] }
+thiserror = "1.0.31"
+
+[dev-dependencies]
+diem-workspace-hack = { path = "../diem-workspace-hack" }
