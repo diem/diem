@@ -1,0 +1,407 @@
+<svg width="1000" height="2160" viewBox="0 0 1000 2160" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="999" height="2159" opacity="1" fill="#FFFFFF" stroke="none"/>
+<rect x="0" y="1" width="45" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="54" y="3" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+= poly_backend
+</text>
+<rect x="0" y="21" width="45" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="54" y="23" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+= mono_backend
+</text>
+<text x="0" y="58" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DiemAccount
+</text>
+<rect x="0" y="73" width="909" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="918" y="75" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+7.006
+</text>
+<rect x="0" y="93" width="657" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="666" y="95" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+5.063
+</text>
+<text x="0" y="116" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::Diem
+</text>
+<rect x="0" y="132" width="436" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="445" y="134" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+3.364
+</text>
+<rect x="0" y="151" width="282" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="291" y="153" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+2.177
+</text>
+<text x="0" y="175" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::ValidatorAdministrationScripts
+</text>
+<rect x="0" y="190" width="272" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="281" y="192" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+2.101
+</text>
+<rect x="0" y="210" width="154" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="163" y="212" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.191
+</text>
+<text x="0" y="233" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DiemSystem
+</text>
+<rect x="0" y="249" width="262" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="271" y="251" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+2.023
+</text>
+<rect x="0" y="268" width="145" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="154" y="270" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.123
+</text>
+<text x="0" y="291" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::TreasuryComplianceScripts
+</text>
+<rect x="0" y="307" width="259" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="268" y="309" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.998
+</text>
+<rect x="0" y="326" width="208" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="217" y="328" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.606
+</text>
+<text x="0" y="350" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::AccountAdministrationScripts
+</text>
+<rect x="0" y="365" width="185" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="194" y="367" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.431
+</text>
+<rect x="0" y="385" width="154" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="163" y="387" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.187
+</text>
+<text x="0" y="408" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::AccountCreationScripts
+</text>
+<rect x="0" y="424" width="168" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="177" y="426" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.300
+</text>
+<rect x="0" y="443" width="157" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="166" y="445" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.215
+</text>
+<text x="0" y="467" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DiemTimestamp
+</text>
+<rect x="0" y="482" width="165" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="174" y="484" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.272
+</text>
+<rect x="0" y="502" width="161" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="170" y="504" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.245
+</text>
+<text x="0" y="525" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::Roles
+</text>
+<rect x="0" y="540" width="164" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="173" y="542" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.270
+</text>
+<rect x="0" y="560" width="143" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="152" y="562" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.107
+</text>
+<text x="0" y="583" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::Genesis
+</text>
+<rect x="0" y="599" width="148" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="157" y="601" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.142
+</text>
+<rect x="0" y="618" width="140" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="149" y="620" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.084
+</text>
+<text x="0" y="642" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DualAttestation
+</text>
+<rect x="0" y="657" width="145" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="154" y="659" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.121
+</text>
+<rect x="0" y="677" width="119" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="128" y="679" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.923
+</text>
+<text x="0" y="700" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::AccountLimits
+</text>
+<rect x="0" y="716" width="142" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="151" y="718" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+1.096
+</text>
+<rect x="0" y="735" width="96" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="105" y="737" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.743
+</text>
+<text x="0" y="758" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::TransactionFee
+</text>
+<rect x="0" y="774" width="117" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="126" y="776" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.905
+</text>
+<rect x="0" y="793" width="102" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="111" y="795" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.790
+</text>
+<text x="0" y="817" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::ValidatorConfig
+</text>
+<rect x="0" y="832" width="117" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="126" y="834" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.902
+</text>
+<rect x="0" y="852" width="92" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="101" y="854" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.709
+</text>
+<text x="0" y="875" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::RecoveryAddress
+</text>
+<rect x="0" y="891" width="106" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="115" y="893" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.822
+</text>
+<rect x="0" y="910" width="71" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="80" y="912" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.550
+</text>
+<text x="0" y="934" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DiemConfig
+</text>
+<rect x="0" y="949" width="100" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="109" y="951" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.774
+</text>
+<rect x="0" y="969" width="77" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="86" y="971" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.596
+</text>
+<text x="0" y="992" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DesignatedDealer
+</text>
+<rect x="0" y="1008" width="96" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="105" y="1009" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.745
+</text>
+<rect x="0" y="1027" width="79" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="88" y="1029" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.613
+</text>
+<text x="0" y="1050" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::VASP
+</text>
+<rect x="0" y="1066" width="96" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="105" y="1068" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.740
+</text>
+<rect x="0" y="1085" width="73" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="82" y="1087" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.568
+</text>
+<text x="0" y="1109" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DiemTransactionPublishingOption
+</text>
+<rect x="0" y="1124" width="94" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="104" y="1126" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.732
+</text>
+<rect x="0" y="1144" width="78" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="87" y="1146" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.607
+</text>
+<text x="0" y="1167" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::SharedEd25519PublicKey
+</text>
+<rect x="0" y="1183" width="94" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="103" y="1185" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.729
+</text>
+<rect x="0" y="1202" width="77" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="86" y="1204" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.598
+</text>
+<text x="0" y="1225" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::XDX
+</text>
+<rect x="0" y="1241" width="92" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="101" y="1243" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.715
+</text>
+<rect x="0" y="1260" width="88" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="97" y="1262" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.680
+</text>
+<text x="0" y="1284" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::AccountFreezing
+</text>
+<rect x="0" y="1299" width="92" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="101" y="1301" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.709
+</text>
+<rect x="0" y="1319" width="74" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="83" y="1321" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.576
+</text>
+<text x="0" y="1342" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::SystemAdministrationScripts
+</text>
+<rect x="0" y="1358" width="86" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="95" y="1360" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.665
+</text>
+<rect x="0" y="1377" width="69" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="78" y="1379" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.535
+</text>
+<text x="0" y="1401" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::RegisteredCurrencies
+</text>
+<rect x="0" y="1416" width="83" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="93" y="1418" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.647
+</text>
+<rect x="0" y="1436" width="60" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="70" y="1438" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.470
+</text>
+<text x="0" y="1459" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DiemVMConfig
+</text>
+<rect x="0" y="1475" width="83" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="92" y="1476" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.643
+</text>
+<rect x="0" y="1494" width="65" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="75" y="1496" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.508
+</text>
+<text x="0" y="1517" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::XUS
+</text>
+<rect x="0" y="1533" width="82" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="91" y="1535" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.638
+</text>
+<rect x="0" y="1552" width="70" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="79" y="1554" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.542
+</text>
+<text x="0" y="1576" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DiemBlock
+</text>
+<rect x="0" y="1591" width="82" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="91" y="1593" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.635
+</text>
+<rect x="0" y="1611" width="70" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="79" y="1613" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.544
+</text>
+<text x="0" y="1634" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::CoreAddresses
+</text>
+<rect x="0" y="1650" width="81" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="90" y="1652" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.631
+</text>
+<rect x="0" y="1669" width="58" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="67" y="1671" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.452
+</text>
+<text x="0" y="1692" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::Authenticator
+</text>
+<rect x="0" y="1708" width="79" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="88" y="1710" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.612
+</text>
+<rect x="0" y="1728" width="59" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="68" y="1729" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.460
+</text>
+<text x="0" y="1751" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::ValidatorOperatorConfig
+</text>
+<rect x="0" y="1766" width="75" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="84" y="1768" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.585
+</text>
+<rect x="0" y="1786" width="57" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="66" y="1788" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.446
+</text>
+<text x="0" y="1809" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DiemVersion
+</text>
+<rect x="0" y="1825" width="74" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="83" y="1827" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.574
+</text>
+<rect x="0" y="1844" width="62" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="71" y="1846" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.481
+</text>
+<text x="0" y="1868" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::DiemConsensusConfig
+</text>
+<rect x="0" y="1883" width="73" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="82" y="1885" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.566
+</text>
+<rect x="0" y="1903" width="57" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="66" y="1905" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.443
+</text>
+<text x="0" y="1926" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::ChainId
+</text>
+<rect x="0" y="1942" width="70" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="79" y="1944" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.546
+</text>
+<rect x="0" y="1961" width="54" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="63" y="1963" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.417
+</text>
+<text x="0" y="1984" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::SlidingNonce
+</text>
+<rect x="0" y="2000" width="68" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="77" y="2002" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.529
+</text>
+<rect x="0" y="2019" width="55" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="64" y="2021" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.427
+</text>
+<text x="0" y="2043" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::PaymentScripts
+</text>
+<rect x="0" y="2058" width="49" height="14" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="58" y="2060" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.379
+</text>
+<rect x="0" y="2078" width="40" height="13" opacity="1" fill="#909090" stroke="none"/>
+<text x="49" y="2080" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.311
+</text>
+<text x="0" y="2101" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="12.096774193548388" opacity="1" fill="#000000">
+0x1::Signature
+</text>
+<rect x="0" y="2117" width="47" height="13" opacity="1" fill="#B4B4B4" stroke="none"/>
+<text x="56" y="2119" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.369
+</text>
+<rect x="0" y="2136" width="39" height="14" opacity="1" fill="#909090" stroke="none"/>
+<text x="48" y="2138" dy="0.76em" text-anchor="start" font-family="sans-serif" font-size="10.483870967741936" opacity="1" fill="#000000">
+0.303
+</text>
+</svg>

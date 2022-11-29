@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{pool::Entry, SYMBOL_POOL};
-use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt, num::NonZeroU64};
+use serde::{de::Deserialize, ser::Serialize};
+use std::{borrow::Cow, cmp::Ordering, fmt, num::NonZeroU64, ops::Deref};
 
 /// Represents a string that has been cached.
 ///
@@ -37,34 +37,48 @@ use std::{cmp::Ordering, fmt, num::NonZeroU64};
 ///
 /// [`as_str()`]: crate::Symbol::as_str
 /// [`Display`]: std::fmt::Display
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Symbol(NonZeroU64);
 
 impl Symbol {
     pub fn as_str(&self) -> &str {
-        let ptr = self.0.get() as *const Entry;
-        let entry = unsafe { &*ptr };
-        &entry.string
+        self.as_ref()
     }
 }
 
-impl From<&str> for Symbol {
-    fn from(s: &str) -> Self {
+impl<'a> From<Cow<'a, str>> for Symbol {
+    fn from(s: Cow<'a, str>) -> Self {
         let mut pool = SYMBOL_POOL.lock().expect("could not acquire lock on pool");
         let address = pool.insert(s).as_ptr() as u64;
         Symbol(NonZeroU64::new(address).expect("address of symbol cannot be null"))
     }
 }
 
+impl From<&str> for Symbol {
+    fn from(s: &str) -> Self {
+        Self::from(Cow::Borrowed(s))
+    }
+}
+
 impl From<String> for Symbol {
     fn from(s: String) -> Self {
-        Self::from(s.as_str())
+        Self::from(Cow::Owned(s))
+    }
+}
+
+impl Deref for Symbol {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        let ptr = self.0.get() as *const Entry;
+        let entry = unsafe { &*ptr };
+        &entry.string
     }
 }
 
 impl AsRef<str> for Symbol {
     fn as_ref(&self) -> &str {
-        self.as_str()
+        self
     }
 }
 
@@ -87,6 +101,24 @@ impl Ord for Symbol {
 impl PartialOrd for Symbol {
     fn partial_cmp(&self, other: &Symbol) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Serialize for Symbol {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.as_str().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Symbol {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Symbol::from(String::deserialize(deserializer)?))
     }
 }
 

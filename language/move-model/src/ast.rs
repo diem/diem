@@ -438,8 +438,9 @@ impl ExpData {
     }
 
     /// Returns the free local variables, inclusive their types, used in this expression.
-    pub fn free_vars(&self, env: &GlobalEnv) -> BTreeMap<Symbol, Type> {
-        let mut vars = BTreeMap::new();
+    /// Result is ordered by occurrence.
+    pub fn free_vars(&self, env: &GlobalEnv) -> Vec<(Symbol, Type)> {
+        let mut vars = vec![];
         let mut shadowed = vec![]; // Should be multiset but don't have this
         let mut visitor = |up: bool, e: &ExpData| {
             use ExpData::*;
@@ -461,8 +462,8 @@ impl ExpData {
                     }
                 }
                 if let LocalVar(id, sym) = e {
-                    if !shadowed.contains(sym) {
-                        vars.insert(*sym, env.get_node_type(*id));
+                    if !shadowed.contains(sym) && !vars.iter().any(|(s, _)| s == sym) {
+                        vars.push((*sym, env.get_node_type(*id)));
                     }
                 }
             }
@@ -504,12 +505,14 @@ impl ExpData {
         result
     }
 
-    /// Returns the temporaries used in this expression.
-    pub fn temporaries(&self, env: &GlobalEnv) -> BTreeMap<TempIndex, Type> {
-        let mut temps = BTreeMap::new();
+    /// Returns the temporaries used in this expression. Result is ordered by occurrence.
+    pub fn temporaries(&self, env: &GlobalEnv) -> Vec<(TempIndex, Type)> {
+        let mut temps = vec![];
         let mut visitor = |e: &ExpData| {
             if let ExpData::Temporary(id, idx) = e {
-                temps.insert(*idx, env.get_node_type(*id));
+                if !temps.iter().any(|(i, _)| i == idx) {
+                    temps.push((*idx, env.get_node_type(*id)));
+                }
             }
         };
         self.visit(&mut visitor);
@@ -567,7 +570,10 @@ impl ExpData {
             }
             Lambda(_, _, body) => body.visit_pre_post(visitor),
             Quant(_, _, ranges, triggers, condition, body) => {
-                for (_, range) in ranges {
+                for (decl, range) in ranges {
+                    if let Some(binding) = &decl.binding {
+                        binding.visit_pre_post(visitor);
+                    }
                     range.visit_pre_post(visitor);
                 }
                 for trigger in triggers {

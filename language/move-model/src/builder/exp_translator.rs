@@ -569,6 +569,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 
     /// Translates a source AST type into a target AST type.
+    #[allow(clippy::borrow_deref_ref)]
     pub fn translate_type(&mut self, ty: &EA::Type) -> Type {
         use EA::Type_::*;
         match &ty.value {
@@ -656,7 +657,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             Ref(is_mut, ty) => Type::Reference(*is_mut, Box::new(self.translate_type(ty))),
             Fun(args, result) => Type::Fun(
                 self.translate_types(args),
-                Box::new(self.translate_type(result)),
+                Box::new(self.translate_type(&*result)),
             ),
             Unit => Type::Tuple(vec![]),
             Multiple(vst) => Type::Tuple(self.translate_types(vst)),

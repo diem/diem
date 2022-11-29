@@ -2,6 +2,9 @@
 # Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+echo "Lab cannot be run at head"
+exit 1
+
 DIEM="$(git rev-parse --show-toplevel)"
 FRAMEWORK="$DIEM/language/diem-framework/modules"
 STDLIB="$DIEM/language/move-stdlib/modules"

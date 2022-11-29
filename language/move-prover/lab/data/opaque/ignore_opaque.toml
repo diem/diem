@@ -1,0 +1,3 @@
+# Ignore pragma opaque wherever possible
+[model_builder]
+ignore_pragma_opaque_when_possible = true

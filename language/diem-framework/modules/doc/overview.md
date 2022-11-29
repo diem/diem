@@ -115,6 +115,7 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 -  [`0x1::FixedPoint32`](../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32)
 -  [`0x1::Genesis`](Genesis.md#0x1_Genesis)
 -  [`0x1::Hash`](../../../../../../move-stdlib/docs/Hash.md#0x1_Hash)
+-  [`0x1::NetworkIdentity`](NetworkIdentity.md#0x1_NetworkIdentity)
 -  [`0x1::Option`](../../../../../../move-stdlib/docs/Option.md#0x1_Option)
 -  [`0x1::PaymentScripts`](PaymentScripts.md#0x1_PaymentScripts)
 -  [`0x1::RecoveryAddress`](RecoveryAddress.md#0x1_RecoveryAddress)

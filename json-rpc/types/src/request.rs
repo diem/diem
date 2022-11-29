@@ -62,6 +62,7 @@ impl JsonRpcRequest {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "method", content = "params")]
+#[allow(clippy::large_enum_variant)]
 pub enum MethodRequest {
     Submit(SubmitParams),
     GetMetadata(GetMetadataParams),

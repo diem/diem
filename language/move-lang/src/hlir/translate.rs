@@ -20,14 +20,14 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 const NEW_NAME_DELIM: &str = "#";
 
-fn new_name(n: &str) -> String {
-    format!("{}{}{}", n, NEW_NAME_DELIM, Counter::next())
+fn new_name(context: &mut Context, n: &str) -> String {
+    format!("{}{}{}", n, NEW_NAME_DELIM, context.counter_next())
 }
 
-const TEMP_PREFIX: &str = "tmp%";
+const TEMP_PREFIX: &str = "%";
 
-fn new_temp_name() -> String {
-    new_name(TEMP_PREFIX)
+fn new_temp_name(context: &mut Context) -> String {
+    new_name(context, TEMP_PREFIX)
 }
 
 pub fn is_temp_name(s: &str) -> bool {
@@ -60,6 +60,7 @@ struct Context<'env> {
     local_scope: UniqueMap<Var, Var>,
     used_locals: BTreeSet<Var>,
     signature: Option<H::FunctionSignature>,
+    tmp_counter: usize,
 }
 
 impl<'env> Context<'env> {
@@ -71,6 +72,7 @@ impl<'env> Context<'env> {
             local_scope: UniqueMap::new(),
             used_locals: BTreeSet::new(),
             signature: None,
+            tmp_counter: 0,
         }
     }
 
@@ -80,13 +82,14 @@ impl<'env> Context<'env> {
 
     pub fn extract_function_locals(&mut self) -> (UniqueMap<Var, H::SingleType>, BTreeSet<Var>) {
         self.local_scope = UniqueMap::new();
+        self.tmp_counter = 0;
         let locals = std::mem::replace(&mut self.function_locals, UniqueMap::new());
         let used = std::mem::take(&mut self.used_locals);
         (locals, used)
     }
 
     pub fn new_temp(&mut self, loc: Loc, t: H::SingleType) -> Var {
-        let new_var = Var(sp(loc, new_temp_name()));
+        let new_var = Var(sp(loc, new_temp_name(self)));
         self.function_locals.add(new_var.clone(), t).unwrap();
         self.local_scope
             .add(new_var.clone(), new_var.clone())
@@ -99,7 +102,7 @@ impl<'env> Context<'env> {
         let new_var = if !self.function_locals.contains_key(&v) {
             v.clone()
         } else {
-            Var(sp(v.loc(), new_name(v.value())))
+            Var(sp(v.loc(), new_name(self, v.value())))
         };
         self.function_locals.add(new_var.clone(), t).unwrap();
         self.local_scope.remove(&v);
@@ -130,6 +133,11 @@ impl<'env> Context<'env> {
 
     pub fn fields(&self, struct_name: &StructName) -> &UniqueMap<Field, usize> {
         self.structs.get(struct_name).unwrap()
+    }
+
+    fn counter_next(&mut self) -> usize {
+        self.tmp_counter += 1;
+        self.tmp_counter
     }
 }
 
@@ -240,6 +248,7 @@ fn script(context: &mut Context, tscript: T::Script) -> H::Script {
 
 fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Function {
     assert!(context.has_empty_locals());
+    assert!(context.tmp_counter == 0);
     let attributes = f.attributes;
     let visibility = f.visibility;
     let signature = function_signature(context, f.signature);
@@ -902,8 +911,8 @@ fn exp_<'env>(
                 let tbool = N::Type_::bool(loc);
                 let tu64 = N::Type_::u64(loc);
                 let tunit = sp(loc, N::Type_::Unit);
-                let vcond = Var(sp(loc, new_temp_name()));
-                let vcode = Var(sp(loc, new_temp_name()));
+                let vcond = Var(sp(loc, new_temp_name(stack.context)));
+                let vcode = Var(sp(loc, new_temp_name(stack.context)));
 
                 let mut stmts = VecDeque::new();
 

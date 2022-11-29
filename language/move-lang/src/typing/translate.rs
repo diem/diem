@@ -142,9 +142,7 @@ fn check_primitive_script_arg(
         result.is_ok()
     };
     if is_signer {
-        if !*seen_non_signer {
-            return;
-        } else {
+        if *seen_non_signer {
             let msg = mk_msg();
             let tmsg = format!(
                 "{}s must be a prefix of the arguments to a script--they must come before any \
@@ -154,8 +152,9 @@ fn check_primitive_script_arg(
             context
                 .env
                 .add_diag(diag!(TypeSafety::ScriptSignature, (mloc, msg), (loc, tmsg)));
-            return;
         }
+
+        return;
     } else {
         *seen_non_signer = true;
     }

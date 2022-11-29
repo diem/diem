@@ -24,7 +24,7 @@ use diem_types::{
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use executor_types::Error as ExecutionError;
-use futures::{select, SinkExt, StreamExt};
+use futures::{FutureExt, SinkExt, StreamExt};
 use safety_rules::TSafetyRules;
 use std::{
     collections::BTreeMap,
@@ -32,7 +32,12 @@ use std::{
 };
 use tokio::time;
 
-use crate::state_replication::StateComputerCommitCallBackType;
+use crate::{
+    experimental::execution_phase::{reset_ack_new, ResetAck},
+    state_replication::StateComputerCommitCallBackType,
+};
+use diem_logger::error;
+use futures::{channel::oneshot, prelude::stream::FusedStream};
 
 /*
 Commit phase takes in the executed blocks from the execution
@@ -47,11 +52,23 @@ having to collect the signatures.
 
 const COMMIT_PHASE_TIMEOUT_SEC: u64 = 1; // retry timeout in seconds
 
-pub type CommitChannelType = (
-    Vec<ExecutedBlock>,
-    LedgerInfoWithSignatures,
-    StateComputerCommitCallBackType,
+pub struct CommitChannelType(
+    pub Vec<ExecutedBlock>,
+    pub LedgerInfoWithSignatures,
+    pub StateComputerCommitCallBackType,
 );
+
+impl std::fmt::Debug for CommitChannelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::fmt::Display for CommitChannelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "CommitChannelType({:?}, {})", self.0, self.1)
+    }
+}
 
 //#[derive(Clone)]
 pub struct PendingBlocks {
@@ -126,6 +143,7 @@ pub struct CommitPhase {
     network_sender: NetworkSender,
     timeout_event_tx: Sender<CommitVote>,
     timeout_event_rx: Receiver<CommitVote>,
+    reset_event_rx: Receiver<oneshot::Sender<ResetAck>>,
 }
 
 /// Wrapper for ExecutionProxy.commit
@@ -185,6 +203,7 @@ impl CommitPhase {
         author: Author,
         back_pressure: Arc<AtomicU64>,
         network_sender: NetworkSender,
+        reset_event_rx: Receiver<oneshot::Sender<ResetAck>>,
     ) -> Self {
         let (timeout_event_tx, timeout_event_rx) = channel::new::<CommitVote>(
             2,
@@ -202,6 +221,7 @@ impl CommitPhase {
             network_sender,
             timeout_event_tx,
             timeout_event_rx,
+            reset_event_rx,
         }
     }
 
@@ -343,13 +363,33 @@ impl CommitPhase {
         self.back_pressure.load(Ordering::SeqCst)
     }
 
+    pub async fn process_reset_event(
+        &mut self,
+        reset_event_callback: oneshot::Sender<ResetAck>,
+    ) -> anyhow::Result<()> {
+        // reset the commit phase
+
+        // exhaust the commit channel
+        // we do not have to exhaust the commit message channel because inconsistent messages will be ignored
+        while self.commit_channel_recv.next().now_or_never().is_some() {}
+
+        // reset local block
+        self.blocks = None;
+
+        // activate the callback
+        reset_event_callback
+            .send(reset_ack_new())
+            .map_err(|_| Error::ResetDropped)?;
+
+        Ok(())
+    }
+
     pub async fn start(mut self) {
         loop {
-            while self.blocks.is_some() {
-                // if we are still collecting the signatures
-                select! {
-                    // process messages dispatched from epoch_manager
-                    msg = self.commit_msg_rx.select_next_some() => {
+            // if we are still collecting the signatures
+            tokio::select! {
+                // process messages dispatched from epoch_manager
+                msg = self.commit_msg_rx.select_next_some(), if self.blocks.is_some() => {
                         match msg {
                             VerifiedEvent::CommitVote(cv) => {
                                 monitor!(
@@ -367,35 +407,36 @@ impl CommitPhase {
                                 unreachable!("Unexpected messages: something wrong with message dispatching.")
                             }
                         };
-                    }
-                    retry_cv = self.timeout_event_rx.select_next_some() => {
-                        if let Some(ref pending_blocks) = self.blocks {
-                            if pending_blocks.block_info() == retry_cv.commit_info() {
-                                // retry broadcasting the message if the blocks are still pending
-                                tokio::spawn(broadcast_commit_vote_with_retry(self.network_sender.clone(), retry_cv, self.timeout_event_tx.clone()));
-                            }
-                        }
-                    }
-                    complete => break,
+                        report_err!(
+                            // check if the blocks are ready to commit
+                            self.check_commit().await,
+                            "Error in checking whether self.block is ready to commit."
+                        );
                 }
-                report_err!(
-                    // check if the blocks are ready to commit
-                    self.check_commit().await,
-                    "Error in checking whether self.block is ready to commit."
-                );
-            }
-
-            if let Some((blocks, ordered_ledger_info, callback)) =
-                self.commit_channel_recv.next().await
-            {
-                report_err!(
-                    // receive new blocks from execution phase
-                    self.process_executed_blocks(blocks, ordered_ledger_info, callback)
-                        .await,
-                    "Error in processing received blocks"
-                );
-            } else {
-                break;
+                retry_cv = self.timeout_event_rx.select_next_some(), if self.blocks.is_some() && !self.commit_msg_rx.is_terminated()  => {
+                    let pending_blocks = self.blocks.as_ref().unwrap();
+                    if pending_blocks.block_info() == retry_cv.commit_info() {
+                        // retry broadcasting the message if the blocks are still pending
+                        tokio::spawn(broadcast_commit_vote_with_retry(self.network_sender.clone(), retry_cv, self.timeout_event_tx.clone()));
+                    }
+                }
+                // callback event might come when self.blocks is not empty
+                reset_event_callback = self.reset_event_rx.select_next_some() => {
+                        self.process_reset_event(reset_event_callback).await.map_err(|e| ExecutionError::InternalError {
+                            error: e.to_string(),
+                        })
+                        .unwrap();
+                }
+                CommitChannelType(blocks, ordered_ledger_info, callback) = self.commit_channel_recv.select_next_some(),
+                    if self.blocks.is_none() => {
+                        report_err!(
+                            // receive new blocks from execution phase
+                            self.process_executed_blocks(blocks, ordered_ledger_info, callback)
+                                .await,
+                            "Error in processing received blocks"
+                        );
+                }
+                else => break,
             }
         }
     }

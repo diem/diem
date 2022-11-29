@@ -1120,7 +1120,7 @@ impl IfElse {
             else_block: None,
         }
     }
-
+    #[allow(clippy::self_named_constructors)]
     /// Creates an if-statement with an else branch
     pub fn if_else(cond: Exp, if_block: Block, else_block: Block) -> Self {
         IfElse {

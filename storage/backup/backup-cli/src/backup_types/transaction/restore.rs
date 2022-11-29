@@ -65,6 +65,7 @@ pub struct TransactionRestoreController {
     state: State,
 }
 
+#[allow(dead_code)]
 struct LoadedChunk {
     pub manifest: TransactionChunk,
     pub txns: Vec<Transaction>,

@@ -89,18 +89,16 @@ fn create_leaves(nums: std::ops::Range<usize>) -> Vec<HashValue> {
 #[test]
 fn test_accumulator_append() {
     // expected_root_hashes[i] is the root hash of an accumulator that has the first i leaves.
-    let expected_root_hashes: Vec<HashValue> = (0..100)
-        .map(|x| {
-            let leaves = create_leaves(0..x);
-            compute_root_hash_naive(&leaves)
-        })
-        .collect();
+    let expected_root_hashes = (0..100).map(|x| {
+        let leaves = create_leaves(0..x);
+        compute_root_hash_naive(&leaves)
+    });
 
     let leaves = create_leaves(0..100);
     let mut accumulator = InMemoryAccumulator::<TestOnlyHasher>::default();
     // Append the leaves one at a time and check the root hashes match.
     for (i, (leaf, expected_root_hash)) in
-        itertools::zip_eq(leaves.into_iter(), expected_root_hashes.into_iter()).enumerate()
+        itertools::zip_eq(leaves.into_iter(), expected_root_hashes).enumerate()
     {
         assert_eq!(accumulator.root_hash(), expected_root_hash);
         assert_eq!(accumulator.num_leaves(), i as LeafCount);

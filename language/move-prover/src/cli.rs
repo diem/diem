@@ -250,7 +250,14 @@ impl Options {
             .arg(
                 Arg::with_name("ignore-pragma-opaque-when-possible")
                     .long("ignore-pragma-opaque-when-possible")
-                    .help("Ignore the \"opaque\" pragma on function specs when possible"),
+                    .help("Ignore the \"opaque\" pragma on specs of \
+                    all functions when possible"),
+            )
+            .arg(
+                Arg::with_name("ignore-pragma-opaque-internal-only")
+                    .long("ignore-pragma-opaque-internal-only")
+                    .help("Ignore the \"opaque\" pragma on specs of \
+                    internal functions when possible"),
             )
             .arg(
                 Arg::with_name("docgen")
@@ -426,6 +433,12 @@ impl Options {
                     .help("checks whether there is any inconsistency")
             )
             .arg(
+                Arg::with_name("unconditional-abort-as-inconsistency")
+                    .long("unconditional-abort-as-inconsistency")
+                    .help("treat functions that do not return (i.e., abort unconditionally) \
+                    as inconsistency violations")
+            )
+            .arg(
                 Arg::with_name("verify-only")
                     .long("verify-only")
                     .takes_value(true)
@@ -538,6 +551,9 @@ impl Options {
         if matches.is_present("ignore-pragma-opaque-when-possible") {
             options.model_builder.ignore_pragma_opaque_when_possible = true;
         }
+        if matches.is_present("ignore-pragma-opaque-internal-only") {
+            options.model_builder.ignore_pragma_opaque_internal_only = true;
+        }
         if matches.is_present("docgen") {
             options.run_docgen = true;
         }
@@ -627,8 +643,12 @@ impl Options {
         if matches.is_present("generate-smt") {
             options.backend.generate_smt = true;
         }
+
         if matches.is_present("check-inconsistency") {
             options.prover.check_inconsistency = true;
+        }
+        if matches.is_present("unconditional-abort-as-inconsistency") {
+            options.prover.unconditional_abort_as_inconsistency = true;
         }
 
         if matches.is_present("verify-only") {

@@ -5,9 +5,12 @@
 
 use anyhow::Context;
 use bytecode_verifier::{dependencies, verify_module, verify_script};
-use compiler::{util, Compiler};
+use compiler::util;
 use ir_to_bytecode::parser::{parse_module, parse_script};
-use move_binary_format::{errors::VMError, file_format::CompiledModule};
+use move_binary_format::{
+    errors::VMError,
+    file_format::{CompiledModule, CompiledScript},
+};
 use move_command_line_common::files::{
     MOVE_COMPILED_EXTENSION, MOVE_IR_EXTENSION, SOURCE_MAP_EXTENSION,
 };
@@ -52,12 +55,18 @@ fn print_error_and_exit(verification_error: &VMError) -> ! {
     std::process::exit(1);
 }
 
-fn do_verify_module(module: CompiledModule, dependencies: &[CompiledModule]) -> CompiledModule {
-    verify_module(&module).unwrap_or_else(|err| print_error_and_exit(&err));
-    if let Err(err) = dependencies::verify_module(&module, dependencies) {
+fn do_verify_module(module: &CompiledModule, dependencies: &[CompiledModule]) {
+    verify_module(module).unwrap_or_else(|err| print_error_and_exit(&err));
+    if let Err(err) = dependencies::verify_module(module, dependencies) {
         print_error_and_exit(&err);
     }
-    module
+}
+
+fn do_verify_script(script: &CompiledScript, dependencies: &[CompiledModule]) {
+    verify_script(script).unwrap_or_else(|err| print_error_and_exit(&err));
+    if let Err(err) = dependencies::verify_script(script, dependencies) {
+        print_error_and_exit(&err);
+    }
 }
 
 fn write_output(path: &Path, buf: &[u8]) {
@@ -130,39 +139,13 @@ fn main() {
             vec![]
         }
     };
-    let deps = deps_owned.iter().collect::<Vec<_>>();
 
-    if !args.module_input {
-        let source = fs::read_to_string(args.source_path.clone()).expect("Unable to read file");
-        let compiler = Compiler { address, deps };
-        let (compiled_script, source_map) = compiler
-            .into_compiled_script_and_source_map(file_name, &source)
-            .expect("Failed to compile script");
-
-        verify_script(&compiled_script).expect("Failed to verify script");
-
-        if args.output_source_maps {
-            let source_map_bytes =
-                bcs::to_bytes(&source_map).expect("Unable to serialize source maps for script");
-            write_output(
-                &source_path.with_extension(source_map_extension),
-                &source_map_bytes,
-            );
-        }
-
-        let mut script = vec![];
-        compiled_script
-            .serialize(&mut script)
-            .expect("Unable to serialize script");
-        write_output(&source_path.with_extension(mv_extension), &script);
-    } else {
+    if args.module_input {
         let (compiled_module, source_map) =
             util::do_compile_module(&args.source_path, address, &deps_owned);
-        let compiled_module = if !args.no_verify {
-            do_verify_module(compiled_module, &deps_owned)
-        } else {
-            compiled_module
-        };
+        if !args.no_verify {
+            do_verify_module(&compiled_module, &deps_owned);
+        }
 
         if args.output_source_maps {
             let source_map_bytes =
@@ -178,5 +161,26 @@ fn main() {
             .serialize(&mut module)
             .expect("Unable to serialize module");
         write_output(&source_path.with_extension(mv_extension), &module);
+    } else {
+        let (compiled_script, source_map) =
+            util::do_compile_script(&args.source_path, address, &deps_owned);
+        if !args.no_verify {
+            do_verify_script(&compiled_script, &deps_owned);
+        }
+
+        if args.output_source_maps {
+            let source_map_bytes =
+                bcs::to_bytes(&source_map).expect("Unable to serialize source maps for script");
+            write_output(
+                &source_path.with_extension(source_map_extension),
+                &source_map_bytes,
+            );
+        }
+
+        let mut script = vec![];
+        compiled_script
+            .serialize(&mut script)
+            .expect("Unable to serialize script");
+        write_output(&source_path.with_extension(mv_extension), &script);
     }
 }

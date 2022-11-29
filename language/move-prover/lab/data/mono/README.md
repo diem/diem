@@ -1,18 +1,26 @@
-This lab is used to compare the monomorphizing backend with the polymorphic one.
-See general info for working with Jupyter in the [lab/README.md](../../README.md).
+# Benchmarking polymorphic vs monomorphic encoding
 
-To view the results of the current benchmark data, use:
+This lab compares two different backend version. In the traditional polymorphic one, a universal domain `$Value` is
+used which is the union of all possible values. Structs are represented as `Vec $Value`. For generic values, `$Value` is
+used, otherwise the unboxed representation wherever this is possible (non-generic parameters and locals). Equality
+over `$Value` is available and uses stratification to bound the recursion depth.
 
-```
-./notebook.sh
-```
+The monomorphic backend encoding differs as follows:
+- Structs are represented as ADTs. Structs and vectors are specialized for all type instaniations found in the program.
+This also means that equality is specialized and does not require stratification any longer. Specification functions are
+specialized as well.
+- Memory is specialized. We now access memory via a single address index as the type index is compiled away.
+- Mutations are strongly typed as `$Mutation T`. This assumes strong edges for write-back.
+- We verify a generic function (and the memory it uses) by declaring the type parameters as global given types. The
+conjecture here is that if verification succeeds for this, it will also succeed for every instantiation (parametric
+polymorphism). This probably likely needs a more formal proof down the road.
+- For inlined functions, we generate specialized versions for instantiations on the call site. For calls to opaque
+functions, we specialize the pre and post conditions at the caller side and insert them there.
 
-To regenerate the benchmark data, use:
+## Module Verification Time
 
-```
-./run.sh
-```
+![Module-By-Module](mod_by_mod.svg)
 
-You can keep the notebook open in the browser when you regenerate for experimentation.
-Simply re-evaluate all cells from the point where the data is read. This will be much faster as
-starting the notebook again after regeneration.
+## Function Verification Time
+
+![Function-By-Function](fun_by_fun.svg)

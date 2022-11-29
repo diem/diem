@@ -300,6 +300,7 @@ pub fn verify_module(
     Ok(module)
 }
 
+#[allow(dead_code)]
 /// A set of common parameters required to create transactions.
 struct TransactionParameters<'a> {
     pub sender_addr: AccountAddress,

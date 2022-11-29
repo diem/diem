@@ -1314,6 +1314,7 @@ The balance of designated dealer increases by <code>amount</code>.
         amount: mint_amount,
         metadata: x""
     };
+    <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TieredMintEmits">DesignatedDealer::TieredMintEmits</a>&lt;Token&gt;{dd_addr: designated_dealer_address, amount: mint_amount};
 }
 </code></pre>
 
@@ -4539,11 +4540,13 @@ Epilogue for WriteSet trasnaction
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_WritesetEpiloguEmits">WritesetEpiloguEmits</a> {
+    should_trigger_reconfiguration: bool;
     <b>let</b> handle = <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_DiemWriteSetManager">DiemWriteSetManager</a>&gt;(@DiemRoot).upgrade_events;
     <b>let</b> msg = <a href="DiemAccount.md#0x1_DiemAccount_AdminTransactionEvent">AdminTransactionEvent</a> {
         committed_timestamp_secs: <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_seconds">DiemTimestamp::spec_now_seconds</a>()
     };
     emits msg <b>to</b> handle;
+    <b>include</b> should_trigger_reconfiguration ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 }
 </code></pre>
 

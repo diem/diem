@@ -259,6 +259,7 @@ pub struct OffChainError {
 
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "command_type", content = "command")]
+#[allow(clippy::large_enum_variant)]
 pub enum Command {
     PaymentCommand(PaymentCommandObject),
     FundPullPreApprovalCommand,

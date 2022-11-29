@@ -167,7 +167,7 @@ impl RecoveryManager {
         let sync_info = vote_msg.sync_info();
         self.sync_up(sync_info, author).await
     }
-
+    #[allow(clippy::needless_borrow)]
     pub async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData> {
         sync_info
             .verify(&self.epoch_state.verifier)
@@ -182,7 +182,8 @@ impl RecoveryManager {
         );
         let mut retriever = BlockRetriever::new(self.network.clone(), peer);
         let recovery_data = BlockStore::fast_forward_sync(
-            sync_info.highest_commit_cert(),
+            sync_info.highest_ordered_cert(),
+            sync_info.highest_ledger_info().clone(),
             &mut retriever,
             self.storage.clone(),
             self.state_computer.clone(),
@@ -501,7 +502,7 @@ impl RoundManager {
     fn sync_only(&self) -> bool {
         if self.decoupled_execution {
             let back_pressure = self.back_pressure.load(Ordering::SeqCst);
-            let root_round = self.block_store.root().round();
+            let root_round = self.block_store.ordered_root().round();
             let sync_or_not =
                 self.sync_only || root_round > self.back_pressure_limit + back_pressure;
 

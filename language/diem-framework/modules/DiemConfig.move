@@ -276,6 +276,7 @@ module DiemFramework::DiemConfig {
         modifies global<Configuration>(@DiemRoot);
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include ReconfigureAbortsIf;
+        include ReconfigureEmits;
     }
 
     /// Private function to do reconfiguration.  Updates reconfiguration status resource

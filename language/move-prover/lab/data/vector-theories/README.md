@@ -1,18 +1,17 @@
-This lab is used to compare the various vector theories currently supported by the boogie backend.
-See general info for working with Jupyter in the [lab/README.md](../../README.md)
+# Benchmarking multiple vector theories
 
-To view the results of the current benchmark data, use:
+This lab compares the following vector theories (sources in ./boogie-backend/prelude):
 
-```
-./notebook.sh
-```
+- BoogieArray: this is currently the default vector theory used in the Move Prover. It is based on Boogie Arrays (in contrast to native SMT arrays) and does not support extensional equality.
+- BoogieArrayIntern: this is a boogie array theory which uses an internalization of representation to achieve extensionality.
+- SmtArray: this is a vector theory using SMT native arrays, without support for extensional equality.
+- SmtArrayExt: this is a vector theory using SMT native arrays, with added axioms to ensure extensional equality.
+- SmtSeq: this is a vector theory based on SMT sequences.
 
-To regenerate the benchmark data, use:
+## Module Verification Time
 
-```
-./run.sh
-```
+![Module-By-Module](mod_by_mod.svg)
 
-You can keep the notebook open in the browser when you regenerate for experimentation.
-Simply re-evaluate all cells from the point where the data is read. This will be much faster as starting
-the notebook again after regeneration.
+## Function Verification Time
+
+![Function-By-Function](fun_by_fun.svg)

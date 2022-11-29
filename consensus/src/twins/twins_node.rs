@@ -132,7 +132,7 @@ impl SMRNode {
             _state_sync: state_sync,
         }
     }
-
+    #[allow(clippy::redundant_closure)]
     /// Starts a given number of nodes and their twins
     pub fn start_num_nodes_with_twins(
         num_nodes: usize,
@@ -173,7 +173,7 @@ impl SMRNode {
                 .collect(),
         );
         // sort by the peer id
-        node_configs.sort_by_key(author_from_config);
+        node_configs.sort_by_key(|n1| author_from_config(n1));
 
         let proposer_type = match proposer_type {
             RoundProposer(_) => {

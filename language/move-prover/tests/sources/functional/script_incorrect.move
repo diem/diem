@@ -1,4 +1,5 @@
 // flag: --dependency=tests/sources/functional/script_provider.move
+// separate_baseline: no_opaque
 script {
 use 0x1::ScriptProvider;
 

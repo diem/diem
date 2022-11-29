@@ -25,7 +25,7 @@ use move_vm_types::{
         self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
     },
 };
-use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
+use std::{cmp::min, collections::VecDeque, fmt::Write, mem, sync::Arc};
 use tracing::error;
 
 macro_rules! debug_write {
@@ -141,7 +141,7 @@ impl Interpreter {
                         current_frame = frame;
                         current_frame.pc += 1; // advance past the Call instruction in the caller
                     } else {
-                        return Ok(std::mem::take(&mut self.operand_stack.0));
+                        return Ok(mem::take(&mut self.operand_stack.0));
                     }
                 }
                 ExitCode::Call(fh_idx) => {

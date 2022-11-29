@@ -8,6 +8,7 @@ use consensus_types::{
 };
 use diem_crypto::HashValue;
 use diem_logger::prelude::*;
+use diem_types::ledger_info::LedgerInfoWithSignatures;
 use mirai_annotations::{checked_verify_eq, precondition};
 use std::{
     collections::{vec_deque::VecDeque, HashMap, HashSet},
@@ -61,7 +62,7 @@ pub struct BlockTree {
     /// All the blocks known to this replica (with parent links)
     id_to_block: HashMap<HashValue, LinkableBlock>,
     /// Root of the tree. This is the root of ordering phase
-    root_id: HashValue,
+    ordered_root_id: HashValue,
     /// Commit Root id: this is the root of commit phase
     commit_root_id: HashValue,
     /// A certified block id with highest round
@@ -72,7 +73,9 @@ pub struct BlockTree {
     /// The highest timeout certificate (if any).
     highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
     /// The quorum certificate that has highest commit info.
-    highest_commit_cert: Arc<QuorumCert>,
+    highest_ordered_cert: Arc<QuorumCert>,
+    /// The quorum certificate that has highest commit decision info.
+    highest_ledger_info: LedgerInfoWithSignatures,
     /// Map of block id to its completed quorum certificate (2f + 1 votes)
     id_to_quorum_cert: HashMap<HashValue, Arc<QuorumCert>>,
     /// To keep the IDs of the elements that have been pruned from the tree but not cleaned up yet.
@@ -85,13 +88,14 @@ impl BlockTree {
     pub(super) fn new(
         root: ExecutedBlock,
         root_quorum_cert: QuorumCert,
-        root_ledger_info: QuorumCert,
+        root_ordered_cert: QuorumCert,
+        root_commit_ledger_info: LedgerInfoWithSignatures,
         max_pruned_blocks_in_mem: usize,
         highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
     ) -> Self {
         assert_eq!(
             root.id(),
-            root_ledger_info.commit_info().id(),
+            root_ordered_cert.commit_info().id(),
             "inconsistent root and ledger info"
         );
         let root_id = root.id();
@@ -111,12 +115,13 @@ impl BlockTree {
 
         BlockTree {
             id_to_block,
-            root_id,
-            commit_root_id: root_id,
+            ordered_root_id: root_id,
+            commit_root_id: root_id, // initially we set commit_root_id = root_id
             highest_certified_block_id: root_id,
             highest_quorum_cert: Arc::clone(&root_quorum_cert),
             highest_timeout_cert,
-            highest_commit_cert: Arc::new(root_ledger_info),
+            highest_ordered_cert: Arc::new(root_ordered_cert),
+            highest_ledger_info: root_commit_ledger_info,
             id_to_quorum_cert,
             pruned_block_ids,
             max_pruned_blocks_in_mem,
@@ -156,8 +161,14 @@ impl BlockTree {
             .map(|lb| Arc::clone(lb.executed_block()))
     }
 
-    pub(super) fn root(&self) -> Arc<ExecutedBlock> {
-        self.get_block(&self.root_id).expect("Root must exist")
+    pub(super) fn ordered_root(&self) -> Arc<ExecutedBlock> {
+        self.get_block(&self.ordered_root_id)
+            .expect("Root must exist")
+    }
+
+    pub(super) fn commit_root(&self) -> Arc<ExecutedBlock> {
+        self.get_block(&self.commit_root_id)
+            .expect("Commit root must exist")
     }
 
     pub(super) fn highest_certified_block(&self) -> Arc<ExecutedBlock> {
@@ -178,8 +189,12 @@ impl BlockTree {
         self.highest_timeout_cert.replace(tc);
     }
 
-    pub(super) fn highest_commit_cert(&self) -> Arc<QuorumCert> {
-        Arc::clone(&self.highest_commit_cert)
+    pub(super) fn highest_ordered_cert(&self) -> Arc<QuorumCert> {
+        Arc::clone(&self.highest_ordered_cert)
+    }
+
+    pub(super) fn highest_ledger_info(&self) -> LedgerInfoWithSignatures {
+        self.highest_ledger_info.clone()
     }
 
     pub(super) fn get_quorum_cert_for_block(
@@ -214,6 +229,17 @@ impl BlockTree {
         }
     }
 
+    pub(super) fn update_highest_ledger_info(
+        &mut self,
+        new_ledger_info_with_sig: LedgerInfoWithSignatures,
+    ) {
+        if new_ledger_info_with_sig.commit_info().round()
+            > self.highest_ledger_info.commit_info().round()
+        {
+            self.highest_ledger_info = new_ledger_info_with_sig
+        }
+    }
+
     pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> anyhow::Result<()> {
         let block_id = qc.certified_block().id();
         let qc = Arc::new(qc);
@@ -245,8 +271,8 @@ impl BlockTree {
             .entry(block_id)
             .or_insert_with(|| Arc::clone(&qc));
 
-        if self.highest_commit_cert.commit_info().round() < qc.commit_info().round() {
-            self.highest_commit_cert = qc;
+        if self.highest_ordered_cert.commit_info().round() < qc.commit_info().round() {
+            self.highest_ordered_cert = qc;
         }
 
         Ok(())
@@ -289,10 +315,10 @@ impl BlockTree {
         blocks_pruned
     }
 
-    pub(super) fn update_root_id(&mut self, root_id: HashValue) -> &mut Self {
+    pub(super) fn update_ordered_root_id(&mut self, root_id: HashValue) -> &mut Self {
         assert!(self.block_exists(&root_id));
         // Update the next root
-        self.root_id = root_id;
+        self.ordered_root_id = root_id;
         self
     }
 
@@ -322,19 +348,24 @@ impl BlockTree {
         }
     }
 
-    /// Returns all the blocks between the root and the given block, including the given block
+    /// Returns all the blocks between the commit root and the given block, including the given block
     /// but excluding the root.
     /// In case a given block is not the successor of the root, return None.
     /// While generally the provided blocks should always belong to the active tree, there might be
     /// a race, in which the root of the tree is propagated forward between retrieving the block
     /// and getting its path from root (e.g., at proposal generator). Hence, we don't want to panic
     /// and prefer to return None instead.
-    pub(super) fn path_from_root(&self, block_id: HashValue) -> Option<Vec<Arc<ExecutedBlock>>> {
+    pub(super) fn path_from_root_to_block(
+        &self,
+        block_id: HashValue,
+        root_id: HashValue,
+        root_round: u64,
+    ) -> Option<Vec<Arc<ExecutedBlock>>> {
         let mut res = vec![];
         let mut cur_block_id = block_id;
         loop {
             match self.get_block(&cur_block_id) {
-                Some(ref block) if block.round() <= self.root().round() => {
+                Some(ref block) if block.round() <= root_round => {
                     break;
                 }
                 Some(block) => {
@@ -345,12 +376,26 @@ impl BlockTree {
             }
         }
         // At this point cur_block.round() <= self.root.round()
-        if cur_block_id != self.root_id {
+        if cur_block_id != root_id {
             return None;
         }
         // Called `.reverse()` to get the chronically increased order.
         res.reverse();
         Some(res)
+    }
+
+    pub(super) fn path_from_ordered_root(
+        &self,
+        block_id: HashValue,
+    ) -> Option<Vec<Arc<ExecutedBlock>>> {
+        self.path_from_root_to_block(block_id, self.ordered_root_id, self.ordered_root().round())
+    }
+
+    pub(super) fn path_from_commit_root(
+        &self,
+        block_id: HashValue,
+    ) -> Option<Vec<Arc<ExecutedBlock>>> {
+        self.path_from_root_to_block(block_id, self.commit_root_id, self.commit_root().round())
     }
 
     pub(super) fn max_pruned_blocks_in_mem(&self) -> usize {

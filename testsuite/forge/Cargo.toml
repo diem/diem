@@ -15,6 +15,7 @@ futures = "0.3.12"
 itertools = "0.10.0"
 rand = "0.8.3"
 rayon = "1.5.0"
+regex = "1.4.3"
 structopt = "0.3.21"
 termcolor = "1.1.2"
 tokio = { version = "1.18.2", features = ["full"] }

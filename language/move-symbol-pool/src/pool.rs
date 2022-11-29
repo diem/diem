@@ -33,6 +33,7 @@
 //! [`LinkedList`]: std::collections::LinkedList
 
 use std::{
+    borrow::Cow,
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
     ptr::NonNull,
@@ -54,7 +55,7 @@ pub(crate) struct Entry {
 }
 
 /// A contiguous array of buckets.
-pub(crate) struct Pool(Box<[Bucket; NB_BUCKETS]>);
+pub(crate) struct Pool(pub(crate) Box<[Bucket; NB_BUCKETS]>);
 
 impl Pool {
     /// Allocates a contiguous array of buckets on the heap. As strings are
@@ -76,8 +77,8 @@ impl Pool {
 
     /// Given a string, returns its entry in the pool (adding it if it does not
     /// yet exist in the pool).
-    pub(crate) fn insert(&mut self, string: &str) -> NonNull<Entry> {
-        let hash = Self::hash(string);
+    pub(crate) fn insert(&mut self, string: Cow<str>) -> NonNull<Entry> {
+        let hash = Self::hash(&string);
         // Access the top-level bucket in the pool's contiguous array that
         // contains the linked list of entries that contain the string.
         let bucket_index = (hash & BUCKET_MASK) as usize;
@@ -99,7 +100,7 @@ impl Pool {
         // The string doesn't exist in the pool yet; insert it at the head of
         // the linked list of entries.
         let mut entry = Box::new(Entry {
-            string: string.to_owned().into_boxed_str(),
+            string: string.into_owned().into_boxed_str(),
             hash,
             next: self.0[bucket_index].take(),
         });
@@ -115,13 +116,15 @@ impl Pool {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use crate::Pool;
 
     #[test]
     fn test_insert_identical_strings_have_the_same_entry() {
         let mut pool = Pool::new();
-        let e1 = pool.insert("hi");
-        let e2 = pool.insert("hi");
+        let e1 = pool.insert(Cow::Borrowed("hi"));
+        let e2 = pool.insert(Cow::Owned("hi".to_owned()));
         assert_eq!(e1, e2);
     }
 }

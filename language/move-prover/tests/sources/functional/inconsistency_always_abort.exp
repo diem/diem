@@ -1,0 +1,20 @@
+Move prover returns: exiting with boogie verification errors
+error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
+  ┌─ tests/sources/functional/inconsistency_always_abort.move:6:5
+  │
+6 │ ╭     fun always_abort() {
+7 │ │         abort 0
+8 │ │     }
+  │ ╰─────^
+
+error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
+   ┌─ tests/sources/functional/inconsistency_always_abort.move:14:5
+   │
+14 │ ╭     fun always_abort_if_else(x: u64): bool {
+15 │ │         if (x == x) {
+16 │ │             abort 0
+17 │ │         } else {
+18 │ │             return true
+19 │ │         }
+20 │ │     }
+   │ ╰─────^

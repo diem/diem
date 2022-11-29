@@ -7,6 +7,9 @@ FRAMEWORK="$DIEM/language/diem-framework/modules"
 STDLIB="$DIEM/language/move-stdlib/modules"
 
 for config in *.toml ; do
+  # Benchmark per function
+  cargo run -q --release -p prover-lab -- \
+    bench -f -c $config -d $STDLIB -d $FRAMEWORK $FRAMEWORK/*.move
   # Benchmark per module
   cargo run -q --release -p prover-lab -- \
     bench -c $config -d $STDLIB -d $FRAMEWORK $FRAMEWORK/*.move

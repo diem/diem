@@ -92,6 +92,7 @@ impl Mnemonic {
     }
 
     /// Generate mnemonic from entropy byte-array.
+    #[allow(clippy::self_named_constructors)]
     pub fn mnemonic(entropy: &[u8]) -> Result<Mnemonic> {
         let len = entropy.len();
         if !(16..=32).contains(&len) || len % 4 != 0 {

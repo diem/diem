@@ -19,7 +19,7 @@ use move_binary_format::{
 };
 
 use move_binary_format::file_format::TableIndex;
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 //---------------------------------------------------------------------------
 // Type Instantiations from Unification with the Abstract Stack
@@ -439,9 +439,7 @@ pub fn get_struct_instantiation_for_state(
     let struct_def = StructDefinitionView::new(&state.module.module, struct_def);
     let typs = struct_def.type_parameters();
     for (index, type_param) in typs.iter().enumerate() {
-        if let std::collections::hash_map::Entry::Vacant(e) =
-            partial_instantiation.subst.entry(index)
-        {
+        if let Entry::Vacant(e) = partial_instantiation.subst.entry(index) {
             if type_param.constraints.has_key() {
                 unimplemented!("[Struct Instantiation] Need to fill in resource type params");
             } else {
@@ -892,9 +890,7 @@ pub fn get_function_instantiation_for_state(
     let function_handle = FunctionHandleView::new(&state.module.module, function_handle);
     let typs = function_handle.type_parameters();
     for (index, abilities) in typs.iter().enumerate() {
-        if let std::collections::hash_map::Entry::Vacant(e) =
-            partial_instantiation.subst.entry(index)
-        {
+        if let Entry::Vacant(e) = partial_instantiation.subst.entry(index) {
             if abilities.has_key() {
                 unimplemented!("[Struct Instantiation] Need to fill in resource type params");
             } else {

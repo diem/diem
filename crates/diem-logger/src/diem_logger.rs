@@ -377,7 +377,7 @@ impl Logger for DiemLogger {
         }
     }
 }
-
+#[allow(clippy::large_enum_variant)]
 enum LoggerServiceEvent {
     LogEntry(LogEntry),
     Flush(SyncSender<()>),

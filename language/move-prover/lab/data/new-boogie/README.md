@@ -1,19 +1,15 @@
-This lab is used to compare the current version of Boogie with an alternative, experimental one.
-To run this lab, one must have set the variable `EXP_BOOGIE_EXE` to the alternative boogie
-binary.
+# Benchmarking current vs alternative version of Boogie
 
-To view the results of the current benchmark data, use:
+This compares the current version of Boogie with a an alternative, newer one
 
-```
-./notebook.sh
-```
+In the current instance, we are comparing Boogie 2.8.31 with the head version in which *zero weights are used for array
+axioms*. The comparison uses the new monomorphized Boogie backend. There is a ~10% improvement visible from the
+benchmarks. While some verification problems take longer, overall verification time is reduced.
 
-To regenerate the benchmark data, use:
+## Module Verification Time
 
-```
-./run.sh
-```
+![Module-By-Module](mod_by_mod.svg)
 
-You can keep the notebook open in the browser when you regenerate for experimentation.
-Simply re-evaluate all cells from the point where the data is read. This will be much faster as
-starting the notebook again after regeneration.
+## Function Verification Time
+
+![Function-By-Function](fun_by_fun.svg)

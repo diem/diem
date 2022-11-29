@@ -43,14 +43,4 @@ module 0x42::Inconsistency {
     spec call_inconsistent_opaque {
         ensures false;
     }
-
-    // There is an inconsistent assumption in the verification of this function
-    // because it always aborts.
-    fun always_abort() {
-        abort 0
-    }
-    spec always_abort {
-        ensures false;
-    }
-
 }

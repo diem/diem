@@ -1,13 +1,5 @@
 Move prover returns: exiting with boogie verification errors
 error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
-   ┌─ tests/sources/functional/inconsistency.move:49:5
-   │
-49 │ ╭     fun always_abort() {
-50 │ │         abort 0
-51 │ │     }
-   │ ╰─────^
-
-error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
    ┌─ tests/sources/functional/inconsistency.move:17:5
    │
 17 │ ╭     fun assume_false(x: u64): u64 {
@@ -16,12 +8,4 @@ error: there is an inconsistent assumption in the function, which may allow any 
 20 │ │         };
 21 │ │         dec(x)
 22 │ │     }
-   │ ╰─────^
-
-error: there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proven
-   ┌─ tests/sources/functional/inconsistency.move:40:5
-   │
-40 │ ╭     fun call_inconsistent_opaque() {
-41 │ │         inconsistent_opaque();
-42 │ │     }
    │ ╰─────^

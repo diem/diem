@@ -7,8 +7,17 @@
 //! The presence of inconsistency is a serious issue. If there is an inconsistency in the
 //! verification assumptions (perhaps due to a specification mistake or a Prover bug), any false
 //! post-condition can be proved vacuously. The `InconsistencyCheckInstrumentationProcessor` adds
-//! an `assert false;` before every `return;` instruction such that if this `assert false;` can
-//! be proved, it means we have an inconsistency in the specifications.
+//! an `assert false` before
+//! - every `return` and
+//! - every `abort` (if the `unconditional-abort-as-inconsistency` option is set).
+//! In this way, if the instrumented `assert false` can be proved, it means we have an inconsistency
+//! in the specifications.
+//!
+//! A function that unconditionally abort might be considered as some form of inconsistency as well.
+//! Consider the function `fun always_abort() { abort 0 }`, it might seem surprising that the prover
+//! can prove that `spec always_abort { ensures 1 == 2; }`. If this function aborts unconditionally,
+//! any post-condition can be proved. Checking of this behavior is turned-off by default, and can
+//! be enabled with the `unconditional-abort-as-inconsistency` flag.
 
 use crate::{
     function_data_builder::FunctionDataBuilder,
@@ -16,6 +25,7 @@ use crate::{
     function_target_pipeline::{
         FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant, VerificationFlavor,
     },
+    options::ProverOptions,
     stackless_bytecode::{Bytecode, PropKind},
 };
 
@@ -52,6 +62,9 @@ impl FunctionTargetProcessor for InconsistencyCheckInstrumenter {
             FunctionVariant::Verification(flavor) => flavor.clone(),
         };
 
+        // obtain the options first
+        let options = ProverOptions::get(fun_env.module_env.env);
+
         // create a clone of the data for inconsistency check
         let new_data = data.fork(FunctionVariant::Verification(
             VerificationFlavor::Inconsistency(Box::new(flavor)),
@@ -61,7 +74,10 @@ impl FunctionTargetProcessor for InconsistencyCheckInstrumenter {
         let mut builder = FunctionDataBuilder::new(fun_env, new_data);
         let old_code = std::mem::take(&mut builder.data.code);
         for bc in old_code {
-            if matches!(bc, Bytecode::Ret(..)) {
+            if matches!(bc, Bytecode::Ret(..))
+                || (matches!(bc, Bytecode::Abort(..))
+                    && !options.unconditional_abort_as_inconsistency)
+            {
                 let loc = builder.fun_env.get_spec_loc();
                 builder.set_loc_and_vc_info(loc, EXPECTED_TO_FAIL);
                 let exp = builder.mk_bool_const(false);

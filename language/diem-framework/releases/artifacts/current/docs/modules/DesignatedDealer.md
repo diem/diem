@@ -346,6 +346,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TieredMintAbortsIf">TieredMintAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TieredMintEmits">TieredMintEmits</a>&lt;CoinType&gt;;
 <b>modifies</b> <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
 <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;CoinType&gt;&gt;(@CurrencyInfo);
 <b>ensures</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;CoinType&gt;&gt;(@CurrencyInfo);
@@ -372,6 +373,26 @@ multi-signer transactions in order to add a new currency to an existing DD.
     <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_AbortsIfNoDealer">AbortsIfNoDealer</a>;
     <b>aborts_if</b> !<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_MintCapability">Diem::MintCapability</a>&lt;CoinType&gt;&gt;(<a href="../../../../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account)) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>;
     <b>include</b> <a href="Diem.md#0x1_Diem_MintAbortsIf">Diem::MintAbortsIf</a>&lt;CoinType&gt;{value: amount};
+}
+</code></pre>
+
+
+
+
+<a name="0x1_DesignatedDealer_TieredMintEmits"></a>
+
+
+<pre><code><b>schema</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TieredMintEmits">TieredMintEmits</a>&lt;CoinType&gt; {
+    dd_addr: address;
+    amount: u64;
+    <b>let</b> handle = <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).mint_event_handle;
+    <b>let</b> msg = <a href="DesignatedDealer.md#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a> {
+        currency_code: <a href="Diem.md#0x1_Diem_spec_currency_code">Diem::spec_currency_code</a>&lt;CoinType&gt;(),
+        destination_address: dd_addr,
+        amount,
+    };
+    emits msg <b>to</b> handle;
+    <b>include</b> <a href="Diem.md#0x1_Diem_MintEmits">Diem::MintEmits</a>&lt;CoinType&gt;{value: amount};
 }
 </code></pre>
 

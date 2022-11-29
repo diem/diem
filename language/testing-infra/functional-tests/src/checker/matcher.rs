@@ -113,12 +113,11 @@ where
     let mut buffer = vec![];
 
     for (id, d) in directives.into_iter().enumerate() {
-        if d.as_ref().is_positive() {
-            buffer.push((id, d));
+        let is_positive = d.as_ref().is_positive();
+        buffer.push((id, d));
+        if is_positive {
             groups.push(buffer);
             buffer = vec![];
-        } else {
-            buffer.push((id, d));
         }
     }
     if !buffer.is_empty() {

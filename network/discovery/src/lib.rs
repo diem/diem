@@ -43,7 +43,7 @@ pub struct DiscoveryChangeListener {
     update_channel: channel::Sender<ConnectivityRequest>,
     source_stream: DiscoveryChangeStream,
 }
-
+#[allow(clippy::large_enum_variant)]
 enum DiscoveryChangeStream {
     ValidatorSet(ValidatorSetStream),
     File(FileStream),

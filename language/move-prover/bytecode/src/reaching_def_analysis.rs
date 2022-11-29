@@ -111,10 +111,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
         func_env: &FunctionEnv<'_>,
         mut data: FunctionData,
     ) -> FunctionData {
-        if func_env.is_native() {
-            // Nothing to do
-            data
-        } else {
+        if !func_env.is_native() {
             let cfg = StacklessControlFlowGraph::new_forward(&data.code);
             let analyzer = ReachingDefAnalysis {
                 _target: FunctionTarget::new(func_env, &data),
@@ -142,8 +139,9 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
             // Currently we do not need reaching defs after this phase. If so in the future, we
             // need to uncomment this statement.
             //data.annotations.set(annotations);
-            data
         }
+
+        data
     }
 
     fn name(&self) -> String {

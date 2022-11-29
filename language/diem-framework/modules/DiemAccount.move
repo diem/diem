@@ -476,6 +476,7 @@ module DiemFramework::DiemAccount {
             amount: mint_amount,
             metadata: x""
         };
+        include DesignatedDealer::TieredMintEmits<Token>{dd_addr: designated_dealer_address, amount: mint_amount};
     }
 
     // Cancel the burn request from `preburn_address` and return the funds.
@@ -2104,11 +2105,13 @@ module DiemFramework::DiemAccount {
         include WritesetEpiloguEmits;
     }
     spec schema WritesetEpiloguEmits {
+        should_trigger_reconfiguration: bool;
         let handle = global<DiemWriteSetManager>(@DiemRoot).upgrade_events;
         let msg = AdminTransactionEvent {
             committed_timestamp_secs: DiemTimestamp::spec_now_seconds()
         };
         emits msg to handle;
+        include should_trigger_reconfiguration ==> DiemConfig::ReconfigureEmits;
     }
 
     /// Create a Validator account

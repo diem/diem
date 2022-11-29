@@ -1,8 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(clippy::upper_case_acronyms)]
-
 use crate::subaddress::{Subaddress, SubaddressParseError};
 use bech32::{self, u5, FromBase32, ToBase32};
 use diem_sdk::{

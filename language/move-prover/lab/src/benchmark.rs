@@ -12,7 +12,7 @@ use itertools::Itertools;
 use log::LevelFilter;
 use move_model::{
     model::{FunctionEnv, GlobalEnv, ModuleEnv, VerificationScope},
-    run_model_builder,
+    run_model_builder_with_options,
 };
 use move_prover::{
     check_errors, cli::Options, create_and_process_bytecode, generate_boogie, verify_boogie,
@@ -122,19 +122,18 @@ fn run_benchmark(
     dep_dirs: &[String],
     per_function: bool,
 ) -> anyhow::Result<()> {
-    println!("building model");
-    let env = run_model_builder(modules, dep_dirs)?;
-    let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
     let mut options = if let Some(config_file) = config_file_opt {
         Options::create_from_toml_file(config_file)?
     } else {
         Options::default()
     };
+    let env = run_model_builder_with_options(modules, dep_dirs, options.model_builder.clone())?;
+    let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
 
-    // Do not allow any benchmark to run longer than 100s. If this is exceeded it usually
+    // Do not allow any benchmark to run longer than 60s. If this is exceeded it usually
     // indicates a bug in boogie or the solver, because we already propagate soft timeouts, but
     // they are ignored.
-    options.backend.hard_timeout_secs = 100;
+    options.backend.hard_timeout_secs = 60;
 
     options.verbosity_level = LevelFilter::Warn;
     options.backend.proc_cores = 1;

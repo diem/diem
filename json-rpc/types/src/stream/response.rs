@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[allow(clippy::large_enum_variant)]
 pub enum StreamJsonRpcResponseView {
     Transaction(TransactionView),
     Event(EventView),

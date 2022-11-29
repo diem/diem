@@ -73,6 +73,8 @@ pub struct ProverOptions {
     pub sequential_task: bool,
     /// Whether to check the inconsistency
     pub check_inconsistency: bool,
+    /// Whether to consider a function that abort unconditionally as an inconsistency violation
+    pub unconditional_abort_as_inconsistency: bool,
     /// Whether to use exclusively weak edges in borrow analysis
     pub weak_edges: bool,
     /// Whether to run monomorphization analysis & transformation
@@ -105,6 +107,7 @@ impl Default for ProverOptions {
             num_instances: 1,
             sequential_task: false,
             check_inconsistency: false,
+            unconditional_abort_as_inconsistency: false,
             weak_edges: false,
             run_mono: true,
             invariants_v2: true,

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{diag, diagnostics::Diagnostics};
+use move_command_line_common::character_sets::{is_permitted_char, is_permitted_newline_char};
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::{collections::BTreeMap, iter::Peekable, str::Chars};
@@ -10,34 +11,6 @@ use std::{collections::BTreeMap, iter::Peekable, str::Chars};
 pub type CommentMap = BTreeMap<Symbol, MatchedFileCommentMap>;
 pub type MatchedFileCommentMap = BTreeMap<u32, String>;
 pub type FileCommentMap = BTreeMap<(u32, u32), String>;
-
-/// Determine if a character is an allowed eye-visible (printable) character.
-///
-/// The only allowed printable characters are the printable ascii characters (SPACE through ~) and
-/// tabs. All other characters are invalid and we return false.
-pub fn is_permitted_printable_char(c: char) -> bool {
-    let x = c as u32;
-    let is_above_space = x >= 0x20; // Don't allow meta characters
-    let is_below_tilde = x <= 0x7E; // Don't allow DEL meta character
-    let is_tab = x == 0x09; // Allow tabs
-    (is_above_space && is_below_tilde) || is_tab
-}
-
-/// Determine if a character is a permitted newline character.
-///
-/// The only permitted newline character is \n. All others are invalid.
-pub fn is_permitted_newline_char(c: char) -> bool {
-    let x = c as u32;
-    x == 0x0A
-}
-
-/// Determine if a character is permitted character.
-///
-/// A permitted character is either a permitted printable character, or a permitted
-/// newline. Any other characters are disallowed from appearing in the file.
-pub fn is_permitted_char(c: char) -> bool {
-    is_permitted_printable_char(c) || is_permitted_newline_char(c)
-}
 
 fn verify_string(fname: Symbol, string: &str) -> Result<(), Diagnostics> {
     match string

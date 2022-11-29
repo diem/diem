@@ -24,11 +24,12 @@ use tokio::{
 };
 
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
-use tracing::{debug, warn, trace};
+use tracing::{debug, trace, warn};
 
 pub(crate) type StreamingClientReceiver = mpsc::Receiver<StreamResult<StreamJsonRpcResponse>>;
 pub(crate) type StreamingClientSender = mpsc::Sender<StreamResult<StreamJsonRpcResponse>>;
 
+#[allow(dead_code)]
 struct SubscriptionSender {
     pub _id: Id,
     pub sender: StreamingClientSender,
@@ -36,10 +37,7 @@ struct SubscriptionSender {
 
 impl SubscriptionSender {
     pub fn new(_id: Id, sender: StreamingClientSender) -> Self {
-        Self {
-            _id,
-            sender,
-        }
+        Self { _id, sender }
     }
 }
 
@@ -163,8 +161,7 @@ impl StreamingClient {
 
     pub(crate) async fn send_unsubscribe(&mut self, id: &Id) -> StreamResult<()> {
         debug!("StreamingClient sending unsubscribe for: {:?}", id);
-        self
-            .client
+        self.client
             .write()
             .await
             .send_method_request(StreamMethodRequest::Unsubscribe, Some(id.clone()))
@@ -246,7 +243,10 @@ impl StreamingClient {
         };
 
         // is this is an unsubscription confirmation
-        let msg_is_unsubscribe = msg.result.as_ref().map_or(false, |v| v.get("unsubscribe").is_some());
+        let msg_is_unsubscribe = msg
+            .result
+            .as_ref()
+            .map_or(false, |v| v.get("unsubscribe").is_some());
 
         // Send the message to the respective channel
         let id = id.clone();
@@ -274,9 +274,9 @@ impl StreamingClient {
                 // If this is an unsubscribe confirmation, this is OK
                 if !msg_is_unsubscribe {
                     warn!(
-                    "StreamingClient got message without subscription: {:?}",
-                    &msg
-                );
+                        "StreamingClient got message without subscription: {:?}",
+                        &msg
+                    );
                     drop(subscriptions);
                     let _ = self.send_unsubscribe(&id).await;
                 }

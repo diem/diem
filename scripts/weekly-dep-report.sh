@@ -5,6 +5,9 @@
 # fast fail.
 set -eo pipefail
 
+echo " Dependency change report "
+echo "--------------------------"
+
 # expects two parameters: repository name and branch
 repository=$1
 starter_point=${2:-"HEAD"}

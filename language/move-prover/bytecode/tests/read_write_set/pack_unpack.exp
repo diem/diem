@@ -48,10 +48,10 @@ fun PackUnpack::read_packed_borrow_glob($t0|a2: address): bool {
 
 [variant baseline]
 fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
-     var $t1|a1: address
-     var $t2|a2: address
-     var $t3|b: bool
-     var $t4|tmp#$4: address
+     var $t1|tmp#$1: address
+     var $t2|a1: address
+     var $t3|a2: address
+     var $t4|b: bool
      var $t5: PackUnpack::S
      var $t6: address
      var $t7: PackUnpack::T
@@ -66,23 +66,23 @@ fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
   1: ($t6, $t7, $t8) := unpack PackUnpack::S($t5)
   2: destroy($t8)
   3: ($t9, $t10) := unpack PackUnpack::T($t7)
-  4: $t3 := $t10
-  5: $t2 := $t9
-  6: $t1 := $t6
-  7: $t11 := copy($t3)
+  4: $t4 := $t10
+  5: $t3 := $t9
+  6: $t2 := $t6
+  7: $t11 := copy($t4)
   8: if ($t11) goto 11 else goto 9
   9: label L1
  10: goto 15
  11: label L0
- 12: $t12 := copy($t1)
- 13: $t4 := $t12
+ 12: $t12 := copy($t2)
+ 13: $t1 := $t12
  14: goto 19
  15: label L2
- 16: $t13 := copy($t2)
- 17: $t4 := $t13
+ 16: $t13 := copy($t3)
+ 17: $t1 := $t13
  18: goto 19
  19: label L3
- 20: $t14 := move($t4)
+ 20: $t14 := move($t1)
  21: return $t14
 }
 
@@ -233,10 +233,10 @@ fun PackUnpack::read_packed_borrow_glob($t0|a2: address): bool {
 
 [variant baseline]
 fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
-     var $t1|a1: address
-     var $t2|a2: address
-     var $t3|b: bool
-     var $t4|tmp#$4: address
+     var $t1|tmp#$1: address
+     var $t2|a1: address
+     var $t3|a2: address
+     var $t4|b: bool
      var $t5: PackUnpack::S
      var $t6: address
      var $t7: PackUnpack::T
@@ -259,23 +259,23 @@ fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
   1: ($t6, $t7, $t8) := unpack PackUnpack::S($t5)
   2: destroy($t8)
   3: ($t9, $t10) := unpack PackUnpack::T($t7)
-  4: $t3 := $t10
-  5: $t2 := $t9
-  6: $t1 := $t6
-  7: $t11 := copy($t3)
+  4: $t4 := $t10
+  5: $t3 := $t9
+  6: $t2 := $t6
+  7: $t11 := copy($t4)
   8: if ($t11) goto 11 else goto 9
   9: label L1
  10: goto 15
  11: label L0
- 12: $t12 := copy($t1)
- 13: $t4 := $t12
+ 12: $t12 := copy($t2)
+ 13: $t1 := $t12
  14: goto 19
  15: label L2
- 16: $t13 := copy($t2)
- 17: $t4 := $t13
+ 16: $t13 := copy($t3)
+ 17: $t1 := $t13
  18: goto 19
  19: label L3
- 20: $t14 := move($t4)
+ 20: $t14 := move($t1)
  21: return $t14
 }
 

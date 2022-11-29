@@ -1418,16 +1418,14 @@ impl<'env> Docgen<'env> {
 
     /// Begins a collapsed section.
     fn begin_collapsed(&self, summary: &str) {
+        emitln!(self.writer);
         if self.options.collapsed_sections {
-            emitln!(self.writer);
             emitln!(self.writer, "<details>");
             emitln!(self.writer, "<summary>{}</summary>", summary);
-            emitln!(self.writer);
         } else {
-            emitln!(self.writer);
             emitln!(self.writer, "##### {}", summary);
-            emitln!(self.writer);
         }
+        emitln!(self.writer);
     }
 
     /// Ends a collapsed section.

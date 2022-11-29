@@ -13,6 +13,7 @@ edition = "2018"
 anyhow = "1.0.38"
 ir-to-bytecode-syntax = { path = "syntax" }
 diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
+move-command-line-common = { path = "../../move-command-line-common" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
 move-binary-format = { path = "../../move-binary-format" }

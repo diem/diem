@@ -141,10 +141,10 @@ impl SourceCoverageBuilder {
                 let end_loc = files.location(file_id, span.end()).unwrap();
                 let start_line = start_loc.line.0;
                 let end_line = end_loc.line.0;
+                let segments = uncovered_segments
+                    .entry(start_line)
+                    .or_insert_with(Vec::new);
                 if start_line == end_line {
-                    let segments = uncovered_segments
-                        .entry(start_line)
-                        .or_insert_with(Vec::new);
                     let segment = AbstractSegment::Bounded {
                         start: start_loc.column.0,
                         end: end_loc.column.0,
@@ -155,10 +155,7 @@ impl SourceCoverageBuilder {
                         segments.push(segment);
                     }
                 } else {
-                    let first_segment = uncovered_segments
-                        .entry(start_line)
-                        .or_insert_with(Vec::new);
-                    first_segment.push(AbstractSegment::BoundedLeft {
+                    segments.push(AbstractSegment::BoundedLeft {
                         start: start_loc.column.0,
                     });
                     for i in start_line + 1..end_line {

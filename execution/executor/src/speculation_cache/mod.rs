@@ -267,14 +267,14 @@ impl SpeculationCache {
         );
         Ok(())
     }
-
+    #[allow(clippy::unnecessary_lazy_evaluations)]
     // This function is intended to be called internally.
     pub fn get_block(&self, block_id: &HashValue) -> Result<Arc<Mutex<SpeculationBlock>>, Error> {
         Ok(self
             .block_map
             .lock()
             .get(block_id)
-            .ok_or(Error::BlockNotFound(*block_id))?
+            .ok_or_else(|| Error::BlockNotFound(*block_id))?
             .upgrade()
             .ok_or_else(|| {
                 format_err!(

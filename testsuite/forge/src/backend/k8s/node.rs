@@ -6,7 +6,10 @@ use anyhow::format_err;
 use diem_config::config::NodeConfig;
 use diem_sdk::{client::Client as JsonRpcClient, types::PeerId};
 use reqwest::Url;
-use std::str::FromStr;
+use std::{
+    fmt::{Debug, Formatter},
+    str::FromStr,
+};
 use tokio::runtime::Runtime;
 
 pub struct K8sNode {
@@ -57,7 +60,7 @@ impl Node for K8sNode {
     }
 
     fn json_rpc_endpoint(&self) -> Url {
-        Url::from_str(&format!("http://{}:{}/v1", self.ip(), self.port())).expect("Invalid URL.")
+        Url::from_str(&format!("http://{}:{}/v1", self.dns(), self.port())).expect("Invalid URL.")
     }
 
     fn debug_endpoint(&self) -> Url {
@@ -81,18 +84,28 @@ impl Node for K8sNode {
     }
 
     fn health_check(&mut self) -> Result<(), HealthCheckError> {
-        let results = self
+        let results = match self
             .runtime
             .block_on(self.json_rpc_client().batch(Vec::new()))
-            .unwrap();
+        {
+            Ok(x) => x,
+            Err(x) => return Err(HealthCheckError::RpcFailure(format_err!(x))),
+        };
         if results.iter().all(Result::is_ok) {
-            return Err(HealthCheckError::RpcFailure(format_err!("")));
+            return Ok(());
         }
-
-        Ok(())
+        Err(HealthCheckError::RpcFailure(format_err!(
+            "K8s node health_check failed"
+        )))
     }
 }
 
 impl Validator for K8sNode {}
 
 impl FullNode for K8sNode {}
+
+impl Debug for K8sNode {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}

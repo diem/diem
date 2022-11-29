@@ -252,6 +252,7 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
 #[derive(Debug)]
 #[cfg(any(test, feature = "async"))]
 #[must_use = "futures do nothing unless you `.await` or poll them"]
+#[allow(clippy::large_enum_variant)]
 pub enum Sleep {
     RealSleep(#[pin] RealSleep),
 

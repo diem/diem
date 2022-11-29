@@ -1,21 +1,20 @@
-This lab is used to compare representation of structs as vectors vs representation as ADTs
-(dataype). See general info for working with Jupyter in the [lab/README.md](../../README.md).
+# Benchmarking ADT struct representation vs Vector struct representation
 
-This lab results cannot reproduced at head. The commit hash it can be reproduced is at
-`222ef5b779c8b10c2575467541c1ff6139609a06`
+This lab compares the representation of structures on Boogie level as:
 
-To view the results of the current benchmark data, use:
+- Vectors of the universal `$Value` type. Values for all fields are represented in boxed ($Value) representation.
+  Selecting and updating fields amounts to vector indexing. On select/update values need to be unboxed/boxed.
+- Abstract data types. Values of fields are stored in unboxed representation unless their type is generic. Equality on
+  universal values has to be implemented by a large case distinction of the multiple ADT variants. However, equality is
+  extensional unless a struct contains a transient field of vector type, which breaks extensionality.
 
-```
-./notebook.sh
-```
+This lab results cannot reproduced at head. The commit hash it can be reproduced is
+`222ef5b779c8b10c2575467541c1ff6139609a06`.
 
-To regenerate the benchmark data, use:
+## Module Verification Time
 
-```
-./run.sh
-```
+![Module-By-Module](mod_by_mod.svg)
 
-You can keep the notebook open in the browser when you regenerate for experimentation.
-Simply re-evaluate all cells from the point where the data is read. This will be much faster as
-starting the notebook again after regeneration.
+## Function Verification Time
+
+![Function-By-Function](fun_by_fun.svg)
