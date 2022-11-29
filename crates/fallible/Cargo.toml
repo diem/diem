@@ -10,6 +10,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-thiserror = "1.0"
+thiserror = "1.0.37"
 
 diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }

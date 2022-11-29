@@ -17,7 +17,7 @@ serde_yaml = "0.8.17"
 tokio = { version = "1.18.2", features = ["full"] }
 
 channel = {path = "../../crates/channel"}
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-config = { path = "../../config"}
 diem-crypto = {path = "../../crates/diem-crypto"}
 diem-logger = {path = "../../crates/diem-logger"}

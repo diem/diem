@@ -12,9 +12,9 @@ edition = "2018"
 [dependencies]
 base64 = "0.13.0"
 serde = { version = "1.0.124", features = ["rc"], default-features = false }
-thiserror = "1.0.24"
+thiserror = "1.0.37"
 
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-global-constants = { path = "../../global-constants"}
 diem-infallible = { path = "../../../crates/diem-infallible" }
 diem-logger = { path = "../../../crates/diem-logger" }

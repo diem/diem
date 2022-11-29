@@ -16,9 +16,9 @@ enum_dispatch = "0.3.5"
 rand = "0.8.3"
 serde = { version = "1.0.124", features = ["rc"], default-features = false }
 serde_json = "1.0.64"
-thiserror = "1.0.24"
+thiserror = "1.0.37"
 
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-crypto = { path = "../../crates/diem-crypto" }
 diem-github-client = { path = "github" }
 diem-infallible = { path = "../../crates/diem-infallible" }

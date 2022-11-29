@@ -9,7 +9,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-thiserror = "1.0"
+thiserror = "1.0.37"
 toml = "0.5.8"
 serde = { version = "1.0", features = ["derive"] }
 petgraph = "0.5.1"
@@ -17,7 +17,7 @@ anyhow = "1.0.40"
 walkdir = "2.3.1"
 structopt = "0.3.21"
 sha2 = "0.9.3"
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 serde_json = "1.0.59"
 colored = "2.0.0"
 crev-recursive-digest = "0.4.0"

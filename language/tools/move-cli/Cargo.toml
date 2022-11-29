@@ -20,7 +20,7 @@ structopt = "0.3.21"
 tempfile = "3.2.0"
 walkdir = "2.3.1"
 
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 bytecode-verifier = { path = "../../bytecode-verifier" }
 
 disassembler = { path = "../disassembler" }

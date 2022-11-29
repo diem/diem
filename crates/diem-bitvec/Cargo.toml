@@ -17,7 +17,7 @@ serde = { version = "1.0.124", features = ["derive"] }
 serde_bytes = "0.11.5"
 
 [dev-dependencies]
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-proptest-helpers = { path = "../diem-proptest-helpers"}
 proptest = { version = "1.0.0", default-features = true }
 proptest-derive = { version = "0.3.0" }

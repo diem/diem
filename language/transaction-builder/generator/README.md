@@ -206,7 +206,7 @@ Supporting transaction builders in an additional programming language boils down
 3. Code generation for transaction builders (Rust tool).
 
 
-Items (1) and (2) are provided by the Rust library `serde-generate` which is developed in a separate [github repository](https://github.com/novifinancial/serde-reflection).
+Items (1) and (2) are provided by the Rust library `serde-generate` which is developed in a separate [github repository]({ git = "https://github.com/diem/serde-reflection-diem.git"}).
 
 Item (3) --- this tool --- is currently developed in the Diem repository.
 

@@ -374,9 +374,8 @@ checksum = "7b8a45dc8036c7e52889226a96edacd45831c0dbdb8b803a58b8e0e12613b1a6"
 
 [[package]]
 name = "bcs"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a86ab68e515a8b195b2be6ff544a83b626eb3b15ea435be1fa6b9d4ccd1591ac"
+version = "0.1.4"
+source = "git+https://github.com/diem/bcs?rev=30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6"
 dependencies = [
  "serde",
  "thiserror",
@@ -7101,9 +7100,8 @@ dependencies = [
 
 [[package]]
 name = "serde-generate"
-version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b53e80288353f538b8a6aff447ce08fd59b81f3e56ca4c45326e6585155188ce"
+version = "0.20.6"
+source = "git+https://github.com/diem/serde-reflection-diem.git?rev=bb38a0fdb7b9c219cbbb646097e847587d059086"
 dependencies = [
  "bcs",
  "bincode",
@@ -7130,10 +7128,10 @@ dependencies = [
 
 [[package]]
 name = "serde-reflection"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "695ca48311bdeac687d09bbd558de507f0874a401c56cce52ee5665705f817f3"
+version = "0.3.5"
+source = "git+https://github.com/diem/serde-reflection-diem.git?rev=bb38a0fdb7b9c219cbbb646097e847587d059086#bb38a0fdb7b9c219cbbb646097e847587d059086"
 dependencies = [
+ "once_cell",
  "serde",
  "thiserror",
 ]

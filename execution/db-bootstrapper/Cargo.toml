@@ -14,7 +14,7 @@ anyhow = "1.0.38"
 structopt = "0.3.21"
 
 executor = { path = "../executor" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diemdb = { path = "../../storage/diemdb" }
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crates/diem-crypto" }

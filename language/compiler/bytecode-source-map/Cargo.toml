@@ -13,7 +13,7 @@ move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
 move-symbol-pool = { path = "../../move-symbol-pool" }
 move-binary-format = { path = "../../move-binary-format" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 codespan-reporting = "0.11.1"
 serde = { version = "1.0.124", default-features = false }
 

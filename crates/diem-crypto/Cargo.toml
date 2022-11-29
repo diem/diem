@@ -28,12 +28,12 @@ serde_bytes = "0.11.5"
 serde-name = "0.1.1"
 sha2 = "0.9.3"
 static_assertions = "1.1.0"
-thiserror = "1.0.24"
+thiserror = "1.0.37"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }
 x25519-dalek = { version = "0.1.0", package = "x25519-dalek-fiat", default-features = false, features = ["std"] }
 aes-gcm = "0.8.0"
 diem-crypto-derive = { path = "../diem-crypto-derive", version = "0.0.2" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 
 [dev-dependencies]
 bitvec = "0.19.4"

@@ -13,7 +13,7 @@ publish = false
 serde_json = "1.0.64"
 language-e2e-tests = { path = "../testing-infra/e2e-tests" }
 bytecode-verifier = { path = "../bytecode-verifier" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 compiler = { path = "../compiler" }
 diem-crypto = { path = "../../crates/diem-crypto", features = ["fuzzing"] }
 diem-types = { path = "../../types", features = ["fuzzing"] }
