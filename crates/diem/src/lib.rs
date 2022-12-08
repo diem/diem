@@ -18,34 +18,15 @@ use clap::Parser;
 #[derive(Parser)]
 #[clap(name = "diem", author, version, propagate_version = true)]
 pub enum Tool {
-    // #[clap(subcommand)]
-    // Account(account::AccountTool),
-    // #[clap(subcommand)]
-    // Config(config::ConfigTool),
-    // #[clap(subcommand)]
-    // Genesis(genesis::GenesisTool),
-    // Info(InfoTool),
-    // Init(common::init::InitTool),
-    // #[clap(subcommand)]
-    // Key(key::KeyTool),
-    // #[clap(subcommand)]
-    // Move(move_tool::MoveTool),
-    // #[clap(subcommand)]
-    // Node(node::NodeTool),
+    #[clap(subcommand)]
+    Config(config::ConfigTool),
 }
 
 impl Tool {
     pub async fn execute(self) -> Result<String, String> {
-        // use Tool::*;
+        use Tool::*;
         match self {
-            // Account(tool) => tool.execute().await,
-            // Config(tool) => tool.execute().await,
-            // Genesis(tool) => tool.execute().await,
-            // Info(tool) => tool.execute_serialized().await,
-            // Init(tool) => tool.execute_serialized_success().await,
-            // Key(tool) => tool.execute().await,
-            // Move(tool) => tool.execute().await,
-            // Node(tool) => tool.execute().await,
+            Config(tool) => tool.execute().await,
         }
     }
 }

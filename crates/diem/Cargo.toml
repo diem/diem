@@ -15,6 +15,10 @@ clap = { version = "4.0.26", features = ["derive", "env"] }
 serde = { version = "1.0.137", features = ["derive", "rc"] }
 serde_json = { version = "1.0.81", features = ["preserve_order"] }
 thiserror = "1.0.31"
+home = "0.5.4"
+tokio = { version = "1.18.2", features = ["full"] }
+serde_yaml = "0.8.17"
+structopt = "0.3.21"
 
 [dev-dependencies]
 diem-workspace-hack = { path = "../diem-workspace-hack" }

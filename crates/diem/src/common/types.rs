@@ -28,8 +28,10 @@ pub enum CliError {
     AbortedError,
     #[error("Invalid arguments: {0}")]
     CommandArgumentError(String),
-    #[error("Unable to load config: {0} {1}")]
-    ConfigLoadError(String, String),
+    #[error("Unable to load config: {0}")]
+    ConfigLoadError(String),
+    #[error("Unable to save config: {0}")]
+    ConfigSaveError(String),
     #[error("Unable to find config {0}, have you run `diem init`?")]
     ConfigNotFoundError(String),
 }
@@ -39,7 +41,8 @@ impl CliError {
         match self {
             CliError::AbortedError => "AbortedError",
             CliError::CommandArgumentError(_) => "CommandArgumentError",
-            CliError::ConfigLoadError(_, _) => "ConfigLoadError",
+            CliError::ConfigLoadError(_) => "ConfigLoadError",
+            CliError::ConfigSaveError(_) => "ConfigSaveError",
             CliError::ConfigNotFoundError(_) => "ConfigNotFoundError",
         }
     }

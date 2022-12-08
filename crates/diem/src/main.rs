@@ -3,9 +3,21 @@
 
 // CLI for interacting with the Diem blockchain
 
-// #![forbid(unsafe_code)]
+#![forbid(unsafe_code)]
 
-// use diem::Tool;
-fn main() {
-    // Tool::parse().execute().await;
+use clap::Parser;
+use diem::Tool;
+use std::process::exit;
+
+#[tokio::main]
+async fn main() {
+    let result = Tool::parse().execute().await;
+
+    match result {
+        Ok(res) => println!("{}", res),
+        Err(res) => {
+            println!("{}", res);
+            exit(1);
+        }
+    }
 }
