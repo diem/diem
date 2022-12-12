@@ -18,11 +18,11 @@ jobs:
       MAX_ALLOWED_CHARS: 65536
     steps:
       - name: checkout
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v3.1.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: checkout base ref
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v3.1.0
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           path: diem-base

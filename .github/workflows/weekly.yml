@@ -13,7 +13,7 @@ jobs:
     env:
       MESSAGE_PAYLOAD_FILE: /tmp/message
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v3.1.0
         with:
             # fetch full history
             fetch-depth: 0
@@ -40,7 +40,7 @@ jobs:
       SAS: ""
       CONFIG: .github/workflows/transaction-replay.toml
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v3.1.0
       - uses: ./.github/actions/build-setup
       - name: install azcopy
         run: |
