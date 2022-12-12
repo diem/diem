@@ -3,7 +3,7 @@
 
 // CLI for interacting with the Diem blockchain
 
-#![forbid(unsafe_code)]
+// #![forbid(unsafe_code)]
 
 use clap::Parser;
 use diem::Tool;
@@ -15,8 +15,8 @@ async fn main() {
 
     match result {
         Ok(res) => println!("{}", res),
-        Err(res) => {
-            println!("{}", res);
+        Err(err) => {
+            println!("{}", err);
             exit(1);
         }
     }

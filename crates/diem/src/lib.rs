@@ -12,12 +12,13 @@ pub mod move_tool;
 pub mod node;
 
 use clap::Parser;
-// use std::collections::BTreeMap;
 
-// Command Line Interface (CLI) for developing and interacting with the Diem blockchain
+// Command Line Interface (CLI) for interacting with the Diem blockchain
 #[derive(Parser)]
 #[clap(name = "diem", author, version, propagate_version = true)]
 pub enum Tool {
+    #[clap(subcommand)]
+    Account(account::AccountSubcommand),
     #[clap(subcommand)]
     Config(config::ConfigTool),
 }
@@ -26,6 +27,7 @@ impl Tool {
     pub async fn execute(self) -> Result<String, String> {
         use Tool::*;
         match self {
+            Account(tool) => tool.execute().await,
             Config(tool) => tool.execute().await,
         }
     }

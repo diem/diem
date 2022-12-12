@@ -1,8 +1,21 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-
 use crate::common::types::CliError;
-use serde::Serialize;
+use anyhow::Result;
+use diem_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+    Uniform, ValidCryptoMaterialStringExt,
+};
+use diem_types::transaction::authenticator::AuthenticationKey;
+
+use rand::{prelude::StdRng, SeedableRng};
+use serde::{Deserialize, Serialize};
+use std::{env, error::Error, fs, fs::File};
+
+use swiss_knife::helpers;
+
+use home;
 
 #[cfg(unix)]
 
@@ -30,5 +43,79 @@ impl<T> From<Result<T, CliError>> for ResultWrapper<T> {
             Ok(inner) => ResultWrapper::Result(inner),
             Err(inner) => ResultWrapper::Error(inner.to_string()),
         }
+    }
+}
+
+/// Converts a GenerateKeypairResponse struct to JSON and saves file
+pub fn save_keypair(keypair: GenerateKeypairResponse) -> Result<String, Box<dyn Error>> {
+    let serialized = serde_json::to_string_pretty(&keypair).unwrap();
+    println!("key_pair: {}", serialized);
+
+    let folder = match home::home_dir() {
+        Some(path) => path.display().to_string() + "/.diem/account",
+        None => env::current_dir()?.display().to_string(),
+    };
+
+    if !std::path::Path::new(&folder).exists() {
+        match fs::create_dir_all(&folder) {
+            Ok(()) => {}
+            Err(err) => {
+                panic!("Error creating directory to save keypair file: {}", err)
+            }
+        };
+    }
+    let file_path = format!("{}/{}-keypair.json", &folder, &keypair.diem_account_address);
+
+    let file = match File::create(&file_path) {
+        Ok(file) => file,
+        Err(err) => return Err(err.into()),
+    };
+
+    match serde_json::to_writer_pretty(&file, &keypair) {
+        Ok(()) => {
+            let res = format!("Keypair successfully saved to {}", &file_path);
+            Ok(res)
+        }
+        Err(err) => Err(err.into()),
+    }
+}
+
+/// Response struct for generating a new keypair
+//Moved from swiss knife
+#[derive(Deserialize, Serialize)]
+pub struct GenerateKeypairResponse {
+    pub private_key: String,
+    pub public_key: String,
+    pub diem_auth_key: String,
+    pub diem_account_address: String,
+}
+
+/// Generates a new local public/private keypair
+/// Returns a GenerateKeypairResponse struct
+pub fn generate_key_pair(seed: Option<u64>) -> GenerateKeypairResponse {
+    let mut rng = StdRng::seed_from_u64(seed.unwrap_or_else(rand::random));
+    let keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
+        Ed25519PrivateKey::generate(&mut rng).into();
+
+    let diem_auth_key = AuthenticationKey::ed25519(&keypair.public_key);
+    let diem_account_address: String = diem_auth_key.derived_address().to_string();
+    let diem_auth_key: String = diem_auth_key.to_string();
+    GenerateKeypairResponse {
+        private_key: keypair
+            .private_key
+            .to_encoded_string()
+            .map_err(|err| {
+                helpers::exit_with_error(format!("Failed to encode private key : {}", err))
+            })
+            .unwrap(),
+        public_key: keypair
+            .public_key
+            .to_encoded_string()
+            .map_err(|err| {
+                helpers::exit_with_error(format!("Failed to encode public key : {}", err))
+            })
+            .unwrap(),
+        diem_auth_key,
+        diem_account_address,
     }
 }

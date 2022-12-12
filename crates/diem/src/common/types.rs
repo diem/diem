@@ -1,27 +1,28 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-
 use crate::common::utils::to_common_result;
 use async_trait::async_trait;
-use serde::Serialize;
+use std::fmt::Debug;
 use thiserror::Error;
 
-/// General trait for all CLI commands
+use serde::Serialize;
+
+/// Trait for all CLI commands
 #[async_trait]
 pub trait Command<T: Serialize + Send>: Sized + Send {
-    /// Returns a name for logging purposes
+    /// Returns the name of the command
     fn command_name(&self) -> &'static str;
 
-    /// Returns a result specific to the command executed
+    /// Returns a result from the executed command
     async fn execute(self) -> Result<T, CliError>;
 
-    /// Returns command execution result as common JSON output type
+    /// Returns a result from the executed command serialized as JSON
     async fn execute_serialized(self) -> Result<String, String> {
         to_common_result(self.execute().await).await
     }
 }
 
-// CLI Errors for reporting through telemetry and outputs
+// CLI Errors for logging
 #[derive(Debug, Error)]
 pub enum CliError {
     #[error("Aborted command")]

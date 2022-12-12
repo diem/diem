@@ -1563,12 +1563,25 @@ dependencies = [
 name = "diem"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "clap 4.0.26",
+ "diem-client",
+ "diem-crypto",
+ "diem-logger",
+ "diem-types",
  "diem-workspace-hack",
+ "generate-key",
+ "hex",
+ "home",
+ "rand 0.8.3",
+ "reqwest",
  "serde",
  "serde_json",
+ "structopt 0.3.21",
+ "swiss-knife",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -3813,9 +3826,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.11.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
+checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 
 [[package]]
 name = "headers"
@@ -3890,6 +3903,15 @@ checksum = "c1441c6b1e930e2817404b5046f1f989899143a12bf92de603b69f4e0aee1e15"
 dependencies = [
  "crypto-mac",
  "digest 0.9.0",
+]
+
+[[package]]
+name = "home"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "747309b4b440c06d57b0b25f2aee03ee9b5e5397d288c60e21fc709bb98a7408"
+dependencies = [
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -4076,12 +4098,12 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.7.0"
+version = "1.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc633605454125dec4b66843673f01c7df2b89479b32e0ed634e43a91cff62a5"
+checksum = "1885e79c1fc4b10f0e172c475f458b7f7b93061064d98c3293e98c5ba0c8b399"
 dependencies = [
  "autocfg",
- "hashbrown 0.11.2",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
