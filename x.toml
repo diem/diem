@@ -46,6 +46,7 @@ allowed = [
     "clippy::derive_partial_eq_without_eq",
     "clippy::map-flatten",
     "clippy::format-push-string",
+    "clippy::unwrap-or-else-default",
 ]
 warn = [
     "clippy::wildcard_dependencies",
@@ -217,6 +218,7 @@ members = [
     "move-lang-test-utils",
     "move-oncall-trainer",
     "move-prover-test-utils",
+    "move-transactional-test-runner",
     "move-vm-integration-tests",
     "offchain",
     "diem-scratchpad-benchmark",

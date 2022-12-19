@@ -1,5 +1,3 @@
-// separate_baseline: inv-v1
-// This test is obsolete for v2 invariants
 module 0x42::TestFriendError {
 
     struct R {

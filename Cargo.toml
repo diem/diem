@@ -111,6 +111,7 @@ members = [
     "language/testing-infra/functional-tests",
     "language/testing-infra/module-generation",
     "language/testing-infra/test-generation",
+    "language/testing-infra/transactional-test-runner",
     "language/tools/diem-resource-viewer",
     "language/tools/disassembler",
     "language/tools/genesis-viewer",

@@ -469,12 +469,8 @@ pub struct GlobalEnv {
     symbol_pool: SymbolPool,
     /// A counter for allocating node ids.
     next_free_node_id: RefCell<usize>,
-    /// A map from node id to associated location.
-    loc_map: RefCell<BTreeMap<NodeId, Loc>>,
-    /// A map from node id to associated type.
-    type_map: RefCell<BTreeMap<NodeId, Type>>,
-    /// A map from node id to associated instantiation of type parameters.
-    instantiation_map: RefCell<BTreeMap<NodeId, Vec<Type>>>,
+    /// A map from node id to associated information of the expression.
+    exp_info: RefCell<BTreeMap<NodeId, ExpInfo>>,
     /// List of loaded modules, in order they have been provided using `add`.
     pub module_data: Vec<ModuleData>,
     /// A counter for issuing global ids.
@@ -533,9 +529,7 @@ impl GlobalEnv {
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
             next_free_node_id: Default::default(),
-            loc_map: Default::default(),
-            type_map: Default::default(),
-            instantiation_map: Default::default(),
+            exp_info: Default::default(),
             module_data: vec![],
             global_id_counter: RefCell::new(0),
             global_invariants: Default::default(),
@@ -1309,35 +1303,33 @@ impl GlobalEnv {
 
     /// Gets the location of the given node.
     pub fn get_node_loc(&self, node_id: NodeId) -> Loc {
-        self.loc_map
+        self.exp_info
             .borrow()
             .get(&node_id)
-            .cloned()
-            .unwrap_or_else(|| self.unknown_loc())
+            .map_or_else(|| self.unknown_loc(), |info| info.loc.clone())
     }
 
     /// Gets the type of the given node.
     pub fn get_node_type(&self, node_id: NodeId) -> Type {
-        self.type_map
+        self.get_node_type_opt(node_id).expect("node type defined")
+    }
+
+    /// Gets the type of the given node, if available.
+    pub fn get_node_type_opt(&self, node_id: NodeId) -> Option<Type> {
+        self.exp_info
             .borrow()
             .get(&node_id)
-            .cloned()
-            .expect("node type defined")
+            .map(|info| info.ty.clone())
     }
 
     /// Converts an index into a node id.
     pub fn index_to_node_id(&self, index: usize) -> Option<NodeId> {
         let id = NodeId::new(index);
-        if self.loc_map.borrow().get(&id).is_some() {
+        if self.exp_info.borrow().get(&id).is_some() {
             Some(id)
         } else {
             None
         }
-    }
-
-    /// Gets the type of the given node, if available.
-    pub fn get_node_type_opt(&self, node_id: NodeId) -> Option<Type> {
-        self.type_map.borrow().get(&node_id).cloned()
     }
 
     /// Returns the next free node number.
@@ -1356,51 +1348,45 @@ impl GlobalEnv {
     /// Allocates a new node id and assigns location and type to it.
     pub fn new_node(&self, loc: Loc, ty: Type) -> NodeId {
         let id = self.new_node_id();
-        self.loc_map.borrow_mut().insert(id, loc);
-        self.type_map.borrow_mut().insert(id, ty);
+        self.exp_info.borrow_mut().insert(id, ExpInfo::new(loc, ty));
         id
-    }
-
-    /// Sets type for the given node id. Must not have been set before.
-    pub fn set_node_type(&self, node_id: NodeId, ty: Type) {
-        assert!(self.type_map.borrow_mut().insert(node_id, ty).is_none());
-    }
-
-    /// Sets instantiation for the given node id. Must not have been set before.
-    pub fn set_node_instantiation(&self, node_id: NodeId, instantiation: Vec<Type>) {
-        assert!(self
-            .instantiation_map
-            .borrow_mut()
-            .insert(node_id, instantiation)
-            .is_none());
     }
 
     /// Updates type for the given node id. Must have been set before.
     pub fn update_node_type(&self, node_id: NodeId, ty: Type) {
-        assert!(self.type_map.borrow_mut().insert(node_id, ty).is_some());
+        let mut mods = self.exp_info.borrow_mut();
+        let info = mods.get_mut(&node_id).expect("node exist");
+        info.ty = ty;
+    }
+
+    /// Sets instantiation for the given node id. Must not have been set before.
+    pub fn set_node_instantiation(&self, node_id: NodeId, instantiation: Vec<Type>) {
+        let mut mods = self.exp_info.borrow_mut();
+        let info = mods.get_mut(&node_id).expect("node exist");
+        assert!(info.instantiation.is_none());
+        info.instantiation = Some(instantiation);
     }
 
     /// Updates instantiation for the given node id. Must have been set before.
     pub fn update_node_instantiation(&self, node_id: NodeId, instantiation: Vec<Type>) {
-        assert!(self
-            .instantiation_map
-            .borrow_mut()
-            .insert(node_id, instantiation)
-            .is_some());
+        let mut mods = self.exp_info.borrow_mut();
+        let info = mods.get_mut(&node_id).expect("node exist");
+        assert!(info.instantiation.is_some());
+        info.instantiation = Some(instantiation);
     }
 
     /// Gets the type parameter instantiation associated with the given node.
     pub fn get_node_instantiation(&self, node_id: NodeId) -> Vec<Type> {
-        self.instantiation_map
-            .borrow()
-            .get(&node_id)
-            .cloned()
-            .unwrap_or_default()
+        self.get_node_instantiation_opt(node_id)
+            .unwrap_or_else(Vec::new)
     }
 
     /// Gets the type parameter instantiation associated with the given node, if it is available.
     pub fn get_node_instantiation_opt(&self, node_id: NodeId) -> Option<Vec<Type>> {
-        self.instantiation_map.borrow().get(&node_id).cloned()
+        self.exp_info
+            .borrow()
+            .get(&node_id)
+            .and_then(|info| info.instantiation.clone())
     }
 }
 
@@ -3146,6 +3132,30 @@ impl<'env> FunctionEnv<'env> {
         TypeDisplayContext::WithEnv {
             env: self.module_env.env,
             type_param_names: Some(type_param_names),
+        }
+    }
+}
+
+// =================================================================================================
+/// # Expression Environment
+
+/// Represents context for an expression.
+#[derive(Debug)]
+pub struct ExpInfo {
+    /// The associated location of this expression.
+    loc: Loc,
+    /// The type of this expression.
+    ty: Type,
+    /// The associated instantiation of type parameters for this expression, if applicable
+    instantiation: Option<Vec<Type>>,
+}
+
+impl ExpInfo {
+    pub fn new(loc: Loc, ty: Type) -> Self {
+        ExpInfo {
+            loc,
+            ty,
+            instantiation: None,
         }
     }
 }

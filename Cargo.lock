@@ -5020,6 +5020,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-transactional-test-runner"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytecode-interpreter",
+ "colored",
+ "compiler",
+ "datatest-stable",
+ "diem-workspace-hack",
+ "difference",
+ "move-binary-format",
+ "move-bytecode-utils",
+ "move-cli",
+ "move-command-line-common",
+ "move-core-types",
+ "move-lang",
+ "move-lang-test-utils",
+ "move-stdlib",
+ "move-symbol-pool",
+ "move-vm-runtime",
+ "move-vm-test-utils",
+ "move-vm-types",
+ "once_cell",
+ "rayon",
+ "regex",
+ "resource-viewer",
+ "structopt 0.3.21",
+ "tempfile",
+]
+
+[[package]]
 name = "move-unit-test"
 version = "0.1.0"
 dependencies = [

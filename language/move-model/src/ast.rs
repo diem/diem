@@ -648,7 +648,8 @@ impl ExpData {
                 t.visit_pre_post(visitor);
                 e.visit_pre_post(visitor);
             }
-            _ => {}
+            // Explicitly list all enum variants
+            Value(..) | LocalVar(..) | Temporary(..) | SpecVar(..) | Invalid(..) => {}
         }
         visitor(true, self);
     }
@@ -933,6 +934,18 @@ impl ExpData {
         };
         self.visit(&mut visitor);
         is_pure
+    }
+
+    /// Checks whether the expression involves a generic type.
+    pub fn is_generic(&self, env: &GlobalEnv) -> bool {
+        self.used_memory(env).into_iter().any(|(mem, _)| {
+            mem.inst.into_iter().any(|ty| {
+                ty.is_generic(
+                    /* treat_type_param_as_open */ false,
+                    /* treat_type_local_as_open */ true,
+                )
+            })
+        })
     }
 }
 

@@ -12,6 +12,8 @@ use crate::{
     global_invariant_instrumentation_v2::GlobalInvariantInstrumentationProcessorV2,
     inconsistency_check::InconsistencyCheckInstrumenter,
     livevar_analysis::LiveVarAnalysisProcessor,
+    local_mono::LocalMonoProcessor,
+    local_mono_compat::LocalMonoCompatProcessor,
     loop_analysis::LoopAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
     mono_analysis::MonoAnalysisProcessor,
@@ -57,6 +59,13 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
         processors.push(MutationTester::new()); // pass which may do nothing
     }
     if options.run_mono {
+        // NOTE: the compat processor must appear before the non-compat one.
+        // - The compat processor will eliminate all and only universally type quantified exps.
+        // - The non-compat process will eliminate *any* exp that has a generic type in it.
+        //
+        // TODO(mengxu) remove the compat processor after the generic invariant feature is done
+        processors.push(LocalMonoCompatProcessor::new());
+        processors.push(LocalMonoProcessor::new());
         processors.push(MonoAnalysisProcessor::new());
     }
     // inconsistency check instrumentation should be the last one in the pipeline

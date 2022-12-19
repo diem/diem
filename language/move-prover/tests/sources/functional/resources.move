@@ -1,4 +1,3 @@
-// separate_baseline: no_opaque
 module 0x42::TestResources {
 
     use Std::Signer;
