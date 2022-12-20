@@ -21,12 +21,12 @@
 # so that the container can join the same network and talk to each other.
 # To start both validator and monitoring, run `docker-compose -f docker-compose.yaml -f docker-compose.mon.yaml up -d`
 
-version: "3.8"
+version: "3.7"
 services:
   validator:
     # Note this image currently does not support this, will update to the appropriate minimum
     # version shortly
-    image: "diem/validator:${IMAGE_TAG:-devnet}"
+    image: "diem/validator:${IMAGE_TAG:-testnet}"
     networks:
       shared:
     volumes:
@@ -43,7 +43,7 @@ services:
       - 9101
 
   faucet:
-    image: "diem/faucet:${IMAGE_TAG:-devnet}"
+    image: "diem/faucet:${IMAGE_TAG:-testnet}"
     depends_on:
       - validator
     networks:
