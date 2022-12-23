@@ -4,6 +4,7 @@ version = "0.8.0"
 [system-tests]
 smoke-test = { path = "smoke-test" }
 jsonrpc-integration-tests = { path = "json-rpc/integration-tests" }
+compatibility-test = { path = "testsuite/compatibility-test" }
 
 [cargo.sccache]
 bucket = "ci-artifacts.diem.com"
@@ -42,6 +43,18 @@ allowed = [
     "clippy::bool-assert-comparison",
     "clippy::needless-collect",
     "clippy::enum-variant-names",
+    "clippy::derive_partial_eq_without_eq",
+    "clippy::map-flatten",
+    "clippy::format-push-string",
+    "clippy::unwrap-or-else-default",
+    "clippy::large-enum-variant",
+    "clippy::unnecessary-lazy-evaluations",
+    "clippy::format-in-format-args",
+    "clippy::ptr-arg",
+    "clippy::unnecessary-lazy-evaluations",
+    "clippy::format-in-format-args",
+    "clippy::ptr-arg",
+    "clippy::let-and-return",
 ]
 warn = [
     "clippy::wildcard_dependencies",
@@ -177,8 +190,10 @@ members = [
 
     "bytecode-interpreter-testsuite",
     "bytecode-verifier-tests",
+    "bytecode-verifier-transactional-tests",
     "cli",
     "cluster-test",
+    "compatibility-test",
     "diem-documentation-tool",
     "diem-e2e-tests-replay",
     "diem-fuzz",
@@ -195,6 +210,7 @@ members = [
     "executor-benchmark",
     "executor-test-helpers",
     "forge",
+    "forge-cli",
     "functional-tests",
     "generate-format",
     "invalid-mutations",
@@ -211,7 +227,10 @@ members = [
     "move-lang-test-utils",
     "move-oncall-trainer",
     "move-prover-test-utils",
+    "move-transactional-test-runner",
     "move-vm-integration-tests",
+    "move-vm-transactional-tests",
+    "mvhashmap", # Will be removed once mvhashmap is used in production.
     "offchain",
     "diem-scratchpad-benchmark",
     "sdk-compatibility",

@@ -1,0 +1,17 @@
+//# publish --address 0x1
+module M {
+
+    public foo(): u64 {
+        return 0;
+    }
+
+}
+
+//# run
+import 0x1.M;
+
+main() {
+    // positive stack size invalid even with abort
+    M.foo();
+    abort 0;
+}

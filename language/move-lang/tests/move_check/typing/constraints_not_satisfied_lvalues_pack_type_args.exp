@@ -12,6 +12,12 @@ error[E05001]: ability constraint not satisfied
   │               │    The type '0x8675309::M::R' does not have the ability 'copy'
   │               'copy' constraint not satisifed
 
+warning[W09005]: dead or unreachable code
+  ┌─ tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:8:29
+  │
+8 │         let B<CupC<R>> {} = abort 0;
+  │                             ^^^^^^^ Invalid use of a divergent expression. The code following the evaluation of this expression will be dead and should be removed.
+
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:9:11
   │
@@ -25,4 +31,10 @@ error[E05001]: ability constraint not satisfied
   │           │    │
   │           │    The type '0x8675309::M::R' does not have the ability 'copy'
   │           'copy' constraint not satisifed
+
+warning[W09005]: dead or unreachable code
+  ┌─ tests/move_check/typing/constraints_not_satisfied_lvalues_pack_type_args.move:9:25
+  │
+9 │         B<CupC<R>> {} = abort 0;
+  │                         ^^^^^^^ Invalid use of a divergent expression. The code following the evaluation of this expression will be dead and should be removed.
 

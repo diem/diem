@@ -554,7 +554,7 @@ impl Test for PeerToPeerWithEvents {
 impl PublicUsageTest for PeerToPeerWithEvents {
     fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
         let env = JsonRpcTestHelper::new(ctx.url().to_owned());
-        let factory = ctx.transaction_factory();
+        let factory = ctx.transaction_factory().with_diem_version(0); // Force use of Scripts not ScriptFunctions
 
         let prev_ledger_version = env.send("get_metadata", json!([])).diem_ledger_version;
 
@@ -1725,6 +1725,65 @@ impl PublicUsageTest for GetEventByVersionWithProofTest {
         let value = response.result.unwrap();
         let view = serde_json::from_value::<EventByVersionWithProofView>(value).unwrap();
         let _proof = EventByVersionWithProof::try_from(&view).unwrap();
+
+        Ok(())
+    }
+}
+
+pub struct GetResourcesTest;
+impl Test for GetResourcesTest {
+    fn name(&self) -> &'static str {
+        "jsonrpc::get-resource-test"
+    }
+}
+
+impl PublicUsageTest for GetResourcesTest {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let env = JsonRpcTestHelper::new(ctx.url().to_owned());
+        let address = format!("{:x}", diem_sdk::types::account_config::diem_root_address());
+        let response = env.send("get_resources", json!([address]));
+
+        let value = response.result.unwrap();
+        let resources = value.as_object().unwrap();
+        // check that the CurrencyInfo<XDX> resource looks ok as a sanity check
+        let currency_info = resources
+            .get("0x1::Diem::CurrencyInfo<0x1::XDX::XDX>")
+            .unwrap();
+        assert_eq!(
+            currency_info,
+            &json!({
+              "total_value": 0,
+              "preburn_value": 0,
+              "to_xdx_exchange_rate": {
+                "value": 4294967296_u64
+              },
+              "is_synthetic": true,
+              "scaling_factor": 1000000,
+              "fractional_part": 1000,
+              "currency_code": "XDX",
+              "can_mint": false,
+              "mint_events": {
+                "counter": 0,
+                "guid": "0a000000000000000000000000000000000000000a550c18"
+              },
+              "burn_events": {
+                "counter": 0,
+                "guid": "0b000000000000000000000000000000000000000a550c18"
+              },
+              "preburn_events": {
+                "counter": 0,
+                "guid": "0c000000000000000000000000000000000000000a550c18"
+              },
+              "cancel_burn_events": {
+                "counter": 0,
+                "guid": "0d000000000000000000000000000000000000000a550c18"
+              },
+              "exchange_rate_update_events": {
+                "counter": 0,
+                "guid": "0e000000000000000000000000000000000000000a550c18"
+              }
+            })
+        );
 
         Ok(())
     }

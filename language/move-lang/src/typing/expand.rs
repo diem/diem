@@ -140,7 +140,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
     match &mut e.exp.value {
         E::Use(v) => {
             let from_user = false;
-            let var = v.clone();
+            let var = *v;
             e.exp.value = if core::is_implicitly_copyable(&context.subst, &e.ty) {
                 E::Copy { from_user, var }
             } else {

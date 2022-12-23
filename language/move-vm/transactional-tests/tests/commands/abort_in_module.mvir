@@ -1,0 +1,16 @@
+//# publish --address 0x1
+module M {
+    public foo() {
+        abort 22;
+    }
+
+}
+
+//# run
+import 0x1.M;
+
+main() {
+    // should abort and point to the module
+    M.foo();
+    return;
+}

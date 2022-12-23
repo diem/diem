@@ -37,7 +37,7 @@ num_cpus = "1.13.0"
 
 consensus-types = { path = "../../consensus/consensus-types" }
 generate-key = { path = "../../config/generate-key" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-crypto = { path = "../../crates/diem-crypto" }
 diem-config = { path = "../../config" }
 diem-framework-releases = { path = "../../language/diem-framework/releases" }

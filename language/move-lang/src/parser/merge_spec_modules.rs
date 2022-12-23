@@ -15,6 +15,7 @@ use crate::{
     parser::ast::{Definition, LeadingNameAccess_, ModuleDefinition, ModuleMember, Program},
     shared::*,
 };
+use move_symbol_pool::Symbol;
 use std::collections::BTreeMap;
 
 /// Given a parsed program, merge all specification modules into their target modules.
@@ -63,7 +64,7 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
 }
 
 fn extract_spec_modules(
-    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, String), ModuleDefinition>,
+    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, Symbol), ModuleDefinition>,
     defs: Vec<Definition>,
 ) -> Vec<Definition> {
     use Definition::*;
@@ -85,7 +86,7 @@ fn extract_spec_modules(
 }
 
 fn extract_spec_module(
-    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, String), ModuleDefinition>,
+    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, Symbol), ModuleDefinition>,
     address_opt: Option<&LeadingNameAccess_>,
     m: ModuleDefinition,
 ) -> Option<ModuleDefinition> {
@@ -98,8 +99,8 @@ fn extract_spec_module(
 }
 
 fn merge_spec_modules(
-    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, String), ModuleDefinition>,
-    defs: &mut [Definition],
+    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, Symbol), ModuleDefinition>,
+    defs: &mut Vec<Definition>,
 ) {
     use Definition::*;
     for def in defs.iter_mut() {
@@ -117,7 +118,7 @@ fn merge_spec_modules(
 }
 
 fn merge_spec_module(
-    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, String), ModuleDefinition>,
+    spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, Symbol), ModuleDefinition>,
     address_opt: Option<&LeadingNameAccess_>,
     m: &mut ModuleDefinition,
 ) {
@@ -139,10 +140,10 @@ fn merge_spec_module(
 fn module_key(
     address_opt: Option<&LeadingNameAccess_>,
     m: &ModuleDefinition,
-) -> (Option<LeadingNameAccess_>, String) {
+) -> (Option<LeadingNameAccess_>, Symbol) {
     let addr_ = match &m.address {
-        a @ Some(_) => a.as_ref().map(|sp!(_, a_)| a_.clone()),
-        None => address_opt.cloned(),
+        Some(sp!(_, a_)) => Some(*a_),
+        None => address_opt.copied(),
     };
-    (addr_, m.name.value().to_owned())
+    (addr_, m.name.value())
 }

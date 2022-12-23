@@ -31,3 +31,16 @@ error[E05001]: ability constraint not satisfied
   │                 │       
   │                 Cannot ignore values without the 'drop' ability. The value must be used
 
+error[E06001]: unused value without 'drop'
+  ┌─ tests/move_check/typing/bind_pop_resource.move:9:39
+  │
+2 │     struct R {}
+  │            - To satisfy the constraint, the 'drop' ability would need to be added here
+  ·
+8 │         let _r: R = R{};
+  │             --  - The type '0x8675309::M::R' does not have the ability 'drop'
+  │             │    
+  │             The local variable '_r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+9 │         let (_, _):(R, R) = (R{}, R{});
+  │                                       ^ Invalid return
+

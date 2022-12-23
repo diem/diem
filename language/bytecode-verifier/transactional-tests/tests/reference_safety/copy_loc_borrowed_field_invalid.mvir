@@ -1,0 +1,17 @@
+//# publish --address 0x1
+module Tester {
+    struct T has copy { f: u64 }
+
+    t() {
+        let x: Self.T;
+        let r1: &mut u64;
+        let f: u64;
+
+        x = T { f: 0 };
+        r1 = &mut (&mut x).f;
+        // cannot copy x, data is partially owned by r1. violates ref trans
+        T { f: f } = copy(x);
+        T { f: f } = move(x);
+        return;
+    }
+}

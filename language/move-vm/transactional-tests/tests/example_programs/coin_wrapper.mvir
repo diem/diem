@@ -1,0 +1,146 @@
+//# publish --address 0x1
+module Coin {
+    struct Coin<phantom CoinType> has store { value: u64 }
+
+    public zero<CoinType>(): Self.Coin<CoinType> {
+        return Coin<CoinType> { value: 0 };
+    }
+
+    public value<CoinType>(c: &Self.Coin<CoinType>): u64 {
+        return *&move(c).value;
+    }
+
+    public destroy_zero<CoinType>(c: Self.Coin<CoinType>) {
+        Coin<CoinType> { } = move(c);
+        _ = ();
+        return;
+    }
+}
+
+//# publish --address 0x1
+module YYZ {
+    struct YYZ { unused: bool }
+}
+
+
+//# publish --address 0x1
+module M {
+    import 0x1.Coin;
+    import 0x1.Signer;
+    import 0x1.YYZ;
+
+    struct Foo<T> has store { x: T }
+    struct CoinWrapper has key { f: Self.Foo<Coin.Coin<YYZ.YYZ>> }
+    struct InnerWrapper has key { f: Self.Foo<Self.Inner>}
+    struct Inner has store { b: vector<u8> }
+
+
+    public coin_wrapper(account: &signer, c: Coin.Coin<YYZ.YYZ>) {
+        let foo: Self.Foo<Coin.Coin<YYZ.YYZ>>;
+        let coin_wrapper: Self.CoinWrapper;
+
+        foo = Foo<Coin.Coin<YYZ.YYZ>> {x: move(c)};
+        coin_wrapper = CoinWrapper {f: move(foo)};
+        move_to<CoinWrapper>(move(account), move(coin_wrapper));
+        return;
+    }
+
+    public inner_wrapper(account: &signer, b: vector<u8>) {
+        let foo: Self.Foo<Self.Inner>;
+        let inner_wrapper: Self.InnerWrapper;
+        let inner: Self.Inner;
+
+        inner = Inner { b: move(b) };
+        foo = Foo<Self.Inner> {x: move(inner)};
+        inner_wrapper = InnerWrapper {f: move(foo)};
+        move_to<InnerWrapper>(move(account), move(inner_wrapper));
+        return;
+    }
+
+    public get_coin_value(account: &signer): u64 acquires CoinWrapper {
+        let sender: address;
+        let coin_wrapper_ref: &Self.CoinWrapper;
+        let foo_ref: &Self.Foo<Coin.Coin<YYZ.YYZ>>;
+        let coin_ref: &Coin.Coin<YYZ.YYZ>;
+
+        sender = Signer.address_of(copy(account));
+        coin_wrapper_ref = borrow_global<CoinWrapper>(move(sender));
+        foo_ref = &move(coin_wrapper_ref).f;
+        coin_ref = &move(foo_ref).x;
+
+        return Coin.value<YYZ.YYZ>(move(coin_ref));
+    }
+
+    public get_inner(account: &signer): vector<u8> acquires InnerWrapper {
+        let sender: address;
+        let inner_wrapper_ref: &Self.InnerWrapper;
+        let foo_ref: &Self.Foo<Self.Inner>;
+        let inner_ref: &Self.Inner;
+
+        sender = Signer.address_of(copy(account));
+        inner_wrapper_ref = borrow_global<InnerWrapper>(move(sender));
+        foo_ref = &move(inner_wrapper_ref).f;
+        inner_ref = &move(foo_ref).x;
+
+        return *(&move(inner_ref).b);
+    }
+
+
+    public destroy(account: &signer): Coin.Coin<YYZ.YYZ> acquires CoinWrapper {
+        let sender: address;
+        let coin_wrapper: Self.CoinWrapper;
+        let f: Self.Foo<Coin.Coin<YYZ.YYZ>>;
+        let x: Coin.Coin<YYZ.YYZ>;
+
+        sender = Signer.address_of(copy(account));
+        coin_wrapper = move_from<CoinWrapper>(move(sender));
+        CoinWrapper {f} = move(coin_wrapper);
+        Foo<Coin.Coin<YYZ.YYZ>> {x} = move(f);
+        return move(x);
+    }
+}
+
+//# run --signers 0x1
+import 0x1.M;
+import 0x1.YYZ;
+import 0x1.Coin;
+
+main(account: signer) {
+  let coin: Coin.Coin<YYZ.YYZ>;
+  let byte: vector<u8>;
+
+  byte = h"bac1ac";
+  coin = Coin.zero<YYZ.YYZ>();
+
+  M.coin_wrapper(&account, move(coin));
+  M.inner_wrapper(&account, move(byte));
+
+  return;
+}
+
+//# run --signers 0x1
+import 0x1.M;
+import 0x1.YYZ;
+import 0x1.Coin;
+
+main(account: signer) {
+    let coin: Coin.Coin<YYZ.YYZ>;
+    let byte: vector<u8>;
+
+    byte = h"bac1ac";
+    assert(M.get_coin_value(&account) == 0, 4);
+    assert(M.get_inner(&account) == move(byte), 4);
+    return;
+}
+
+//# run --signers 0x1
+import 0x1.M;
+import 0x1.YYZ;
+import 0x1.Coin;
+
+main(account: signer) {
+    let coin: Coin.Coin<YYZ.YYZ>;
+    coin = M.destroy(&account);
+    Coin.destroy_zero<YYZ.YYZ>(move(coin));
+    return;
+}

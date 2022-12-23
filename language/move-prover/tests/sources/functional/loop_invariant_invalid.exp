@@ -1,0 +1,24 @@
+Move prover returns: exiting with bytecode transformation errors
+error: Loop invariants must be declared at the beginning of the loop header in a consecutive sequence
+   ┌─ tests/sources/functional/loop_invariant_invalid.move:21:17
+   │
+21 │                 invariant k == j; // invalid - not consecutive
+   │                 ^^^^^^^^^^^^^^^^^
+
+error: Loop invariants must be declared at the beginning of the loop header in a consecutive sequence
+  ┌─ tests/sources/functional/loop_invariant_invalid.move:6:17
+  │
+6 │                 invariant i <= 10; // invalid - not in header block
+  │                 ^^^^^^^^^^^^^^^^^^
+
+error: Loop invariants must be declared at the beginning of the loop header in a consecutive sequence
+   ┌─ tests/sources/functional/loop_invariant_invalid.move:51:17
+   │
+51 │                 invariant i <= 11; // invalid - not at top
+   │                 ^^^^^^^^^^^^^^^^^^
+
+error: Loop invariants must be declared at the beginning of the loop header in a consecutive sequence
+   ┌─ tests/sources/functional/loop_invariant_invalid.move:36:17
+   │
+36 │                 invariant i <= 11; // invalid - not at top
+   │                 ^^^^^^^^^^^^^^^^^^

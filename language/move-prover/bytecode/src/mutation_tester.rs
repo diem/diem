@@ -25,7 +25,7 @@ pub struct MutationTester {}
 
 pub struct MutationManager {
     pub mutated: bool,
-    add_sub: usize,
+    pub add_sub: usize,
 }
 
 impl MutationTester {
@@ -37,10 +37,17 @@ impl MutationTester {
 impl FunctionTargetProcessor for MutationTester {
     fn initialize(&self, global_env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {
         let options = ProverOptions::get(global_env);
-        global_env.set_extension(MutationManager {
-            mutated: false,
-            add_sub: options.mutation_add_sub,
-        });
+        let m = global_env.get_extension::<MutationManager>();
+        match m {
+            Some(x) => global_env.set_extension(MutationManager {
+                mutated: x.mutated,
+                add_sub: x.add_sub,
+            }),
+            None => global_env.set_extension(MutationManager {
+                mutated: false,
+                add_sub: options.mutation_add_sub,
+            }),
+        };
     }
 
     fn process(
@@ -53,6 +60,11 @@ impl FunctionTargetProcessor for MutationTester {
 
         if fun_env.is_native() {
             // Nothing to do
+            return data;
+        }
+
+        if !data.variant.is_verified() {
+            // Only need to instrument if this is a verification variant
             return data;
         }
 
@@ -82,7 +94,7 @@ impl FunctionTargetProcessor for MutationTester {
                     } else {
                         builder.emit(bc);
                     }
-                    if mv > 0 {
+                    if mv > 1 {
                         global_env.set_extension(MutationManager {
                             add_sub: mv - 1,
                             mutated: m.mutated,

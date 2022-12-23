@@ -37,8 +37,8 @@ error: unknown assertion failed
 error: induction case of the loop invariant does not hold
    ┌─ tests/sources/functional/loops_with_memory_ops.move:70:17
    │
-70 │                 assert forall n in 0..i: a[n] == b[n];
-   │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+70 │                 invariant forall n in 0..i: a[n] == b[n];
+   │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
    =         a = <redacted>

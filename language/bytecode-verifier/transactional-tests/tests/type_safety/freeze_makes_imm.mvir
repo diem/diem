@@ -1,0 +1,13 @@
+//# run
+main() {
+    let x: u64;
+    let x_ref: &mut u64;
+    let imm_ref: &u64;
+
+    x = 5;
+    x_ref = &mut x;
+    imm_ref = freeze(move(x_ref));
+    // cannot write to an imm ref, even if it is a frozen mut ref
+    *move(imm_ref) = 0;
+    return;
+}

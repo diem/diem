@@ -105,7 +105,7 @@ fn exp(
             let msg = || format!("Invalid call to '{}::{}'", &call.module, &call.name);
             for (sn, sloc) in &call.acquires {
                 check_acquire_listed(context, annotated_acquires, loc, msg, sn, *sloc);
-                seen.insert(sn.clone(), *sloc);
+                seen.insert(*sn, *sloc);
             }
 
             exp(context, annotated_acquires, seen, &call.arguments);
@@ -195,7 +195,7 @@ fn builtin_function(
             let msg = mk_msg(b_.display_name());
             if let Some(sn) = check_global_access(context, loc, msg, bt) {
                 check_acquire_listed(context, annotated_acquires, *loc, msg, sn, bt.loc);
-                seen.insert(sn.clone(), bt.loc);
+                seen.insert(*sn, bt.loc);
             }
         }
 
@@ -294,7 +294,7 @@ where
             return None;
         }
 
-        T::Apply(Some(_), sp!(_, TN::ModuleType(m, s)), _args) => (m.clone(), s),
+        T::Apply(Some(_), sp!(_, TN::ModuleType(m, s)), _args) => (*m, s),
     };
 
     match &context.current_module {

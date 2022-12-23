@@ -1,16 +1,16 @@
 Command `sandbox publish src/modules/M_no_named.move`:
 Command `sandbox publish src/modules/N.move`:
-error[E03001]: unbound address
+error[E03001]: address with no value
   ┌─ src/modules/N.move:2:8
   │
 2 │ module A::N {
-  │        ^ Unbound address 'A'. Try declaring it with 'address A;'
+  │        ^ address 'A' is not assigned a value. Try assigning it a value when calling the compiler
 
-error[E03001]: unbound address
+error[E03001]: address with no value
   ┌─ src/modules/N.move:4:9
   │
 4 │         A::M::useless()
-  │         ^ Unbound address 'A'
+  │         ^ address 'A' is not assigned a value
 
 error[E03002]: unbound module
   ┌─ src/modules/N.move:4:9
@@ -19,5 +19,5 @@ error[E03002]: unbound module
   │         ^^^^ Unbound module 'A::M'
 
 Command `sandbox clean`:
-Command `sandbox publish src/modules/M.move`:
+Command `sandbox publish src/modules/M.move -a A=0x42`:
 Command `sandbox publish src/modules/N.move`:

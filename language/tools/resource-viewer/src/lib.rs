@@ -14,11 +14,12 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
+    resolver::MoveResolver,
     value::{MoveStruct, MoveValue},
 };
-use move_vm_runtime::data_cache::MoveStorage;
+use serde::ser::{SerializeMap, SerializeSeq};
 use std::{
-    convert::TryInto,
+    convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
 };
 
@@ -65,25 +66,19 @@ impl AnnotatedMoveValue {
     }
 }
 
-pub struct MoveValueAnnotator<'a> {
-    cache: Resolver<'a>,
-    _data_view: &'a dyn MoveStorage,
+pub struct MoveValueAnnotator<'a, T> {
+    cache: Resolver<'a, T>,
 }
 
-impl<'a> MoveValueAnnotator<'a> {
-    pub fn new(view: &'a dyn MoveStorage) -> Self {
+impl<'a, T: MoveResolver> MoveValueAnnotator<'a, T> {
+    pub fn new(view: &'a T) -> Self {
         Self {
             cache: Resolver::new(view),
-            _data_view: view,
         }
     }
 
     pub fn get_resource_bytes(&self, addr: &AccountAddress, tag: &StructTag) -> Option<Vec<u8>> {
-        self.cache
-            .state
-            .get_resource(addr, tag)
-            .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())
-            .ok()?
+        self.cache.state.get_resource(addr, tag).ok()?
     }
 
     pub fn view_resource(&self, tag: &StructTag, blob: &[u8]) -> Result<AnnotatedMoveStruct> {
@@ -224,6 +219,61 @@ fn pretty_print_ability_modifiers(f: &mut Formatter, abilities: AbilitySet) -> s
         }
     }
     Ok(())
+}
+
+impl serde::Serialize for AnnotatedMoveStruct {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut s = serializer.serialize_map(Some(self.value.len()))?;
+        for (f, v) in &self.value {
+            s.serialize_entry(f, v)?
+        }
+        s.end()
+    }
+}
+
+impl serde::Serialize for AnnotatedMoveValue {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use AnnotatedMoveValue::*;
+        match self {
+            U8(n) => serializer.serialize_u8(*n),
+            U64(n) => serializer.serialize_u64(*n),
+            U128(n) => {
+                // TODO: we could use serializer.serialize_u128 here, but it requires the serde_json
+                // arbitrary_precision, which breaks some existing json-rpc test. figure
+                // out what's going on or come up with a better workaround
+                if let Ok(i) = u64::try_from(*n) {
+                    serializer.serialize_u64(i)
+                } else {
+                    serializer.serialize_bytes(&n.to_le_bytes())
+                }
+            }
+            Bool(b) => serializer.serialize_bool(*b),
+            Address(a) => a.serialize(serializer),
+            Vector(t, vals) => {
+                assert_ne!(t, &TypeTag::U8);
+                let mut vec = serializer.serialize_seq(Some(vals.len()))?;
+                for v in vals {
+                    vec.serialize_element(v)?;
+                }
+                vec.end()
+            }
+            Bytes(v) => {
+                // try to deserialize as utf8, fall back to hex with if we can't
+                let utf8_str = std::str::from_utf8(v);
+                if let Ok(s) = utf8_str {
+                    if s.chars().any(|c| c.is_ascii_control()) {
+                        // has control characters; probably bytes
+                        serializer.serialize_str(&hex::encode(v))
+                    } else {
+                        serializer.serialize_str(s)
+                    }
+                } else {
+                    serializer.serialize_str(&hex::encode(v))
+                }
+            }
+            Struct(s) => s.serialize(serializer),
+        }
+    }
 }
 
 impl Display for AnnotatedMoveValue {

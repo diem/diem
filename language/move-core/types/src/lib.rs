@@ -14,6 +14,7 @@ pub mod move_resource;
 pub mod parser;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
+pub mod resolver;
 pub mod transaction_argument;
 #[cfg(test)]
 mod unit_tests;

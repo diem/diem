@@ -20,6 +20,12 @@ const FLAGS: &[&str] = &[
     "--dependency=../../move-stdlib/modules",
     "--dependency=../../diem-framework/modules",
     "--docgen",
+    "-a=Std=0x1",
+    "-a=DiemFramework=0x1",
+    "-a=DiemRoot=0xA550C18",
+    "-a=CurrencyInfo=0xA550C18",
+    "-a=TreasuryCompliance=0xB1E55ED",
+    "-a=VMReserved=0x0",
 ];
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {

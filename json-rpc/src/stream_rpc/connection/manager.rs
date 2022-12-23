@@ -17,19 +17,19 @@ use std::{
     },
 };
 
-use storage_interface::DbReader;
+use storage_interface::MoveDbReader;
 
 #[derive(Clone)]
 pub struct ConnectionManager {
     pub clients: Arc<RwLock<HashMap<u64, ClientConnection>>>,
-    pub diem_db: Arc<dyn DbReader>,
+    pub diem_db: Arc<dyn MoveDbReader>,
     pub config: Arc<SubscriptionConfig>,
     /// Our unique user id counter.
     next_user_id: Arc<AtomicU64>,
 }
 
 impl ConnectionManager {
-    pub fn new(diem_db: Arc<dyn DbReader>, config: Arc<SubscriptionConfig>) -> Self {
+    pub fn new(diem_db: Arc<dyn MoveDbReader>, config: Arc<SubscriptionConfig>) -> Self {
         Self {
             clients: Arc::new(RwLock::new(HashMap::new())),
             diem_db,
@@ -38,7 +38,7 @@ impl ConnectionManager {
         }
     }
 
-    fn get_db(&self) -> Arc<dyn DbReader> {
+    fn get_db(&self) -> Arc<dyn MoveDbReader> {
         self.diem_db.clone()
     }
 

@@ -1,54 +1,5 @@
 const {category, standaloneLink} = require("./components");
 
-const Move = category('Move', [
-  "move/move-overview",
-
-  category('Start Here', [
-    "move/move-start-here",
-    "move/move-start-here/move-introduction",
-    "move/move-start-here/move-modules-and-scripts",
-    "move/move-start-here/move-creating-coins",
-  ]),
-
-  category('Primitive Types', [
-    "move/move-primitive-types",
-    "move/move-primitive-types/move-primitives-integers",
-    "move/move-primitive-types/move-primitives-bool",
-    "move/move-primitive-types/move-primitives-address",
-    "move/move-primitive-types/move-primitives-vector",
-    "move/move-primitive-types/move-primitives-signer",
-    "move/move-primitive-types/move-primitives-references",
-    "move/move-primitive-types/move-primitives-tuples-unit",
-  ]),
-
-  category('Basic Concepts', [
-    "move/move-basic-concepts",
-    "move/move-basic-concepts/move-basics-variables",
-    "move/move-basic-concepts/move-basics-abort-assert",
-    "move/move-basic-concepts/move-basics-conditionals",
-    "move/move-basic-concepts/move-basics-loops",
-    "move/move-basic-concepts/move-basics-functions",
-    "move/move-basic-concepts/move-basics-structs-and-resources",
-    "move/move-basic-concepts/move-basics-constants",
-    "move/move-basic-concepts/move-basics-generics",
-    "move/move-basic-concepts/move-basics-equality",
-    "move/move-basic-concepts/move-basics-uses-aliases",
-  ]),
-
-  category('Global Storage', [
-    "move/move-global-storage",
-    "move/move-global-storage/move-global-storage-structure",
-    "move/move-global-storage/move-global-storage-operators",
-  ]),
-
-  category('Reference', [
-    "move/move-reference",
-    "move/move-reference/move-standard-library",
-    "move/move-reference/move-coding-conventions",
-  ]),
-
-]);
-
 const Sidebar = [
   {
     type: 'ref',
@@ -110,8 +61,6 @@ const Sidebar = [
     'tutorials/tutorial-run-local-validator-nw',
     'tutorials/tutorial-my-first-client',
   ]),
-
-  Move,
 
   category('Tools', [
     'tools/sdks',

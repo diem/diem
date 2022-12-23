@@ -24,7 +24,7 @@ rand_core = { version = "0.6.2", optional = true }
 serde = { version = "1.0.124", default-features = false }
 serde_bytes = "0.11.5"
 serde_json = "1.0.64"
-thiserror = "1.0.24"
+thiserror = "1.0.37"
 tokio = { version = "1.18.2", features = ["full"] }
 tokio-retry = "0.3.0"
 tokio-stream = "0.1.8"
@@ -32,7 +32,7 @@ tokio-util = { version = "0.7.2", features = ["compat", "codec"] }
 
 bitvec = { path = "../crates/diem-bitvec", package = "diem-bitvec" }
 channel = { path = "../crates/channel" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-config = { path = "../config" }
 diem-crypto = { path = "../crates/diem-crypto" }
 diem-crypto-derive = { path = "../crates/diem-crypto-derive" }

@@ -14,7 +14,6 @@ diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 resource-viewer = { path = "../resource-viewer" }
 diem-types = { path = "../../../types"  }
 move-core-types = { path = "../../move-core/types" }
-move-vm-runtime = { path = "../../move-vm/runtime" }
 move-binary-format = { path = "../../move-binary-format" }
 
 anyhow = "1.0.38"

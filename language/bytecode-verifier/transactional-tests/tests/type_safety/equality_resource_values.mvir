@@ -1,0 +1,11 @@
+//# publish --address 0x1
+module Token {
+    struct T has key { b: bool }
+
+    public test() {
+        let no: bool;
+        // == requires drop
+        no = T{ b: true } == T{ b: true };
+        return;
+    }
+}

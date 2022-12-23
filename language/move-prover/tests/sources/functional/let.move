@@ -122,4 +122,24 @@ module 0x42::TestLet {
         let e = exists<R>(a1) || exists<R>(a2);
         e && e || e
     }
+
+    // Let Shadowing
+    // =============
+
+    fun shadowed(v: u64): u64 {
+        v
+    }
+    spec shadowed {
+        include Shadowed1;
+    }
+
+    spec schema Shadowed1 {
+        v: u64;
+        include Shadowed2;
+    }
+
+    spec schema Shadowed2 {
+        let v = true;
+        ensures v == true;
+    }
 }

@@ -28,7 +28,6 @@ use crate::{
     options::BoogieOptions,
 };
 use bytecode::mono_analysis::MonoInfo;
-use codespan_reporting::diagnostic::Severity;
 use move_model::{
     ast::{Exp, MemoryLabel, QuantKind, SpecFunDecl, SpecVarDecl, TempIndex},
     model::{QualifiedInstId, SpecVarId},
@@ -743,7 +742,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::ContainsVec => {
                 self.translate_primitive_inst_call(node_id, "$ContainsVec", args)
             }
-            Operation::RangeVec => self.translate_primitive_call("$RangeVec", args),
+            Operation::RangeVec => self.translate_primitive_inst_call(node_id, "$RangeVec", args),
             Operation::InRangeVec => self.translate_primitive_call("InRangeVec", args),
             Operation::InRangeRange => self.translate_primitive_call("$InRange", args),
             Operation::MaxU8 => emit!(self.writer, "$MAX_U8"),
@@ -968,7 +967,15 @@ impl<'env> SpecTranslator<'env> {
         let memory = &self.get_memory_inst_from_node(node_id);
         let resource_name = boogie_modifies_memory_name(self.env, memory);
         emit!(self.writer, "{}[", resource_name);
+
+        let is_signer = self.env.get_node_type(args[0].node_id()).is_signer();
+        if is_signer {
+            emit!(self.writer, "$1_Signer_spec_address_of(");
+        }
         self.translate_exp(&args[0]);
+        if is_signer {
+            emit!(self.writer, ")");
+        }
         emit!(self.writer, "]");
     }
 
@@ -1026,7 +1033,7 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_quant(
         &self,
-        node_id: NodeId,
+        _node_id: NodeId,
         kind: QuantKind,
         ranges: &[(LocalVarDecl, Exp)],
         triggers: &[Vec<Exp>],
@@ -1045,17 +1052,6 @@ impl<'env> SpecTranslator<'env> {
                     self.translate_exp(range);
                     emit!(self.writer, "; ");
                     range_tmps.insert(var.name, range_tmp);
-                }
-                Type::TypeDomain(bt) => {
-                    if matches!(bt.as_ref(), Type::Primitive(PrimitiveType::TypeValue)) {
-                        self.env.diag(
-                            Severity::Error,
-                            &self.env.get_node_loc(node_id),
-                            "Type quantification not supported by this backend.",
-                        );
-                        emitln!(self.writer, "true");
-                        return;
-                    }
                 }
                 _ => {}
             }

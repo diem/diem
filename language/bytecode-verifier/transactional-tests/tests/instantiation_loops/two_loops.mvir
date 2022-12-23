@@ -1,0 +1,18 @@
+//# publish --address 0x1
+
+// Two loops in the resulting graph.
+// One error for the loop.
+
+module M {
+    struct S<T> { b: bool }
+
+    f<T>() {
+        Self.f<Self.S<T>>();
+        return;
+    }
+
+    g<T>() {
+        Self.g<Self.S<T>>();
+        return;
+    }
+}

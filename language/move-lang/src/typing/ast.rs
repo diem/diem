@@ -5,9 +5,10 @@ use crate::{
     expansion::ast::{Attribute, Fields, Friend, ModuleIdent, SpecId, Value},
     naming::ast::{FunctionSignature, StructDefinition, Type, TypeName_, Type_},
     parser::ast::{BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, Visibility},
-    shared::{ast_debug::*, unique_map::UniqueMap, AddressBytes, Name},
+    shared::{ast_debug::*, unique_map::UniqueMap},
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use std::{
     collections::{BTreeMap, VecDeque},
     fmt,
@@ -19,10 +20,8 @@ use std::{
 
 #[derive(Debug, Clone)]
 pub struct Program {
-    // Map of known named address values. Not all addresses will be present
-    pub addresses: UniqueMap<Name, AddressBytes>,
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
-    pub scripts: BTreeMap<String, Script>,
+    pub scripts: BTreeMap<Symbol, Script>,
 }
 
 //**************************************************************************************************
@@ -246,14 +245,7 @@ impl fmt::Display for BuiltinFunction_ {
 
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let Program {
-            addresses,
-            modules,
-            scripts,
-        } = self;
-        for (_, addr, bytes) in addresses {
-            w.writeln(&format!("address {} = {};", addr, bytes));
-        }
+        let Program { modules, scripts } = self;
 
         for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
@@ -283,7 +275,7 @@ impl AstDebug for Script {
             cdef.ast_debug(w);
             w.new_line();
         }
-        (function_name.clone(), function).ast_debug(w);
+        (*function_name, function).ast_debug(w);
     }
 }
 

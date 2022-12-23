@@ -1,0 +1,12 @@
+//# run
+main() {
+    let x: u64;
+    let imm_ref: &u64;
+
+    x = 5;
+    imm_ref = &x;
+    // cannot freeze an imm ref
+    imm_ref = freeze(move(imm_ref));
+    _ = move(imm_ref);
+    return;
+}

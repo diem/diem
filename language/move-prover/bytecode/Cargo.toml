@@ -32,6 +32,7 @@ once_cell = "1.7.2"
 petgraph = "0.5.1"
 
 [dev-dependencies]
+move-stdlib = { path = "../../move-stdlib" }
 datatest-stable = "0.1.1"
 move-prover-test-utils = { path = "../test-utils" }
 anyhow = "1.0.38"

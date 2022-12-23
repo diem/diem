@@ -7,23 +7,23 @@ use diem_types::{
     contract_event::ContractEvent,
 };
 use move_core_types::language_storage::StructTag;
-use move_vm_runtime::data_cache::MoveStorage;
 use resource_viewer::MoveValueAnnotator;
 use std::{
     collections::BTreeMap,
     fmt::{Display, Formatter},
 };
 
+use move_core_types::resolver::MoveResolver;
 pub use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue};
 
-pub struct DiemValueAnnotator<'a>(MoveValueAnnotator<'a>);
+pub struct DiemValueAnnotator<'a, T>(MoveValueAnnotator<'a, T>);
 
 /// A wrapper around `MoveValueAnnotator` that adds a few diem-specific funtionalities.
 #[derive(Debug)]
 pub struct AnnotatedAccountStateBlob(BTreeMap<StructTag, AnnotatedMoveStruct>);
 
-impl<'a> DiemValueAnnotator<'a> {
-    pub fn new(storage: &'a dyn MoveStorage) -> Self {
+impl<'a, T: MoveResolver> DiemValueAnnotator<'a, T> {
+    pub fn new(storage: &'a T) -> Self {
         Self(MoveValueAnnotator::new(storage))
     }
 

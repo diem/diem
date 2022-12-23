@@ -1,0 +1,12 @@
+//# run
+main() {
+    if (true) {
+        // positive stack
+        (4);
+    }
+    else {
+        // positive stack, but never reached when checking
+        (5);
+    }
+    return;
+}

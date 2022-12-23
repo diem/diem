@@ -1,0 +1,18 @@
+//# publish --address 0x1
+module M {
+    struct Coin { value: u64 }
+    zero(): Self.Coin {
+        return Coin { value: 0 };
+    }
+}
+
+//# run
+import 0x1.M;
+
+main() {
+    let z: M.Coin;
+    z = M.zero();
+    // invalid assignment
+    z = M.zero();
+    return;
+}

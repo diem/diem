@@ -23,7 +23,10 @@ use move_model::{
     model::{FunctionEnv, Loc, StructId},
     ty::{PrimitiveType, Type},
 };
-use std::{collections::BTreeMap, matches};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    matches,
+};
 
 pub struct StacklessBytecodeGenerator<'a> {
     func_env: &'a FunctionEnv<'a>,
@@ -33,6 +36,7 @@ pub struct StacklessBytecodeGenerator<'a> {
     local_types: Vec<Type>,
     code: Vec<Bytecode>,
     location_table: BTreeMap<AttrId, Loc>,
+    loop_invariants: BTreeSet<AttrId>,
 }
 
 impl<'a> StacklessBytecodeGenerator<'a> {
@@ -48,6 +52,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             local_types,
             code: vec![],
             location_table: BTreeMap::new(),
+            loop_invariants: BTreeSet::new(),
         }
     }
 
@@ -92,13 +97,25 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             self.code.push(bytecode);
         }
 
+        let Self {
+            func_env,
+            module: _,
+            temp_count: _,
+            temp_stack: _,
+            local_types,
+            code,
+            location_table,
+            loop_invariants,
+        } = self;
+
         FunctionData::new(
-            self.func_env,
-            self.code,
-            self.local_types,
-            self.func_env.get_return_types(),
-            self.location_table,
-            self.func_env.get_acquires_global_resources(),
+            func_env,
+            code,
+            local_types,
+            func_env.get_return_types(),
+            location_table,
+            func_env.get_acquires_global_resources(),
+            loop_invariants,
         )
     }
 
@@ -151,6 +168,10 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let kind = match cond.kind {
                     ConditionKind::Assert => PropKind::Assert,
                     ConditionKind::Assume => PropKind::Assume,
+                    ConditionKind::LoopInvariant => {
+                        self.loop_invariants.insert(attr_id);
+                        PropKind::Assert
+                    }
                     _ => panic!("unsupported spec condition in code"),
                 };
                 self.code

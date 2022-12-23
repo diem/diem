@@ -136,7 +136,7 @@ mod tests {
             transaction::{
                 metadata::{CoinTradeMetadata, Metadata},
                 SignedTransaction, TransactionPayload,
-                TransactionPayload::Script,
+                TransactionPayload::{Script, ScriptFunction},
             },
         },
     };
@@ -403,6 +403,18 @@ mod tests {
                 }
                 _ => panic!("unexpected type of script"),
             },
+            ScriptFunction(_) => match ScriptFunctionCall::decode(payload) {
+                Some(ScriptFunctionCall::PeerToPeerWithMetadata { metadata, .. }) => {
+                    match bcs::from_bytes(&metadata).expect("should decode metadata") {
+                        Metadata::CoinTradeMetadata(CoinTradeMetadata::CoinTradeMetadataV0(
+                            coin_trade_metadata,
+                        )) => coin_trade_metadata.trade_ids,
+                        _ => panic!("unexpected type of transaction metadata"),
+                    }
+                }
+                _ => panic!("unexpected type of script"),
+            },
+
             _ => panic!("unexpected payload type"),
         }
     }
@@ -489,7 +501,28 @@ mod tests {
                                 .unwrap()
                                 .remove(index);
                         }
-                        _ => panic!("unexpected type of script"),
+                        ScriptFunctionCall::CreateParentVaspAccount {
+                            new_account_address: address,
+                            ..
+                        } => {
+                            let mut writer = accounts.write();
+                            let previous = writer
+                                .insert(address, create_vasp_account(&address.to_string(), 0));
+                            assert!(previous.is_none(), "should not create account twice");
+                        }
+                        ScriptFunctionCall::CreateDesignatedDealer { addr: address, .. } => {
+                            let mut writer = accounts.write();
+                            let previous =
+                                writer.insert(address, create_dd_account(&address.to_string(), 0));
+                            assert!(previous.is_none(), "should not create account twice");
+                        }
+                        ScriptFunctionCall::PeerToPeerWithMetadata { payee, amount, .. } => {
+                            let mut writer = accounts.write();
+                            let account =
+                                writer.get_mut(&payee).expect("account should be created");
+                            account["balances"][0]["amount"] = serde_json::json!(amount);
+                        }
+                        script => panic!("unexpected type of script: {:?}", script),
                     }
                 }
                 create_response(&req["id"], chain_id.id(), None)

@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'publish'. lines 1-11:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: UNSAFE_RET_UNUSED_VALUES_WITHOUT_DROP,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 3)],
+}

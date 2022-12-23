@@ -35,10 +35,11 @@ use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::GasAlgebra,
     identifier::IdentStr,
+    resolver::MoveResolver,
     transaction_argument::convert_txn_args,
     value::{serialize_values, MoveValue},
 };
-use move_vm_runtime::{data_cache::MoveStorage, session::Session};
+use move_vm_runtime::session::Session;
 use move_vm_types::gas_schedule::GasStatus;
 use rayon::prelude::*;
 use std::{
@@ -59,7 +60,7 @@ impl DiemVM {
 
     /// Generates a transaction output for a transaction that encountered errors during the
     /// execution process. This is public for now only for tests.
-    pub fn failed_transaction_cleanup<S: MoveStorage>(
+    pub fn failed_transaction_cleanup<S: MoveResolver>(
         &self,
         error_code: VMStatus,
         gas_status: &mut GasStatus,
@@ -79,7 +80,7 @@ impl DiemVM {
         .1
     }
 
-    fn failed_transaction_cleanup_and_keep_vm_status<S: MoveStorage>(
+    fn failed_transaction_cleanup_and_keep_vm_status<S: MoveResolver>(
         &self,
         error_code: VMStatus,
         gas_status: &mut GasStatus,
@@ -124,7 +125,7 @@ impl DiemVM {
         }
     }
 
-    fn success_transaction_cleanup<S: MoveStorage>(
+    fn success_transaction_cleanup<S: MoveResolver>(
         &self,
         mut session: Session<S>,
         gas_status: &mut GasStatus,
@@ -153,7 +154,7 @@ impl DiemVM {
         ))
     }
 
-    fn execute_script_or_script_function<S: MoveStorage>(
+    fn execute_script_or_script_function<S: MoveResolver>(
         &self,
         mut session: Session<S>,
         gas_status: &mut GasStatus,
@@ -240,7 +241,7 @@ impl DiemVM {
         }
     }
 
-    fn execute_module<S: MoveStorage>(
+    fn execute_module<S: MoveResolver>(
         &self,
         mut session: Session<S>,
         gas_status: &mut GasStatus,
@@ -281,7 +282,7 @@ impl DiemVM {
         )
     }
 
-    fn execute_user_transaction<S: MoveStorage>(
+    fn execute_user_transaction<S: MoveResolver>(
         &self,
         storage: &S,
         txn: &SignatureCheckedTransaction,
@@ -366,7 +367,7 @@ impl DiemVM {
         }
     }
 
-    fn execute_writeset<S: MoveStorage>(
+    fn execute_writeset<S: MoveResolver>(
         &self,
         storage: &S,
         writeset_payload: &WriteSetPayload,
@@ -439,7 +440,7 @@ impl DiemVM {
         Ok(())
     }
 
-    fn process_waypoint_change_set<S: MoveStorage + StateView>(
+    fn process_waypoint_change_set<S: MoveResolver + StateView>(
         &self,
         storage: &S,
         writeset_payload: WriteSetPayload,
@@ -457,7 +458,7 @@ impl DiemVM {
         ))
     }
 
-    fn process_block_prologue<S: MoveStorage>(
+    fn process_block_prologue<S: MoveResolver>(
         &self,
         storage: &S,
         block_metadata: BlockMetadata,
@@ -508,7 +509,7 @@ impl DiemVM {
         Ok((VMStatus::Executed, output))
     }
 
-    fn process_writeset_transaction<S: MoveStorage + StateView>(
+    fn process_writeset_transaction<S: MoveResolver + StateView>(
         &self,
         storage: &S,
         txn: &SignatureCheckedTransaction,
@@ -551,7 +552,7 @@ impl DiemVM {
         )
     }
 
-    pub fn execute_writeset_transaction<S: MoveStorage + StateView>(
+    pub fn execute_writeset_transaction<S: MoveResolver + StateView>(
         &self,
         storage: &S,
         writeset_payload: &WriteSetPayload,
@@ -750,7 +751,7 @@ impl DiemVM {
         Ok(result)
     }
 
-    pub(crate) fn execute_single_transaction<S: MoveStorage + StateView>(
+    pub(crate) fn execute_single_transaction<S: MoveResolver + StateView>(
         &self,
         txn: &PreprocessedTransaction,
         data_cache: &S,

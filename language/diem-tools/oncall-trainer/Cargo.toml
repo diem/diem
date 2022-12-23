@@ -18,7 +18,7 @@ tempfile = "3.2.0"
 nix = "^0.20.2"
 rustyline = "8.0.0"
 gag = "0.1.10"
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 
 cli = { path = "../../../testsuite/cli" }
 diem-client = { path = "../../../crates/diem-client/"}

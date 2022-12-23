@@ -4,7 +4,7 @@ error[E05001]: ability constraint not satisfied
  2 │     struct S has copy, drop {}
    │            - To satisfy the constraint, the 'key' ability would need to be added here
    ·
-15 │     fun both<R: key, C: copy>(r: R, c: C) {
+15 │     fun both<R: key, C: copy>(_r: R, _c: C) {
    │                 --- 'key' constraint declared here
    ·
 28 │         both(S{}, Coin{});
@@ -19,7 +19,7 @@ error[E05001]: ability constraint not satisfied
  3 │     struct Coin has key {}
    │            ---- To satisfy the constraint, the 'copy' ability would need to be added here
    ·
-15 │     fun both<R: key, C: copy>(r: R, c: C) {
+15 │     fun both<R: key, C: copy>(_r: R, _c: C) {
    │                         ---- 'copy' constraint declared here
    ·
 28 │         both(S{}, Coin{});
@@ -31,7 +31,7 @@ error[E05001]: ability constraint not satisfied
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/module_call_constraints_not_satisfied.move:29:9
    │
-15 │     fun both<R: key, C: copy>(r: R, c: C) {
+15 │     fun both<R: key, C: copy>(_r: R, _c: C) {
    │                 --- 'key' constraint declared here
    ·
 29 │         both(0, Coin{})
@@ -46,7 +46,7 @@ error[E05001]: ability constraint not satisfied
  3 │     struct Coin has key {}
    │            ---- To satisfy the constraint, the 'copy' ability would need to be added here
    ·
-15 │     fun both<R: key, C: copy>(r: R, c: C) {
+15 │     fun both<R: key, C: copy>(_r: R, _c: C) {
    │                         ---- 'copy' constraint declared here
    ·
 29 │         both(0, Coin{})
@@ -64,7 +64,7 @@ error[E05001]: ability constraint not satisfied
  7 │     fun new_box<T>(): Box<T> {
    │                       ------ The type '0x8675309::M::Box<C>' does not have the ability 'key'
    ·
-15 │     fun both<R: key, C: copy>(r: R, c: C) {
+15 │     fun both<R: key, C: copy>(_r: R, _c: C) {
    │                 --- 'key' constraint declared here
    ·
 33 │         both(new_box<C>(), new_box<R>())
@@ -76,7 +76,7 @@ error[E05001]: ability constraint not satisfied
  7 │     fun new_box<T>(): Box<T> {
    │                       ------ The type '0x8675309::M::Box<R>' does not have the ability 'copy'
    ·
-15 │     fun both<R: key, C: copy>(r: R, c: C) {
+15 │     fun both<R: key, C: copy>(_r: R, _c: C) {
    │                         ---- 'copy' constraint declared here
    ·
 33 │         both(new_box<C>(), new_box<R>())
@@ -94,7 +94,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<C, C, C>' does not have the ability 'key'
    ·
-23 │     fun rsrc<R: key>(r: R) {
+23 │     fun rsrc<R: key>(_r: R) {
    │                 --- 'key' constraint declared here
    ·
 37 │         rsrc(new_box3<C, C, C>());
@@ -106,7 +106,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<R, C, C>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 39 │         cpy(new_box3<R, C, C>());
@@ -121,7 +121,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<C, R, C>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 40 │         cpy(new_box3<C, R, C>());
@@ -136,7 +136,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<C, C, R>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 41 │         cpy(new_box3<C, C, R>());
@@ -151,7 +151,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<C, R, R>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 43 │         cpy(new_box3<C, R, R>());
@@ -166,7 +166,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<R, C, R>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 44 │         cpy(new_box3<R, C, R>());
@@ -181,7 +181,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<R, R, C>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 45 │         cpy(new_box3<R, R, C>());
@@ -196,7 +196,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<R, R, R>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 47 │         cpy(new_box3<R, R, R>());
@@ -211,7 +211,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<U, C, C>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 51 │         cpy(new_box3<U, C, C>());
@@ -226,7 +226,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<C, U, C>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 52 │         cpy(new_box3<C, U, C>());
@@ -241,7 +241,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<C, C, U>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 53 │         cpy(new_box3<C, C, U>());
@@ -256,7 +256,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<C, U, U>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 55 │         cpy(new_box3<C, U, U>());
@@ -271,7 +271,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<U, C, U>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 56 │         cpy(new_box3<U, C, U>());
@@ -286,7 +286,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<U, U, C>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 57 │         cpy(new_box3<U, U, C>());
@@ -301,7 +301,7 @@ error[E05001]: ability constraint not satisfied
 11 │     fun new_box3<T1, T2, T3>(): Box3<T1, T2, T3> {
    │                                 ---------------- The type '0x8675309::M::Box3<U, U, U>' does not have the ability 'copy'
    ·
-19 │     fun cpy<C: copy>(c: C) {
+19 │     fun cpy<C: copy>(_c: C) {
    │                ---- 'copy' constraint declared here
    ·
 59 │         cpy(new_box3<U, U, U>());

@@ -1,0 +1,22 @@
+//# publish --address 0x1
+module M {
+    struct T {v : u64}
+
+    public new(v: u64): Self.T {
+        return T{v: move(v)};
+    }
+
+    // valid ==
+    public compare1 (t1: &mut Self.T, t2: &mut Self.T) : bool {
+        return move(t1) == move(t2);
+    }
+
+    public compare2 (t1: &mut Self.T, t2: &mut Self.T) : bool {
+        let b: bool;
+        let x_ref: &u64;
+        x_ref = &copy(t1).v;
+        b = move(t1) == move(t2);
+        _ = move(x_ref);
+        return move(b);
+    }
+}

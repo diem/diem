@@ -32,7 +32,7 @@ module 0x42::VerifyLoops {
     public fun iter10_no_abort() {
         let i = 0;
         while ({
-            spec { assert i <= 11; };
+            spec { invariant i <= 11; };
             (i <= 10)
         }) {
             if (i > 10) abort 10;
@@ -47,7 +47,7 @@ module 0x42::VerifyLoops {
     public fun iter10_no_abort_incorrect() {
         let i = 0;
         while ({
-            spec { assert i <= 11; };
+            spec { invariant i <= 11; };
             (i <= 10)
         }) {
             if (i > 10) abort 10;
@@ -61,7 +61,7 @@ module 0x42::VerifyLoops {
     public fun iter10_abort() {
         let i = 0;
         while ({
-            spec { assert i <= 7; };
+            spec { invariant i <= 7; };
             (i <= 10)
         }) {
             if (i == 7) abort 7;
@@ -76,7 +76,7 @@ module 0x42::VerifyLoops {
     public fun iter10_abort_incorrect() {
         let i = 0;
         while ({
-            spec { assert i <= 7; };
+            spec { invariant i <= 7; };
             (i <= 10)
         }) {
             if (i == 7) abort 7;
@@ -116,7 +116,7 @@ module 0x42::VerifyLoops {
         };
         loop {
             spec {
-                assert x != y;
+                invariant x != y;
             };
             loop {
                 if (x <= y) {
@@ -142,7 +142,7 @@ module 0x42::VerifyLoops {
         loop {
             loop {
                 spec {
-                    assert x != y;
+                    invariant x != y;
                 };
                 if (x <= y) {
                     break
@@ -186,7 +186,7 @@ module 0x42::VerifyLoops {
         };
         loop {
             spec {
-                assert x != y;
+                invariant x != y;
             };
             if (x > y) {
                 y = y + 1;
@@ -207,7 +207,7 @@ module 0x42::VerifyLoops {
         let x = 0;
         while ({
             spec {
-                assert x != 0;
+                invariant x != 0;
             };
             (x < n)
         }) {
@@ -220,12 +220,43 @@ module 0x42::VerifyLoops {
         let x = 0;
         while ({
             spec {
-                assert x == 0;
+                invariant x == 0;
             };
             (x < n)
         }) {
             x = x + 1;
         };
         x
+    }
+
+    public fun iter10_assert_instead_of_invariant() {
+        let i = 0;
+        while ({
+            spec { assert i <= 11; }; // expect to fail, `i` is havoc-ed
+            (i <= 10)
+        }) {
+            if (i > 10) abort 10;
+            i = i + 1;
+        }
+    }
+    spec iter10_assert_instead_of_invariant {
+        aborts_if false;
+    }
+
+    public fun iter10_assume_assert_instead_of_invariant() {
+        let i = 0;
+        while ({
+            spec {
+                assume i <= 1; // assume arbitrary property about `i`
+                assert i <= 1; // now this can be verified
+            };
+            (i <= 10)
+        }) {
+            if (i > 10) abort 10;
+            i = i + 1;
+        }
+    }
+    spec iter10_assume_assert_instead_of_invariant {
+        aborts_if false;  // this can be verified because of `assume i <= 1;`
     }
 }

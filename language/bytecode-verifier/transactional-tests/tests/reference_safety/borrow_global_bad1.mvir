@@ -1,0 +1,18 @@
+//# publish --address 0x1
+module A {
+    import 0x1.Signer;
+    struct T has key {v: u64}
+
+    public A0(account: &signer, addr: address) acquires T {
+        let x: &mut Self.T;
+        let y: &mut Self.T;
+        let sender: address;
+        sender = Signer.address_of(move(account));
+        x = borrow_global_mut<T>(move(sender));
+        // cannot acquire T, still borrowed
+        y = borrow_global_mut<T>(move(addr));
+        _ = move(x);
+        _ = move(y);
+        return;
+    }
+}

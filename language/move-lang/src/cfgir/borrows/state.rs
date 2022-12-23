@@ -20,16 +20,17 @@ use crate::{
     shared::*,
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 
 use crate::shared::unique_map::UniqueMap;
 use borrow_graph::references::RefID;
 use std::collections::{BTreeMap, BTreeSet};
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 enum Label {
-    Local(String),
-    Resource(String),
-    Field(String),
+    Local(Symbol),
+    Resource(Symbol),
+    Field(Symbol),
 }
 
 type BorrowGraph = borrow_graph::graph::BorrowGraph<Loc, Label>;
@@ -247,7 +248,7 @@ impl BorrowState {
             .filter_map(|(f, borrowers)| {
                 match (at_field_opt, &f) {
                     // Borrow at the same field, so keep
-                    (Some(at_field), Label::Field(f_)) if f_ == at_field.value() => (),
+                    (Some(at_field), Label::Field(f_)) if *f_ == at_field.value() => (),
                     // Borrow not at the same field, so skip
                     (Some(_at_field), _) => return None,
                     // Not freezing at a field, so consider any field borrows
@@ -368,7 +369,7 @@ impl BorrowState {
 
     pub fn assign_local(&mut self, loc: Loc, local: &Var, new_value: Value) -> Diagnostics {
         let old_value = self.locals.remove(local).unwrap();
-        self.locals.add(local.clone(), new_value).unwrap();
+        self.locals.add(*local, new_value).unwrap();
         match old_value {
             Value::Ref(id) => {
                 self.release(id);
@@ -494,7 +495,7 @@ impl BorrowState {
 
     pub fn move_local(&mut self, loc: Loc, local: &Var) -> (Diagnostics, Value) {
         let old_value = self.locals.remove(local).unwrap();
-        self.locals.add(local.clone(), Value::NonRef).unwrap();
+        self.locals.add(*local, Value::NonRef).unwrap();
         match old_value {
             Value::Ref(id) => (Diagnostics::new(), Value::Ref(id)),
             Value::NonRef => {
@@ -658,7 +659,7 @@ impl BorrowState {
             self.readable(loc, ReferenceSafety::RefTrans, msg, id, Some(field))
         };
         let field_borrow_id = self.declare_new_ref(mut_);
-        self.add_field_borrow(loc, id, field.clone(), field_borrow_id);
+        self.add_field_borrow(loc, id, *field, field_borrow_id);
         self.release(id);
         (diags, Value::Ref(field_borrow_id))
     }

@@ -1,6 +1,6 @@
 # Named Addresses
 
-- Status: Implemented in Move 1.4
+- Status: Implemented in Move 1.4, updated in Move 1.5
 
 ## Introduction
 
@@ -60,35 +60,14 @@ let a3: address = @0x42;
 You can think of `@` as an operator that takes an address from being a namespace item to an
 expression item.
 
-### Declaring Named Addresses
+Named addresses are not declared in Move source code. Instead they
+must be declared---and given a value---when invoking the Move compiler. E.g.,
 
-New address names can be declared as:
-
-```move
-address MyAddr;
+```bash
+cargo run --bin move-build --addresses MyAddr=0x42 ...
 ```
 
-Using an address block will also declare the name:
-
-```move
-address MyAddr {
-module M {
-    ...
-}
-}
-```
-
-However, using the `address::module` syntax will not declare the name. It must be declared before
-used:
-
-```move
-address MyAddr;
-module MyAddr::M {
-    ...
-}
-```
-
-The declared address can then be used in both module access and as expression values (with the new
+A named address can be used in both module accesses and as expression values (with the new
 `@` syntax)
 
 ```move
@@ -99,12 +78,10 @@ script {
 }
 ```
 
-An address can be declared multiple times throughout a program.
+A named address can be used multiple times throughout a program.
 
 ```move
 // file1.move
-address MyAddr;
-
 module MyAddr::M {
     ...
 }
@@ -121,50 +98,30 @@ module N {
 
 ### Assigning Named Addresses
 
-The address can be assigned a value with `= <number value>`:
+Named addresses can only be assigned a value by passing their value as a parameter to the compiler with `<addr_name>=<number value>`:
 
-```move
-address MyAddr = 0xC0FFEE;
+```bash
+cargo run --bin move-build --addresses MyAddr=0xC0FFEE ...
 ```
 
-Or in an address block:
-
-```move
-address MyAddr = 0xC0FFEE {
-module M {
-   ...
-}
-}
-```
-
-The address cannot be assigned using the `address::module` syntax. It must be assigned elsewhere:
-
-```move
-address MyAddr = 0xCOFFEE;
-module MyAddr::M {
-    ...
-}
-```
-
-An address can be assigned any number of times in a program, but it can only be given _one_ value.
+An address can be assigned any number of times on the command line as long as it is given only _one_ value.
 The following would be fine, since the address `MyAddr` is given the same value in both assignments:
 
-```move
-address MyAddr = 0xC0FFEE;
-address MyAddr = 12648430; // decimal representation of 0xC0FFEE
+```bash
+cargo run --bin move-build --addresses MyAddr=0xC0FFEE MyAddr=12648430 ... # decimal representation of 0xC0FFEE
 ```
 
-Assigning two different values will result in an error:
+Assigning `MyAddr` two different values will result in an error:
 
-```move
-address MyAddr = 0xCOFFEE;
-address MyAddr = 0xDEADBEEF; // ERROR!
+```bash
+cargo run --bin move-build --addresses MyAddr=0xC0FFEE MyAddr=0xDEADBEEF... # ERROR!
 ```
 
 ### Opaqueness
 
-These assignments, and the name system as whole, only exist at the source language level. Names will
-be fully substituted for their value at the byte code level. So the example from before would be
+Address assignments, and the name system as whole, only exist at the source
+language level and during compilation. Names will be fully substituted for
+their value at the byte code level. So the example from before would be
 equivalent to
 
 ```move
@@ -178,14 +135,13 @@ script {
 But at the source language level, the two are not interchangeable. If we had the declaration:
 
 ```move
-address MyAddr = 0xCOFFEE;
 module MyAddr::M {
     public fun bar() {}
 }
 ```
 
 The function `M::bar` _must_ be accessed through the `MyAddr` named address, not through the
-numerical value.
+numerical value assigned to it.
 
 For example:
 
@@ -214,6 +170,26 @@ opaque, so the numeric values can no longer be used to access the modules. For e
 `0x1::Vector` must now be `Std::Vector`.
 
 Note, as this is just a syntactic change, the compiled module binaries will not be affected.
+
+## Update for release 1.5
+
+The support for assigning values to named addresses in Move source code and declaring named addresses in release 1.4
+
+```move
+address MyAddr = 0x19;
+```
+
+and
+
+```move
+address MyAddr;
+```
+
+was removed.
+
+Support for assigning address values was added to the command line and compiler
+options were added for use in Move packages and the Move command line as described above.
+
 
 ## Future Work
 

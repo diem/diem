@@ -3,11 +3,13 @@
 
 use crate::{
     command_line as cli,
-    diagnostics::{Diagnostic, Diagnostics},
+    diagnostics::{codes::Severity, Diagnostic, Diagnostics},
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
+    collections::BTreeMap,
     convert::TryFrom,
     fmt,
     hash::Hash,
@@ -153,6 +155,62 @@ impl fmt::UpperHex for AddressBytes {
     }
 }
 
+pub fn parse_named_address(s: &str) -> anyhow::Result<(String, AddressBytes)> {
+    let before_after = s.split('=').collect::<Vec<_>>();
+
+    if before_after.len() != 2 {
+        anyhow::bail!("Invalid named address assignment. Must be of the form <address_name>=<address>, but found '{}'", s);
+    }
+    let name = before_after[0].parse()?;
+    let addr =
+        AddressBytes::parse_str(before_after[1]).map_err(|err| anyhow::format_err!("{}", err))?;
+
+    Ok((name, addr))
+}
+
+pub fn verify_and_create_named_address_mapping(
+    named_addresses: Vec<(String, AddressBytes)>,
+) -> anyhow::Result<BTreeMap<String, AddressBytes>> {
+    let mut mapping = BTreeMap::new();
+    let mut invalid_mappings = BTreeMap::new();
+    for (name, addr_bytes) in named_addresses {
+        match mapping.insert(name.clone(), addr_bytes) {
+            Some(other_addr) if other_addr != addr_bytes => {
+                invalid_mappings
+                    .entry(name)
+                    .or_insert_with(Vec::new)
+                    .push(other_addr);
+            }
+            None | Some(_) => (),
+        }
+    }
+
+    if !invalid_mappings.is_empty() {
+        let redefinitions = invalid_mappings
+            .into_iter()
+            .map(|(name, addr_bytes)| {
+                format!(
+                    "{} is assigned differing values {} and {}",
+                    name,
+                    addr_bytes
+                        .iter()
+                        .map(|x| format!("{}", x))
+                        .collect::<Vec<_>>()
+                        .join(","),
+                    mapping[&name]
+                )
+            })
+            .collect::<Vec<_>>();
+
+        anyhow::bail!(
+            "Redefinition of named addresses found in arguments to compiler: {}",
+            redefinitions.join(", ")
+        )
+    }
+
+    Ok(mapping)
+}
+
 //**************************************************************************************************
 // Name
 //**************************************************************************************************
@@ -166,26 +224,26 @@ pub trait TName: Eq + Ord + Clone {
 }
 
 pub trait Identifier {
-    fn value(&self) -> &str;
+    fn value(&self) -> Symbol;
     fn loc(&self) -> Loc;
 }
 
 // TODO maybe we should intern these strings somehow
-pub type Name = Spanned<String>;
+pub type Name = Spanned<Symbol>;
 
 impl TName for Name {
-    type Key = String;
+    type Key = Symbol;
     type Loc = Loc;
 
-    fn drop_loc(self) -> (Loc, String) {
+    fn drop_loc(self) -> (Loc, Symbol) {
         (self.loc, self.value)
     }
 
-    fn add_loc(loc: Loc, key: String) -> Self {
+    fn add_loc(loc: Loc, key: Symbol) -> Self {
         sp(loc, key)
     }
 
-    fn borrow(&self) -> (&Loc, &String) {
+    fn borrow(&self) -> (&Loc, &Symbol) {
         (&self.loc, &self.value)
     }
 }
@@ -232,15 +290,17 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 pub struct CompilationEnv {
     flags: Flags,
     diags: Diagnostics,
+    named_address_mapping: BTreeMap<Symbol, AddressBytes>,
     // TODO(tzakian): Remove the global counter and use this counter instead
     // pub counter: u64,
 }
 
 impl CompilationEnv {
-    pub fn new(flags: Flags) -> Self {
+    pub fn new(flags: Flags, named_address_mapping: BTreeMap<Symbol, AddressBytes>) -> Self {
         Self {
             flags,
             diags: Diagnostics::new(),
+            named_address_mapping,
         }
     }
 
@@ -260,16 +320,32 @@ impl CompilationEnv {
         self.diags.len()
     }
 
-    pub fn check_diags(&mut self) -> Result<(), Diagnostics> {
-        if self.has_diags() {
-            Err(std::mem::take(&mut self.diags))
-        } else {
-            Ok(())
+    pub fn check_diags_at_or_above_severity(
+        &mut self,
+        threshold: Severity,
+    ) -> Result<(), Diagnostics> {
+        match self.diags.max_severity() {
+            Some(max) if max >= threshold => Err(std::mem::take(&mut self.diags)),
+            Some(_) | None => Ok(()),
         }
+    }
+
+    /// Should only be called after compilation is finished
+    pub fn take_final_warning_diags(&mut self) -> Diagnostics {
+        let final_diags = std::mem::take(&mut self.diags);
+        debug_assert!(final_diags
+            .max_severity()
+            .map(|s| s == Severity::Warning)
+            .unwrap_or(true));
+        final_diags
     }
 
     pub fn flags(&self) -> &Flags {
         &self.flags
+    }
+
+    pub fn named_address_mapping(&self) -> &BTreeMap<Symbol, AddressBytes> {
+        &self.named_address_mapping
     }
 }
 

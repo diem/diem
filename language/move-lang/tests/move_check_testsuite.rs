@@ -6,16 +6,32 @@ use move_command_line_common::{
     testing::{format_diff, read_env_update_baseline, EXP_EXT, OUT_EXT},
 };
 use move_lang::{
-    diagnostics::*, shared::Flags, unit_test, CommentMap, Compiler, SteppedCompiler, PASS_CFGIR,
-    PASS_PARSER,
+    compiled_unit::CompiledUnit,
+    diagnostics::*,
+    shared::{AddressBytes, Flags},
+    unit_test, CommentMap, Compiler, SteppedCompiler, PASS_CFGIR, PASS_PARSER,
 };
 use move_lang_test_utils::*;
-use std::{fs, path::Path};
+use std::{collections::BTreeMap, fs, path::Path};
 
 /// Shared flag to keep any temporary results of the test
 const KEEP_TMP: &str = "KEEP";
 
 const TEST_EXT: &str = "unit_test";
+
+fn default_testing_addresses() -> BTreeMap<String, AddressBytes> {
+    let mapping = [
+        ("Std", "0x1"),
+        ("M", "0x1"),
+        ("A", "0x42"),
+        ("B", "0x42"),
+        ("K", "0x19"),
+    ];
+    mapping
+        .iter()
+        .map(|(name, addr)| (name.to_string(), AddressBytes::parse_str(addr).unwrap()))
+        .collect()
+}
 
 fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     // A test is marked that it should also be compiled in test mode by having a `path.unit_test`
@@ -53,10 +69,9 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
 
     let (files, comments_and_compiler_res) = Compiler::new(&targets, &deps)
         .set_flags(flags)
+        .set_named_address_values(default_testing_addresses())
         .run::<PASS_PARSER>()?;
-    let diags = match move_check_for_errors(comments_and_compiler_res) {
-        Err(diags) | Ok(diags) => diags,
-    };
+    let diags = move_check_for_errors(comments_and_compiler_res);
 
     let has_diags = !diags.is_empty();
     let diag_buffer = if has_diags {
@@ -116,17 +131,32 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
 
 fn move_check_for_errors(
     comments_and_compiler_res: Result<(CommentMap, SteppedCompiler<'_, PASS_PARSER>), Diagnostics>,
-) -> Result<Diagnostics, Diagnostics> {
-    let (_, compiler) = comments_and_compiler_res?;
-    let (mut compiler, cfgir) = compiler.run::<PASS_CFGIR>()?.into_ast();
-    let compilation_env = compiler.compilation_env();
-    if compilation_env.flags().is_testing() {
-        unit_test::plan_builder::construct_test_plan(compilation_env, &cfgir);
+) -> Diagnostics {
+    fn try_impl(
+        comments_and_compiler_res: Result<
+            (CommentMap, SteppedCompiler<'_, PASS_PARSER>),
+            Diagnostics,
+        >,
+    ) -> Result<(Vec<CompiledUnit>, Diagnostics), Diagnostics> {
+        let (_, compiler) = comments_and_compiler_res?;
+        let (mut compiler, cfgir) = compiler.run::<PASS_CFGIR>()?.into_ast();
+        let compilation_env = compiler.compilation_env();
+        if compilation_env.flags().is_testing() {
+            unit_test::plan_builder::construct_test_plan(compilation_env, &cfgir);
+        }
+
+        compilation_env.check_diags_at_or_above_severity(codes::Severity::Warning)?;
+        let (units, warnings) = compiler.at_cfgir(cfgir).build()?;
+        Ok((units, warnings))
     }
 
-    compilation_env.check_diags()?;
-    let units = compiler.at_cfgir(cfgir).build()?;
-    Ok(move_lang::compiled_unit::verify_units(units).1)
+    let (units, warnings) = match try_impl(comments_and_compiler_res) {
+        Ok((units, warnings)) => (units, warnings),
+        Err(diags) => return diags,
+    };
+    let mut diags = move_lang::compiled_unit::verify_units(units).1;
+    diags.extend(warnings);
+    diags
 }
 
 datatest_stable::harness!(move_check_testsuite, MOVE_CHECK_DIR, r".*\.move$");

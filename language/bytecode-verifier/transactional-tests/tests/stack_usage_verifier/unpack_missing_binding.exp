@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'publish'. lines 1-21:
+Error: Unable to publish module '00000000000000000000000000000001::Test'. Got VMError: {
+    major_status: POSITIVE_STACK_SIZE_AT_BLOCK_END,
+    sub_status: None,
+    location: 0x1::Test,
+    indices: [(FunctionDefinition, 1)],
+    offsets: [(FunctionDefinitionIndex(1), 0)],
+}

@@ -14,7 +14,7 @@ proptest = { version = "1.0.0", optional = true }
 serde = { version = "1.0.124", default-features = false }
 
 executor-types = { path = "../../execution/executor-types" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-crypto = { path = "../../crates/diem-crypto" }
 diem-crypto-derive = { path = "../../crates/diem-crypto-derive" }
 diem-infallible = { path = "../../crates/diem-infallible" }

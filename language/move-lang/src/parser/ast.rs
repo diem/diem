@@ -8,29 +8,29 @@ use std::{fmt, hash::Hash};
 
 macro_rules! new_name {
     ($n:ident) => {
-        #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Clone)]
+        #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
         pub struct $n(pub Name);
 
         impl TName for $n {
-            type Key = String;
+            type Key = Symbol;
             type Loc = Loc;
 
-            fn drop_loc(self) -> (Loc, String) {
+            fn drop_loc(self) -> (Loc, Symbol) {
                 (self.0.loc, self.0.value)
             }
 
-            fn add_loc(loc: Loc, key: String) -> Self {
+            fn add_loc(loc: Loc, key: Symbol) -> Self {
                 $n(sp(loc, key))
             }
 
-            fn borrow(&self) -> (&Loc, &String) {
+            fn borrow(&self) -> (&Loc, &Symbol) {
                 (&self.0.loc, &self.0.value)
             }
         }
 
         impl Identifier for $n {
-            fn value(&self) -> &str {
-                &self.0.value
+            fn value(&self) -> Symbol {
+                self.0.value
             }
             fn loc(&self) -> Loc {
                 self.0.loc
@@ -68,7 +68,6 @@ pub struct AddressDefinition {
     pub attributes: Vec<Attributes>,
     pub loc: Loc,
     pub addr: LeadingNameAccess,
-    pub addr_value: Option<Spanned<AddressBytes>>,
     pub modules: Vec<ModuleDefinition>,
 }
 
@@ -131,7 +130,7 @@ impl Attribute_ {
 
 new_name!(ModuleName);
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Specifies a name at the beginning of an access chain. Could be
 /// - A module name
 /// - A named address
@@ -142,7 +141,7 @@ pub enum LeadingNameAccess_ {
 }
 pub type LeadingNameAccess = Spanned<LeadingNameAccess_>;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ModuleIdent_ {
     pub address: LeadingNameAccess,
     pub module: ModuleName,
@@ -332,7 +331,6 @@ pub type SpecApplyFragment = Spanned<SpecApplyFragment_>;
 pub enum SpecBlockMember_ {
     Condition {
         kind: SpecConditionKind,
-        type_parameters: Vec<(Name, Vec<Ability>)>,
         properties: Vec<PragmaProperty>,
         exp: Exp,
         additional_exps: Vec<Exp>,
@@ -371,8 +369,8 @@ pub enum SpecBlockMember_ {
 pub type SpecBlockMember = Spanned<SpecBlockMember_>;
 
 // Specification condition kind.
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub enum SpecConditionKind {
+#[derive(PartialEq, Clone, Debug)]
+pub enum SpecConditionKind_ {
     Assert,
     Assume,
     Decreases,
@@ -383,10 +381,11 @@ pub enum SpecConditionKind {
     Emits,
     Ensures,
     Requires,
-    Invariant,
-    InvariantUpdate,
-    Axiom,
+    Invariant(Vec<(Name, Vec<Ability>)>),
+    InvariantUpdate(Vec<(Name, Vec<Ability>)>),
+    Axiom(Vec<(Name, Vec<Ability>)>),
 }
+pub type SpecConditionKind = Spanned<SpecConditionKind_>;
 
 //**************************************************************************************************
 // Types
@@ -458,13 +457,13 @@ pub enum Value_ {
     // @<num>
     Address(LeadingNameAccess),
     // <num>(u8|u64|u128)?
-    Num(String),
+    Num(Symbol),
     // false
     Bool(bool),
     // x"[0..9A..F]+"
-    HexString(String),
+    HexString(Symbol),
     // b"(<ascii> | \n | \r | \t | \\ | \0 | \" | \x[0..9A..F][0..9A..F])+"
-    ByteString(String),
+    ByteString(Symbol),
 }
 pub type Value = Spanned<Value_>;
 
@@ -713,7 +712,7 @@ impl ModuleName {
 
 impl Var {
     pub fn is_underscore(&self) -> bool {
-        self.0.value == "_"
+        self.0.value.as_str() == "_"
     }
 
     pub fn starts_with_underscore(&self) -> bool {
@@ -972,14 +971,10 @@ impl AstDebug for AddressDefinition {
             attributes,
             loc: _loc,
             addr,
-            addr_value,
             modules,
         } = self;
         attributes.ast_debug(w);
         w.write(&format!("address {}", addr));
-        if let Some(sp!(_, addr_bytes)) = addr_value {
-            w.write(&format!(" = {}", addr_bytes));
-        }
         w.writeln(" {{");
         for m in modules {
             m.ast_debug(w)
@@ -1223,9 +1218,9 @@ impl AstDebug for SpecBlockTarget_ {
     }
 }
 
-impl AstDebug for SpecConditionKind {
+impl AstDebug for SpecConditionKind_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        use SpecConditionKind::*;
+        use SpecConditionKind_::*;
         match self {
             Assert => w.write("assert "),
             Assume => w.write("assume "),
@@ -1237,9 +1232,21 @@ impl AstDebug for SpecConditionKind {
             Emits => w.write("emits "),
             Ensures => w.write("ensures "),
             Requires => w.write("requires "),
-            Invariant => w.write("invariant "),
-            InvariantUpdate => w.write("invariant update "),
-            Axiom => w.write("axiom "),
+            Invariant(ty_params) => {
+                w.write("invariant");
+                ty_params.ast_debug(w);
+                w.write(" ")
+            }
+            InvariantUpdate(ty_params) => {
+                w.write("invariant");
+                ty_params.ast_debug(w);
+                w.write(" update ")
+            }
+            Axiom(ty_params) => {
+                w.write("axiom");
+                ty_params.ast_debug(w);
+                w.write(" ")
+            }
         }
     }
 }
@@ -1249,13 +1256,11 @@ impl AstDebug for SpecBlockMember_ {
         match self {
             SpecBlockMember_::Condition {
                 kind,
-                type_parameters,
                 properties: _,
                 exp,
                 additional_exps,
             } => {
                 kind.ast_debug(w);
-                type_parameters.ast_debug(w);
                 exp.ast_debug(w);
                 w.list(additional_exps, ",", |w, e| {
                     e.ast_debug(w);

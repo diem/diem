@@ -1,9 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
-use move_core_types::{effects::ChangeSet, language_storage::ModuleId};
-use move_vm_runtime::data_cache::MoveStorage;
+use move_binary_format::errors::{PartialVMError, VMResult};
+use move_core_types::{effects::ChangeSet, language_storage::ModuleId, resolver::MoveResolver};
 
 /// The result returned by the stackless VM does not contain code offsets and indices. In order to
 /// do cross-vm comparison, we need to adapt the Move VM result by removing these fields.
@@ -24,20 +23,17 @@ pub fn adapt_move_vm_result<T>(result: VMResult<T>) -> VMResult<T> {
 /// The same guarantee is not provided by the Move VM. In Move VM, we could borrow_global_mut but
 /// write the same value back instead of an updated value. In this case, the Move VM produces an
 /// entry in the change_set.
-pub fn adapt_move_vm_change_set<S: MoveStorage>(
+pub fn adapt_move_vm_change_set<S: MoveResolver>(
     change_set_result: VMResult<ChangeSet>,
     old_storage: &S,
 ) -> VMResult<ChangeSet> {
-    change_set_result.and_then(|change_set| {
-        adapt_move_vm_change_set_internal(change_set, old_storage)
-            .map_err(|err| err.finish(Location::Undefined))
-    })
+    change_set_result.map(|change_set| adapt_move_vm_change_set_internal(change_set, old_storage))
 }
 
-fn adapt_move_vm_change_set_internal<S: MoveStorage>(
+fn adapt_move_vm_change_set_internal<S: MoveResolver>(
     change_set: ChangeSet,
     old_storage: &S,
-) -> PartialVMResult<ChangeSet> {
+) -> ChangeSet {
     let mut adapted = ChangeSet::new();
     for (addr, state) in change_set.into_inner() {
         let (modules, resources) = state.into_inner();
@@ -46,7 +42,7 @@ fn adapt_move_vm_change_set_internal<S: MoveStorage>(
                 // deletion
                 None => adapted.unpublish_resource(addr, tag).unwrap(),
                 // addition / modification
-                Some(new_val) => match old_storage.get_resource(&addr, &tag)? {
+                Some(new_val) => match old_storage.get_resource(&addr, &tag).unwrap() {
                     // addition
                     None => adapted.publish_resource(addr, tag, new_val).unwrap(),
                     // modification is only added to change_set if the values actually change
@@ -68,5 +64,5 @@ fn adapt_move_vm_change_set_internal<S: MoveStorage>(
             }
         }
     }
-    Ok(adapted)
+    adapted
 }

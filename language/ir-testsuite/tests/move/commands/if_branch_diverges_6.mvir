@@ -8,5 +8,4 @@ main() {
         return;
     }
 }
-// check: "Post-compile bounds check errors"
 // check: INDEX_OUT_OF_BOUNDS

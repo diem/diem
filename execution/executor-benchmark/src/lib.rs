@@ -29,7 +29,7 @@ use diem_types::{
     },
 };
 use diem_vm::DiemVM;
-use diemdb::DiemDB;
+use diemdb::{metrics::DIEM_STORAGE_API_LATENCY_SECONDS, DiemDB};
 use executor::{
     db_bootstrapper::{generate_waypoint, maybe_bootstrap},
     metrics::{
@@ -344,19 +344,22 @@ impl TransactionExecutor {
             version as f64 / global_start_time.elapsed().as_secs_f64(),
         );
         info!(
-            "Accumulative total: VM time: {:.0} secs, executor time: {:.0} secs, commit time: {:.0} secs",
+            "Accumulative total: VM time: {:.0} secs, executor time: {:.0} secs, commit time: {:.0} secs, DB commit time: {:.0} secs",
             DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.get_sample_sum(),
             DIEM_EXECUTOR_EXECUTE_BLOCK_SECONDS.get_sample_sum() - DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.get_sample_sum(),
             DIEM_EXECUTOR_COMMIT_BLOCKS_SECONDS.get_sample_sum(),
+            DIEM_STORAGE_API_LATENCY_SECONDS.get_metric_with_label_values(&["save_transactions", "Ok"]).expect("must exist.").get_sample_sum(),
         );
         const NANOS_PER_SEC: f64 = 1_000_000_000.0;
         info!(
-            "Accumulative per transaction: VM time: {:.0} ns, executor time: {:.0} ns, commit time: {:.0} ns",
+            "Accumulative per transaction: VM time: {:.0} ns, executor time: {:.0} ns, commit time: {:.0} ns, DB commit time: {:.0} ns",
             DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.get_sample_sum() * NANOS_PER_SEC
                 / version as f64,
             (DIEM_EXECUTOR_EXECUTE_BLOCK_SECONDS.get_sample_sum() - DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.get_sample_sum()) * NANOS_PER_SEC
                 / version as f64,
             DIEM_EXECUTOR_COMMIT_BLOCKS_SECONDS.get_sample_sum() * NANOS_PER_SEC
+                / version as f64,
+            DIEM_STORAGE_API_LATENCY_SECONDS.get_metric_with_label_values(&["save_transactions", "Ok"]).expect("must exist.").get_sample_sum() * NANOS_PER_SEC
                 / version as f64,
         );
     }

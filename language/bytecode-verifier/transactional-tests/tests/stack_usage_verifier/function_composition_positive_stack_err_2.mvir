@@ -1,0 +1,24 @@
+//# publish --address 0x1
+module A {
+    public parity(u: u64): u64 * bool {
+        return copy(u), (move(u) % 2 == 0);
+    }
+
+    public takes_bool(b: bool): u64 {
+        if (move(b)) { return 1;}
+        else { return 0;}
+    }
+}
+
+//# run
+import 0x1.A;
+
+main() {
+    let k: u64;
+    let ans: u64;
+    k = 100;
+    // positive stack
+    ans = A.takes_bool(A.parity(move(k)));
+    assert(move(ans) == true, 42);
+    return;
+}

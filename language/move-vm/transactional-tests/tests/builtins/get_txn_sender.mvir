@@ -1,0 +1,12 @@
+//# run --signers 0x1
+import 0x1.Signer;
+
+main(account: signer) {
+    let sender: address;
+    let addr: address;
+
+    sender = Signer.address_of(&account);
+    addr = 0x1;
+    assert(copy(sender) == copy(addr), 42);
+    return;
+}

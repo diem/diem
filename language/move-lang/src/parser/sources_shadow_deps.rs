@@ -24,17 +24,17 @@ pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
     for def in &source_definitions {
         match def {
             Definition::Address(a) => {
-                let addr = &a.addr.value;
+                let addr = a.addr.value;
                 for module in &a.modules {
-                    modules_defined_in_src.insert((addr.clone(), module.name.clone()));
+                    modules_defined_in_src.insert((addr, module.name));
                 }
             }
             Definition::Module(module) => {
                 modules_defined_in_src.insert((
-                    module.address.clone().map(|a| a.value).unwrap_or_else(|| {
+                    module.address.map(|a| a.value).unwrap_or_else(|| {
                         LeadingNameAccess_::AnonymousAddress(AddressBytes::DEFAULT_ERROR_BYTES)
                     }),
-                    module.name.clone(),
+                    module.name,
                 ));
             }
             Definition::Script(_) => (),
@@ -49,13 +49,11 @@ pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
         .into_iter()
         .map(|def| match def {
             Definition::Address(mut a) => {
-                let addr = &a.addr.value;
+                let addr = a.addr.value;
                 let modules = std::mem::take(&mut a.modules);
                 a.modules = modules
                     .into_iter()
-                    .filter(|module| {
-                        !modules_defined_in_src.contains(&(addr.clone(), module.name.clone()))
-                    })
+                    .filter(|module| !modules_defined_in_src.contains(&(addr, module.name)))
                     .collect();
                 Definition::Address(a)
             }
@@ -64,10 +62,10 @@ pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
         .filter(|def| match def {
             Definition::Address(_) => true,
             Definition::Module(module) => !modules_defined_in_src.contains(&(
-                module.address.clone().map(|a| a.value).unwrap_or_else(|| {
+                module.address.map(|a| a.value).unwrap_or_else(|| {
                     LeadingNameAccess_::AnonymousAddress(AddressBytes::DEFAULT_ERROR_BYTES)
                 }),
-                module.name.clone(),
+                module.name,
             )),
             Definition::Script(_) => false,
         })

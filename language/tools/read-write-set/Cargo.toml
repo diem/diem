@@ -15,7 +15,6 @@ diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 move-binary-format = { path = "../../move-binary-format" }
 move-bytecode-utils = { path = "../move-bytecode-utils" }
 move-core-types = { path = "../../move-core/types" }
-move-vm-runtime = { path = "../../move-vm/runtime" }
 move-model = { path = "../../move-model" }
 prover_bytecode = { path = "../../move-prover/bytecode", package="bytecode" }
 resource-viewer = { path = "../resource-viewer" }

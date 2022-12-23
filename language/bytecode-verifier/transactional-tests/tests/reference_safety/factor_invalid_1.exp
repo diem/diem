@@ -1,0 +1,19 @@
+processed 2 tasks
+
+task 0 'publish'. lines 1-27:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: CALL_BORROWED_MUTABLE_REFERENCE_ERROR,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 15)],
+}
+
+task 1 'publish'. lines 29-55:
+Error: Unable to publish module '00000000000000000000000000000001::M2'. Got VMError: {
+    major_status: CALL_BORROWED_MUTABLE_REFERENCE_ERROR,
+    sub_status: None,
+    location: 0x1::M2,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 15)],
+}

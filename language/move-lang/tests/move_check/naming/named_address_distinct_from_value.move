@@ -1,8 +1,6 @@
 // These checks straddle a few different passes but
 // Named addresses are distinct from their value
 
-address A = 0x42;
-
 module A::M {
     const C: u64 = 0;
     struct S {}

@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'run'. lines 1-13:
+Error: Script execution failed with VMError: {
+    major_status: STLOC_TYPE_MISMATCH_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 6)],
+}

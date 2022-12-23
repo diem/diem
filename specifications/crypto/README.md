@@ -163,7 +163,7 @@ structure.
 
 This library leverages the ubiquitous serde serialization and deserialization framework
 for Rust, and
-[serde-reflection](https://github.com/novifinancial/serde-reflection), a
+[serde-reflection](https://github.com/diem/serde-reflection), a
 format description and polyglot code generator for serde.
 
 <!-- TODO(fga): refer to serialization spec more fully. -->

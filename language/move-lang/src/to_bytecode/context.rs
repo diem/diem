@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    diagnostics::Diagnostic,
     expansion::ast::{Address, ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
     parser::ast::{ConstantName, FunctionName, StructName, Var},
-    shared::{unique_map::UniqueMap, AddressBytes, CompilationEnv, Name},
+    shared::{AddressBytes, CompilationEnv},
 };
 use move_core_types::account_address::AccountAddress as MoveAddress;
-use move_ir_types::{ast as IR, location::Loc};
+use move_ir_types::ast as IR;
+use move_symbol_pool::Symbol;
 use std::{
     clone::Clone,
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -20,7 +20,6 @@ use IR::Ability;
 /// Contains all of the dependencies actually used in the module
 pub struct Context<'a> {
     pub env: &'a mut CompilationEnv,
-    addresses: &'a UniqueMap<Name, AddressBytes>,
     current_module: Option<&'a ModuleIdent>,
     seen_structs: BTreeSet<(ModuleIdent, StructName)>,
     seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
@@ -28,14 +27,9 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(
-        env: &'a mut CompilationEnv,
-        addresses: &'a UniqueMap<Name, AddressBytes>,
-        current_module: Option<&'a ModuleIdent>,
-    ) -> Self {
+    pub fn new(env: &'a mut CompilationEnv, current_module: Option<&'a ModuleIdent>) -> Self {
         Self {
             env,
-            addresses,
             current_module,
             seen_structs: BTreeSet::new(),
             seen_functions: BTreeSet::new(),
@@ -75,7 +69,6 @@ impl<'a> Context<'a> {
     ) -> (Vec<IR::ImportDefinition>, Vec<IR::ModuleDependency>) {
         let Context {
             env,
-            addresses,
             current_module: _current_module,
             mut seen_structs,
             seen_functions,
@@ -94,13 +87,7 @@ impl<'a> Context<'a> {
         for (module, (structs, functions)) in module_dependencies {
             let dependency_order = dependency_orderings[&module];
             let ir_name = Self::ir_module_alias(&module);
-            let ir_ident = match Self::translate_module_ident_impl(addresses, module) {
-                Ok(ident) => ident,
-                Err(d) => {
-                    env.add_diag(d);
-                    continue;
-                }
-            };
+            let ir_ident = Self::translate_module_ident_impl(env.named_address_mapping(), module);
             imports.push(IR::ImportDefinition::new(ir_ident, Some(ir_name.clone())));
             ordered_dependencies.push((
                 dependency_order,
@@ -171,7 +158,7 @@ impl<'a> Context<'a> {
         module: &ModuleIdent,
         sname: StructName,
     ) -> IR::StructDependency {
-        let key = (module.clone(), sname.clone());
+        let key = (*module, sname);
         let (abilities, type_formals) = struct_declarations.get(&key).unwrap().clone();
         let name = Self::translate_struct_name(sname);
         IR::StructDependency {
@@ -209,7 +196,7 @@ impl<'a> Context<'a> {
         module: &ModuleIdent,
         fname: FunctionName,
     ) -> (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionDependency) {
-        let key = (module.clone(), fname.clone());
+        let key = (*module, fname);
         let (seen_structs, signature) = function_declarations.get(&key).unwrap().clone();
         let name = Self::translate_function_name(fname);
         (seen_structs, IR::FunctionDependency { name, signature })
@@ -220,55 +207,43 @@ impl<'a> Context<'a> {
     //**********************************************************************************************
 
     fn ir_module_alias(sp!(_, ModuleIdent_ { address, module }): &ModuleIdent) -> IR::ModuleName {
-        IR::ModuleName::new(format!("{}::{}", address, module))
+        IR::ModuleName(format!("{}::{}", address, module).into())
     }
 
-    pub fn resolve_address(&mut self, loc: Loc, addr: Address, case: &str) -> Option<AddressBytes> {
-        match addr.into_addr_bytes(self.addresses, loc, case) {
-            Ok(addr) => Some(addr),
-            Err(d) => {
-                self.env.add_diag(d);
-                None
-            }
-        }
+    pub fn resolve_address(&self, addr: Address) -> AddressBytes {
+        addr.into_addr_bytes(self.env.named_address_mapping())
     }
 
-    pub fn translate_module_ident(&mut self, ident: ModuleIdent) -> Option<IR::ModuleIdent> {
-        match Self::translate_module_ident_impl(self.addresses, ident) {
-            Ok(ident) => Some(ident),
-            Err(d) => {
-                self.env.add_diag(d);
-                None
-            }
-        }
+    pub fn translate_module_ident(&self, ident: ModuleIdent) -> IR::ModuleIdent {
+        Self::translate_module_ident_impl(self.env.named_address_mapping(), ident)
     }
 
     fn translate_module_ident_impl(
-        addresses: &UniqueMap<Name, AddressBytes>,
-        sp!(loc, ModuleIdent_ { address, module }): ModuleIdent,
-    ) -> Result<IR::ModuleIdent, Diagnostic> {
-        let address_bytes = address.into_addr_bytes(addresses, loc, "module identifier")?;
+        addresses: &BTreeMap<Symbol, AddressBytes>,
+        sp!(_, ModuleIdent_ { address, module }): ModuleIdent,
+    ) -> IR::ModuleIdent {
+        let address_bytes = address.into_addr_bytes(addresses);
         let name = Self::translate_module_name_(module.0.value);
-        Ok(IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
+        IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
             name,
             MoveAddress::new(address_bytes.into_bytes()),
-        )))
+        ))
     }
 
-    fn translate_module_name_(s: String) -> IR::ModuleName {
-        IR::ModuleName::new(s)
+    fn translate_module_name_(s: Symbol) -> IR::ModuleName {
+        IR::ModuleName(s)
     }
 
     fn translate_struct_name(n: StructName) -> IR::StructName {
-        IR::StructName::new(n.0.value)
+        IR::StructName(n.0.value)
     }
 
     fn translate_constant_name(n: ConstantName) -> IR::ConstantName {
-        IR::ConstantName::new(n.0.value)
+        IR::ConstantName(n.0.value)
     }
 
     fn translate_function_name(n: FunctionName) -> IR::FunctionName {
-        IR::FunctionName::new(n.0.value)
+        IR::FunctionName(n.0.value)
     }
 
     //**********************************************************************************************
@@ -291,7 +266,7 @@ impl<'a> Context<'a> {
         let mname = if self.is_current_module(m) {
             IR::ModuleName::module_self()
         } else {
-            self.seen_structs.insert((m.clone(), s.clone()));
+            self.seen_structs.insert((*m, s));
             Self::ir_module_alias(m)
         };
         let n = Self::translate_struct_name(s);
@@ -318,7 +293,7 @@ impl<'a> Context<'a> {
         let mname = if self.is_current_module(m) {
             IR::ModuleName::module_self()
         } else {
-            self.seen_functions.insert((m.clone(), f.clone()));
+            self.seen_functions.insert((*m, f));
             Self::ir_module_alias(m)
         };
         let n = Self::translate_function_name(f);
@@ -346,7 +321,7 @@ impl<'a> Context<'a> {
     //**********************************************************************************************
 
     pub fn spec(&mut self, id: SpecId, used_locals: BTreeMap<Var, H::SingleType>) -> IR::NopLabel {
-        let label = IR::NopLabel(format!("{}", id));
+        let label = IR::NopLabel(format!("{}", id).into());
         assert!(self
             .spec_info
             .insert(id, (label.clone(), used_locals))

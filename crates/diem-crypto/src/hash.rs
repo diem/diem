@@ -475,6 +475,13 @@ pub trait CryptoHasher: Default + std::io::Write {
 
     /// Finish constructing the [`HashValue`].
     fn finish(self) -> HashValue;
+
+    /// Convenience method to compute the hash of a complete byte slice.
+    fn hash_all(bytes: &[u8]) -> HashValue {
+        let mut hasher = Self::default();
+        hasher.update(bytes);
+        hasher.finish()
+    }
 }
 
 /// The default hasher underlying generated implementations of `CryptoHasher`.

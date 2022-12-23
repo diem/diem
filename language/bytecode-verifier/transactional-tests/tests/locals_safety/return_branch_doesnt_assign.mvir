@@ -1,0 +1,14 @@
+//# run
+main() {
+    let x: u64;
+
+    if (true) {
+        return;
+    } else {
+        x = 0;
+    }
+
+    // okay to use x
+    assert(copy(x) == 5, 42);
+    return;
+}

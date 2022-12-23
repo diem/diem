@@ -7,10 +7,8 @@ use move_core_types::{
     effects::{AccountChangeSet, ChangeSet},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
+    resolver::{ModuleResolver, MoveResolver, ResourceResolver},
 };
-use move_vm_runtime::data_cache::MoveStorage;
-// use move_vm_txn_effect_converter::convert_txn_effects_to_move_changeset_and_events;
-use move_binary_format::errors::{PartialVMResult, VMResult};
 use std::collections::{btree_map, BTreeMap};
 
 /// A dummy storage containing no modules or resources.
@@ -23,16 +21,22 @@ impl BlankStorage {
     }
 }
 
-impl MoveStorage for BlankStorage {
-    fn get_module(&self, _module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl ModuleResolver for BlankStorage {
+    type Error = ();
+
+    fn get_module(&self, _module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         Ok(None)
     }
+}
+
+impl ResourceResolver for BlankStorage {
+    type Error = ();
 
     fn get_resource(
         &self,
         _address: &AccountAddress,
         _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
         Ok(None)
     }
 }
@@ -45,8 +49,10 @@ pub struct DeltaStorage<'a, 'b, S> {
     delta: &'b ChangeSet,
 }
 
-impl<'a, 'b, S: MoveStorage> MoveStorage for DeltaStorage<'a, 'b, S> {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl<'a, 'b, S: ModuleResolver> ModuleResolver for DeltaStorage<'a, 'b, S> {
+    type Error = S::Error;
+
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         if let Some(account_storage) = self.delta.accounts().get(module_id.address()) {
             if let Some(blob_opt) = account_storage.modules().get(module_id.name()) {
                 return Ok(blob_opt.clone());
@@ -55,12 +61,16 @@ impl<'a, 'b, S: MoveStorage> MoveStorage for DeltaStorage<'a, 'b, S> {
 
         self.base.get_module(module_id)
     }
+}
+
+impl<'a, 'b, S: ResourceResolver> ResourceResolver for DeltaStorage<'a, 'b, S> {
+    type Error = S::Error;
 
     fn get_resource(
         &self,
         address: &AccountAddress,
         tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> Result<Option<Vec<u8>>, S::Error> {
         if let Some(account_storage) = self.delta.accounts().get(address) {
             if let Some(blob_opt) = account_storage.resources().get(tag) {
                 return Ok(blob_opt.clone());
@@ -71,7 +81,7 @@ impl<'a, 'b, S: MoveStorage> MoveStorage for DeltaStorage<'a, 'b, S> {
     }
 }
 
-impl<'a, 'b, S: MoveStorage> DeltaStorage<'a, 'b, S> {
+impl<'a, 'b, S: MoveResolver> DeltaStorage<'a, 'b, S> {
     pub fn new(base: &'a S, delta: &'b ChangeSet) -> Self {
         Self { base, delta }
     }
@@ -185,19 +195,25 @@ impl InMemoryStorage {
     }
 }
 
-impl MoveStorage for InMemoryStorage {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl ModuleResolver for InMemoryStorage {
+    type Error = ();
+
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         if let Some(account_storage) = self.accounts.get(module_id.address()) {
             return Ok(account_storage.modules.get(module_id.name()).cloned());
         }
         Ok(None)
     }
+}
+
+impl ResourceResolver for InMemoryStorage {
+    type Error = ();
 
     fn get_resource(
         &self,
         address: &AccountAddress,
         tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
         if let Some(account_storage) = self.accounts.get(address) {
             return Ok(account_storage.resources.get(tag).cloned());
         }

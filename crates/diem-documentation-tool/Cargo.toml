@@ -8,11 +8,10 @@ homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
-
 [dependencies]
 serde_yaml = "0.8.17"
-serde-reflection = "0.3.2"
-serde-generate = "0.19.1"
+serde-reflection = { git = "https://github.com/diem/serde-reflection-diem.git", rev = "bb38a0fdb7b9c219cbbb646097e847587d059086" }
+serde-generate = { git = "https://github.com/diem/serde-reflection-diem.git", rev = "bb38a0fdb7b9c219cbbb646097e847587d059086" }
 anyhow = "1.0.38"
 regex = "1.5.5"
 structopt = "0.3.21"

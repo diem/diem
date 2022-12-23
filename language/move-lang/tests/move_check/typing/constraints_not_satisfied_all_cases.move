@@ -4,13 +4,13 @@ module 0x8675309::M {
     struct R has key {}
     struct C has copy {}
 
-    fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
+    fun no_constraint<T>(_c: CupC<T>, _r: CupR<T>) { abort 0 }
 
-    fun t_resource<T: key>(c: CupC<T>, r: CupR<T>) {}
+    fun t_resource<T: key>(_c: CupC<T>, _r: CupR<T>) { abort 0 }
 
-    fun t_copyable<T: copy>(c: CupC<T>, r: CupR<T>) {}
+    fun t_copyable<T: copy>(_c: CupC<T>, _r: CupR<T>) { abort 0 }
 
-    fun r(c: CupC<R>, r: CupR<R>) {}
+    fun r(_c: CupC<R>, _r: CupR<R>) { abort 0 }
 
-    fun c(c: CupC<C>, r: CupR<C>) {}
+    fun c(_c: CupC<C>, _r: CupR<C>) { abort 0 }
 }

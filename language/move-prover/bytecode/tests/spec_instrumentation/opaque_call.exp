@@ -139,57 +139,53 @@ fun Test::incr_twice() {
   0: assume forall $rsc: ResourceDomain<Test::R>(): WellFormed($rsc)
   1: @1 := save_mem(Test::R)
   2: $t0 := 0x1
-     # >> opaque call: $t1 := Test::get_and_incr($t0)
-  3: nop
      # VC: precondition does not hold at this call at tests/spec_instrumentation/opaque_call.move:15:6+22
-  4: assert Neq<address>($t0, 0)
-  5: $t1 := opaque begin: Test::get_and_incr($t0)
-  6: assume Identical($t2, Or(Not(exists<Test::R>($t0)), Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615)))
-  7: if ($t2) goto 8 else goto 12
-  8: label L4
-  9: assume Or(And(Not(exists<Test::R>($t0)), Eq(33, $t3)), Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615))
- 10: trace_abort($t3)
- 11: goto 42
- 12: label L3
- 13: @2 := save_mem(Test::R)
- 14: modifies global<Test::R>($t0)
- 15: assume WellFormed($t1)
- 16: assume Eq<u64>(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global[@2]<Test::R>($t0)), 1))
- 17: assume Eq<u64>($t1, select Test::R.v(global<Test::R>($t0)))
- 18: $t1 := opaque end: Test::get_and_incr($t0)
- 19: destroy($t1)
- 20: $t4 := 0x1
-     # >> opaque call: $t3 := Test::get_and_incr($t2)
- 21: nop
+  3: assert Neq<address>($t0, 0)
+  4: $t1 := opaque begin: Test::get_and_incr($t0)
+  5: assume Identical($t2, Or(Not(exists<Test::R>($t0)), Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615)))
+  6: if ($t2) goto 7 else goto 11
+  7: label L4
+  8: assume Or(And(Not(exists<Test::R>($t0)), Eq(33, $t3)), Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615))
+  9: trace_abort($t3)
+ 10: goto 40
+ 11: label L3
+ 12: @2 := save_mem(Test::R)
+ 13: modifies global<Test::R>($t0)
+ 14: assume WellFormed($t1)
+ 15: assume Eq<u64>(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global[@2]<Test::R>($t0)), 1))
+ 16: assume Eq<u64>($t1, select Test::R.v(global<Test::R>($t0)))
+ 17: $t1 := opaque end: Test::get_and_incr($t0)
+ 18: destroy($t1)
+ 19: $t4 := 0x1
      # VC: precondition does not hold at this call at tests/spec_instrumentation/opaque_call.move:15:6+22
- 22: assert Neq<address>($t4, 0)
- 23: $t5 := opaque begin: Test::get_and_incr($t4)
- 24: assume Identical($t6, Or(Not(exists<Test::R>($t4)), Ge(Add(select Test::R.v(global<Test::R>($t4)), 1), 18446744073709551615)))
- 25: if ($t6) goto 26 else goto 30
- 26: label L6
- 27: assume Or(And(Not(exists<Test::R>($t4)), Eq(33, $t3)), Ge(Add(select Test::R.v(global<Test::R>($t4)), 1), 18446744073709551615))
- 28: trace_abort($t3)
- 29: goto 42
- 30: label L5
- 31: @3 := save_mem(Test::R)
- 32: modifies global<Test::R>($t4)
- 33: assume WellFormed($t5)
- 34: assume Eq<u64>(select Test::R.v(global<Test::R>($t4)), Add(select Test::R.v(global[@3]<Test::R>($t4)), 1))
- 35: assume Eq<u64>($t5, select Test::R.v(global<Test::R>($t4)))
- 36: $t5 := opaque end: Test::get_and_incr($t4)
- 37: destroy($t5)
- 38: label L1
+ 20: assert Neq<address>($t4, 0)
+ 21: $t5 := opaque begin: Test::get_and_incr($t4)
+ 22: assume Identical($t6, Or(Not(exists<Test::R>($t4)), Ge(Add(select Test::R.v(global<Test::R>($t4)), 1), 18446744073709551615)))
+ 23: if ($t6) goto 24 else goto 28
+ 24: label L6
+ 25: assume Or(And(Not(exists<Test::R>($t4)), Eq(33, $t3)), Ge(Add(select Test::R.v(global<Test::R>($t4)), 1), 18446744073709551615))
+ 26: trace_abort($t3)
+ 27: goto 40
+ 28: label L5
+ 29: @3 := save_mem(Test::R)
+ 30: modifies global<Test::R>($t4)
+ 31: assume WellFormed($t5)
+ 32: assume Eq<u64>(select Test::R.v(global<Test::R>($t4)), Add(select Test::R.v(global[@3]<Test::R>($t4)), 1))
+ 33: assume Eq<u64>($t5, select Test::R.v(global<Test::R>($t4)))
+ 34: $t5 := opaque end: Test::get_and_incr($t4)
+ 35: destroy($t5)
+ 36: label L1
      # VC: function does not abort under this condition at tests/spec_instrumentation/opaque_call.move:28:6+35
- 39: assert Not(Not(exists[@1]<Test::R>(1)))
+ 37: assert Not(Not(exists[@1]<Test::R>(1)))
      # VC: post-condition does not hold at tests/spec_instrumentation/opaque_call.move:29:6+56
- 40: assert Eq<u64>(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(global[@1]<Test::R>(1)), 2))
- 41: return ()
- 42: label L2
+ 38: assert Eq<u64>(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(global[@1]<Test::R>(1)), 2))
+ 39: return ()
+ 40: label L2
      # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:27:2+123
- 43: assert Not(exists[@1]<Test::R>(1))
+ 41: assert Not(exists[@1]<Test::R>(1))
      # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:27:2+123
- 44: assert And(Not(exists[@1]<Test::R>(1)), Eq(33, $t3))
- 45: abort($t3)
+ 42: assert And(Not(exists[@1]<Test::R>(1)), Eq(33, $t3))
+ 43: abort($t3)
 }
 
 

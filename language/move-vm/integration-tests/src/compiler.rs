@@ -18,6 +18,7 @@ pub fn compile_units(s: &str) -> Result<Vec<CompiledUnit>> {
 
     let (_, units) = MoveCompiler::new(&[file_path.to_str().unwrap().to_string()], &[])
         .set_flags(Flags::empty().set_sources_shadow_deps(false))
+        .set_named_address_values(move_stdlib::move_stdlib_named_addresses())
         .build_and_report()?;
 
     dir.close()?;

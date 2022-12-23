@@ -38,6 +38,14 @@ error[E05001]: ability constraint not satisfied
    │         Cannot ignore values without the 'drop' ability. The value must be used
    │         The type '0x42::M::Box<0x42::M::Box<T>>' does not have the ability 'drop'
 
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/typing/conditional_drop_invalid.move:13:35
+   │
+12 │         Box<T> { f: t };
+   │                     - The variable does not have a value due to this position. The variable must be assigned a value before being used
+13 │         Box<Box<T>> { f: Box { f: t } };
+   │                                   ^ Invalid usage of variable 't'
+
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/conditional_drop_invalid.move:14:9
    │
@@ -108,6 +116,15 @@ error[E05001]: ability constraint not satisfied
    │         '==' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
    │         The type '0x42::M::Box<T>' does not have the ability 'drop'
 
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/typing/conditional_drop_invalid.move:19:21
+   │
+13 │         Box<Box<T>> { f: Box { f: t } };
+   │                                   - The variable does not have a value due to this position. The variable must be assigned a value before being used
+   ·
+19 │         Box<T> { f: t } == Box<T> { f: t };
+   │                     ^ Invalid usage of variable 't'
+
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/conditional_drop_invalid.move:19:28
    │
@@ -117,6 +134,14 @@ error[E05001]: ability constraint not satisfied
    │                            │   The type '0x42::M::Box<T>' can have the ability 'drop' but the type argument 'T' does not have the required ability 'drop'
    │                            '==' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
    │                            The type '0x42::M::Box<T>' does not have the ability 'drop'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/typing/conditional_drop_invalid.move:19:40
+   │
+19 │         Box<T> { f: t } == Box<T> { f: t };
+   │                     -                  ^ Invalid usage of variable 't'
+   │                     │                   
+   │                     The variable does not have a value due to this position. The variable must be assigned a value before being used
 
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/conditional_drop_invalid.move:20:9
@@ -128,6 +153,14 @@ error[E05001]: ability constraint not satisfied
    │         '==' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
    │         The type '0x42::M::Box<0x42::M::Box<T>>' does not have the ability 'drop'
 
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/typing/conditional_drop_invalid.move:20:35
+   │
+19 │         Box<T> { f: t } == Box<T> { f: t };
+   │                                        - The variable does not have a value due to this position. The variable must be assigned a value before being used
+20 │         Box<Box<T>> { f: Box { f: t } } == Box<Box<T>> { f: Box { f: t} };
+   │                                   ^ Invalid usage of variable 't'
+
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/conditional_drop_invalid.move:20:44
    │
@@ -137,6 +170,14 @@ error[E05001]: ability constraint not satisfied
    │                                            │   The type '0x42::M::Box<0x42::M::Box<T>>' can have the ability 'drop' but the type argument '0x42::M::Box<T>' does not have the required ability 'drop'
    │                                            '==' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
    │                                            The type '0x42::M::Box<0x42::M::Box<T>>' does not have the ability 'drop'
+
+error[E06002]: use of unassigned variable
+   ┌─ tests/move_check/typing/conditional_drop_invalid.move:20:70
+   │
+20 │         Box<Box<T>> { f: Box { f: t } } == Box<Box<T>> { f: Box { f: t} };
+   │                                   -                                  ^ Invalid usage of variable 't'
+   │                                   │                                   
+   │                                   The variable does not have a value due to this position. The variable must be assigned a value before being used
 
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/conditional_drop_invalid.move:21:9

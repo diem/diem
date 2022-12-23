@@ -1,0 +1,21 @@
+//# publish --address 0x1
+module M {
+    struct Foo { f: bool }
+
+    public id<T>(x: T): T {
+        return move(x);
+    }
+
+    public bar<T1, T2>(x: T1, y: T2) {
+        abort 0;
+    }
+
+    foo() {
+        let x: Self.Foo;
+
+        _ = Self.id<u64>(3);
+        x = Self.id<Self.Foo>(Foo { f: false });
+        Self.bar<Self.Foo, bool>(move(x), false);
+        return;
+    }
+}

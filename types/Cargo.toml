@@ -24,10 +24,10 @@ rand = "0.8.3"
 serde = { version = "1.0.124", default-features = false }
 serde_json = "1.0.64"
 serde_bytes = "0.11.5"
-thiserror = "1.0.24"
+thiserror = "1.0.37"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-crypto = { path = "../crates/diem-crypto", version = "0.0.2" }
 diem-crypto-derive = { path = "../crates/diem-crypto-derive", version = "0.0.2" }
 move-core-types = { path = "../language/move-core/types", version = "0.0.2" }

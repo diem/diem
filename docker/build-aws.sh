@@ -50,7 +50,7 @@ while [[ "$1" =~ ^- ]]; do case $1 in
     BUILD_PROJECTS=(diem-tools)
     ;;
   --build-forge )
-    BUILD_PROJECTS=(diem-forge)
+    BUILD_PROJECTS=(diem-forge diem-validator diem-init diem-faucet diem-safety-rules diem-tools)
     ;;
   --version )
     shift;

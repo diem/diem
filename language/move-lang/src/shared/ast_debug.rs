@@ -76,16 +76,16 @@ impl AstWriter {
         self.lines.push(String::new());
     }
 
-    pub fn write(&mut self, s: &str) {
+    pub fn write(&mut self, s: impl AsRef<str>) {
         let margin = self.margin;
         let cur = self.cur();
         if cur.is_empty() {
             (0..margin).for_each(|_| cur.push(' '));
         }
-        cur.push_str(s);
+        cur.push_str(s.as_ref());
     }
 
-    pub fn writeln(&mut self, s: &str) {
+    pub fn writeln(&mut self, s: impl AsRef<str>) {
         self.write(s);
         self.new_line();
     }

@@ -8,3 +8,9 @@ error[E02001]: duplicate declaration, item, or annotation
   │             │   Field previously defined here
   │             Invalid deconstruction binding
 
+warning[W09003]: unused assignment
+  ┌─ tests/move_check/expansion/duplicate_field_unpack.move:4:17
+  │
+4 │         let S { f, f } = S { f: 0 };
+  │                 ^ Unused assignment or binding for local 'f'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_f')
+

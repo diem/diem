@@ -101,8 +101,7 @@ where
         let mut external_definitions = crate::common::get_external_definitions(&diem_types_package);
         // We need BCS for argument encoding and decoding
         external_definitions.insert(
-            "github.com/novifinancial/serde-reflection/serde-generate/runtime/golang/bcs"
-                .to_string(),
+            "github.com/diem/serde-reflection-diem/serde-generate/runtime/golang/bcs".to_string(),
             Vec::new(),
         );
         // Add standard imports

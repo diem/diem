@@ -38,7 +38,7 @@ use executor_types::BlockExecutor;
 use futures::{channel::mpsc::channel, StreamExt};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc};
-use storage_interface::{DbReader, DbReaderWriter};
+use storage_interface::{DbReader, DbReaderWriter, MoveDbReader};
 use tokio::runtime::Runtime;
 use vm_validator::{
     mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
@@ -313,8 +313,8 @@ fn get_test_configs() -> (NodeConfig, KeyManagerConfig) {
 fn setup_node_using_json_rpc() -> (Node<JsonRpcDiemInterface>, Runtime) {
     let (node_config, key_manager_config) = get_test_configs();
 
-    let (_storage, db_rw) = setup_diem_db(&node_config);
-    let (diem, server) = setup_diem_interface_and_json_server(db_rw.clone());
+    let (storage, db_rw) = setup_diem_db(&node_config);
+    let (diem, server) = setup_diem_interface_and_json_server(storage);
     let executor = Executor::new(db_rw);
 
     (
@@ -404,13 +404,15 @@ fn setup_secure_storage(config: &NodeConfig, time: TimeService) -> InMemoryStora
 // based interface using the lightweight JSON client internally, and the server is a JSON server
 // that serves the JSON RPC requests. The server communicates with the given database reader/writer
 // to handle each JSON RPC request.
-fn setup_diem_interface_and_json_server(db_rw: DbReaderWriter) -> (JsonRpcDiemInterface, Runtime) {
+fn setup_diem_interface_and_json_server(
+    db_reader: Arc<dyn MoveDbReader>,
+) -> (JsonRpcDiemInterface, Runtime) {
     let address = "127.0.0.1";
     let port = utils::get_available_port();
     let host = format!("{}:{}", address, port);
 
     let (mp_sender, mut mp_events) = channel(1024);
-    let server = diem_json_rpc::test_bootstrap(host.parse().unwrap(), db_rw.reader, mp_sender);
+    let server = diem_json_rpc::test_bootstrap(host.parse().unwrap(), db_reader, mp_sender);
 
     // Provide a VMValidator to the runtime.
     server.spawn(async move {

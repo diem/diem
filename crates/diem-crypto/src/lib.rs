@@ -16,6 +16,7 @@ pub mod multi_ed25519;
 pub mod noise;
 pub mod test_utils;
 pub mod traits;
+pub mod validatable;
 pub mod x25519;
 
 #[cfg(test)]

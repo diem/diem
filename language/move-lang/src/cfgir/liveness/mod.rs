@@ -122,11 +122,11 @@ fn exp(state: &mut LivenessState, parent_e: &Exp) {
         E::Unit { .. } | E::Value(_) | E::Constant(_) | E::UnresolvedError => (),
 
         E::BorrowLocal(_, var) | E::Copy { var, .. } | E::Move { var, .. } => {
-            state.0.insert(var.clone());
+            state.0.insert(*var);
         }
 
         E::Spec(_, used_locals) => used_locals.keys().for_each(|v| {
-            state.0.insert(v.clone());
+            state.0.insert(*v);
         }),
 
         E::ModuleCall(mcall) => exp(state, &mcall.arguments),
@@ -289,7 +289,7 @@ mod last_usage {
         match &mut l.value {
             L::Ignore => (),
             L::Var(v, _) => {
-                context.dropped_live.insert(v.clone());
+                context.dropped_live.insert(*v);
                 if !context.next_live.contains(v) {
                     match display_var(v.value()) {
                         DisplayVar::Tmp => (),
@@ -346,7 +346,7 @@ mod last_usage {
                 );
                 if var_is_dead && is_reference && !*from_user {
                     parent_e.exp.value = E::Move {
-                        var: var.clone(),
+                        var: *var,
                         from_user: *from_user,
                     };
                 }
@@ -477,7 +477,7 @@ fn release_dead_refs_block(
         .map(|var| (var, locals.get(var).unwrap()))
         .filter(is_ref);
     for (dead_ref, ty) in dead_refs {
-        block.push_front(pop_ref(cmd_loc, dead_ref.clone(), ty.clone()));
+        block.push_front(pop_ref(cmd_loc, *dead_ref, ty.clone()));
     }
 }
 

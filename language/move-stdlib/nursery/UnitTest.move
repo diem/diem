@@ -1,5 +1,3 @@
-address Std;
-
 #[test_only]
 /// Module providing testing functionality. Only included for tests.
 module Std::UnitTest {

@@ -1,0 +1,13 @@
+//# publish --address 0x1
+module M {
+    id<T>(x: T) { return move(x); }
+
+    foo() {
+        let x: u64;
+        let y: &u64;
+        y = &x;
+        // cannot use refs in generics
+        Self.id<&u64>(move(y));
+        return;
+    }
+}

@@ -28,7 +28,7 @@ move-vm-test-utils = { path = "../../move-vm/test-utils" }
 diem-resource-viewer = { path = "../../tools/diem-resource-viewer" }
 diem-framework = { path = "../../diem-framework" }
 move-lang = { path = "../../move-lang" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 difference = "2.0.0"
 
 [dev-dependencies]

@@ -1,9 +1,0 @@
-// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK
-
-main() {
-    let x: u64;
-    let y: u64;
-    let z: u64;
-    x, y, z = (1, 2);
-    return;
-}

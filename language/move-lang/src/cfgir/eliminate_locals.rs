@@ -64,22 +64,22 @@ mod count {
 
         fn assign(&mut self, var: &Var, substitutable: bool) {
             if !substitutable {
-                self.assigned.insert(var.clone(), None);
+                self.assigned.insert(*var, None);
                 return;
             }
 
-            if let Some(count) = self.assigned.entry(var.clone()).or_insert_with(|| Some(0)) {
+            if let Some(count) = self.assigned.entry(*var).or_insert_with(|| Some(0)) {
                 *count += 1
             }
         }
 
         fn used(&mut self, var: &Var, substitutable: bool) {
             if !substitutable {
-                self.used.insert(var.clone(), None);
+                self.used.insert(*var, None);
                 return;
             }
 
-            if let Some(count) = self.used.entry(var.clone()).or_insert_with(|| Some(0)) {
+            if let Some(count) = self.used.entry(*var).or_insert_with(|| Some(0)) {
                 *count += 1
             }
         }

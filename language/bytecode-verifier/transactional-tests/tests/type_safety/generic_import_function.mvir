@@ -1,0 +1,32 @@
+//# publish --address 0x1
+module M {
+    struct R has key { f: bool }
+
+    public foo<T>(x: T) {
+        abort 0;
+    }
+
+    public bar<T1, T2: key, T3: copy + drop>(x: T3, y: T2, z: T1) {
+        abort 0;
+    }
+
+    public r(): Self.R {
+        return R { f: false };
+    }
+}
+
+//# run
+import 0x1.M;
+
+main() {
+    M.foo<u64>(0);
+    abort 0;
+}
+
+//# run
+import 0x1.M;
+
+main() {
+    M.bar<u64, M.R, bool>(false, M.r(), 0);
+    abort 0;
+}

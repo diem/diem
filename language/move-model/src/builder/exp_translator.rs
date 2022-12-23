@@ -329,12 +329,34 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
     /// Defines a type parameter.
     pub fn define_type_param(&mut self, loc: &Loc, name: Symbol, ty: Type) {
-        self.type_params.push((name, ty.clone()));
-        if self.type_params_table.insert(name, ty).is_some() {
+        if let Type::TypeParameter(..) = &ty {
+            if self.type_params_table.insert(name, ty.clone()).is_some() {
+                let param_name = name.display(self.symbol_pool());
+                self.parent.parent.error(
+                    loc,
+                    &format!(
+                        "duplicate declaration of type parameter `{}`, \
+                        previously found in type parameters",
+                        param_name
+                    ),
+                );
+                return;
+            }
+            self.type_params.push((name, ty));
+        } else {
             let param_name = name.display(self.symbol_pool());
-            self.parent
-                .parent
-                .error(loc, &format!("duplicate declaration of `{}`", param_name));
+            let context = TypeDisplayContext::WithEnv {
+                env: self.parent.parent.env,
+                type_param_names: None,
+            };
+            self.parent.parent.error(
+                loc,
+                &format!(
+                    "expect type placeholder `{}` to be a `TypeParameter`, found `{}`",
+                    param_name,
+                    ty.display(&context)
+                ),
+            );
         }
     }
 
@@ -603,9 +625,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         "signer" => {
                             return check_zero_args(self, Type::new_prim(PrimitiveType::Signer));
                         }
-                        "type" => {
-                            return check_zero_args(self, Type::new_prim(PrimitiveType::TypeValue));
-                        }
                         "vector" => {
                             if args.len() != 1 {
                                 self.error(
@@ -623,17 +642,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     let sym = self.symbol_pool().make(n.value.as_str());
                     if let Some(ty) = self.type_params_table.get(&sym).cloned() {
                         return check_zero_args(self, ty);
-                    }
-                    // Attempt to resolve as a type value.
-                    if let Some(entry) = self.lookup_local(sym, false) {
-                        let ty = entry.type_.clone();
-                        self.check_type(
-                            &self.to_loc(&n.loc),
-                            &ty,
-                            &Type::new_prim(PrimitiveType::TypeValue),
-                            "in type",
-                        );
-                        return check_zero_args(self, Type::TypeLocal(sym));
                     }
                 }
                 let loc = self.to_loc(&access.loc);
@@ -848,7 +856,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     ) -> ExpData {
         // First check for builtin functions.
         if let EA::ModuleAccess_::Name(n) = &maccess.value {
-            if n.value == "update_field" {
+            if n.value.as_str() == "update_field" {
                 return self.translate_update_field(expected_type, loc, generics, args);
             }
         }

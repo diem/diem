@@ -24,7 +24,7 @@ structopt = "0.3.21"
 rand = "0.8.3"
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false }
 
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-proptest-helpers = { path = "../../crates/diem-proptest-helpers" }
 diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
 

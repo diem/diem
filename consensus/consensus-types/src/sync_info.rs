@@ -44,7 +44,7 @@ impl Display for SyncInfo {
             self.highest_certified_round(),
             self.highest_ordered_round(),
             htc_repr,
-            self.highest_ledger_info_round(),
+            self.highest_ledger_info(),
         )
     }
 }
@@ -62,7 +62,6 @@ impl SyncInfo {
 
         let highest_ordered_cert =
             Some(highest_ordered_cert).filter(|hoc| hoc != &highest_quorum_cert);
-        let highest_ledger_info = highest_ledger_info.filter(|hli| hli.commit_info().round() > 0);
 
         Self {
             highest_quorum_cert,
@@ -150,7 +149,7 @@ impl SyncInfo {
         ensure!(
             self.highest_ordered_cert().certified_block().round()
                 >= self.highest_ledger_info_round(),
-            "HOC has lower round than HCD"
+            "HOC has lower round than HLI"
         );
 
         ensure!(
@@ -178,7 +177,10 @@ impl SyncInfo {
             })
             .and_then(|_| {
                 if let Some(hli) = self.highest_ledger_info.as_ref() {
-                    hli.verify_signatures(validator)?;
+                    // we do not verify genesis ledger info
+                    if hli.commit_info().round() > 0 {
+                        hli.verify_signatures(validator)?;
+                    }
                 }
                 Ok(())
             })

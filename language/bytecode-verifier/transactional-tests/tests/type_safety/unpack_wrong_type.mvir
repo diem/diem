@@ -1,0 +1,17 @@
+//# publish --address 0x1
+module Test {
+    struct X { b: bool }
+    struct T { b: bool }
+
+    public new_t(): Self.T {
+        return T { b: true };
+    }
+
+    public destroy_t(t: Self.T) {
+        let b: bool;
+        // wrong struct in unpack
+        X { b } = move(t);
+        return;
+    }
+
+}

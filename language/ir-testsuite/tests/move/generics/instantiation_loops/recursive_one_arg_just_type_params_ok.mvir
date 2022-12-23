@@ -1,8 +1,0 @@
-// This is good as there is only one instance foo<T> for any T.
-
-module M {
-    f<T>(x: T) {
-        Self.f<T>(move(x));
-        return;
-    }
-}

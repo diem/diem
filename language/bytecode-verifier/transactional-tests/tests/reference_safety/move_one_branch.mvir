@@ -1,0 +1,31 @@
+//# publish --address 0x1
+module M {
+    t0(cond: bool) {
+        let x: u64;
+        let x_ref: &mut u64;
+        x = 0;
+        x_ref = &mut x;
+        if (move(cond)) {
+            *move(x_ref) = 1;
+        }
+        // safe to assign, as x is no longer borrowed
+        // even though the reference was only moved in one branch
+        x = 1;
+        return;
+    }
+
+    t1(cond: bool) {
+        let x: u64;
+        let x_ref: &mut u64;
+        x = 0;
+        x_ref = &mut x;
+        if (move(cond)) {
+        } else {
+            *move(x_ref) = 1;
+        }
+        // safe to assign, as x is no longer borrowed
+        // even though the reference was only moved in one branch
+        x = 1;
+        return;
+    }
+}

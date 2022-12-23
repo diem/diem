@@ -24,7 +24,7 @@ diem-crypto = { path = "../../../crates/diem-crypto" }
 diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 once_cell = "1.7.2"
 regex = { version = "1.5.5", default-features = false, features = ["std", "perf"] }
-thiserror = "1.0.24"
+thiserror = "1.0.37"
 aho-corasick = "0.7.14"
 termcolor = "1.1.2"
 datatest-stable = "0.1.1"

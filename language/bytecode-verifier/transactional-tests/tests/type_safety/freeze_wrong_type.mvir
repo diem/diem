@@ -1,0 +1,13 @@
+//# run
+main() {
+    let x: u64;
+    let x_ref: &mut u64;
+    let imm_ref: &bool;
+
+    x = 5;
+    x_ref = &mut x;
+    // freeze, correct ref kind, wrong type
+    imm_ref = freeze(move(x_ref));
+    _ = move(imm_ref);
+    return;
+}

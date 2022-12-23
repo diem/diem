@@ -14,7 +14,7 @@ anyhow = "1.0.38"
 tokio = { version = "1.18.2", features = ["full"] }
 futures = "0.3.12"
 
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crates/diem-crypto" }
 diemdb = { path = "../diemdb" }

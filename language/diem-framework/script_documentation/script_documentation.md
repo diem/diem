@@ -2763,7 +2763,7 @@ Successful execution of this script emits two events:
 
 
 
-<pre><code><b>include</b> <a href="script_documentation.md#0x1_PaymentScripts_PeerToPeer">PeerToPeer</a>&lt;Currency&gt;;
+<pre><code><b>include</b> <a href="script_documentation.md#0x1_PaymentScripts_PeerToPeer">PeerToPeer</a>&lt;Currency&gt;{payer_signer: payer};
 <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DualAttestation.md#0x1_DualAttestation_AssertPaymentOkAbortsIf">DualAttestation::AssertPaymentOkAbortsIf</a>&lt;Currency&gt;{
     payer: <a href="_spec_address_of">Signer::spec_address_of</a>(payer),
     value: amount
@@ -2881,7 +2881,7 @@ Successful execution of this script emits two events:
 
 
 
-<pre><code><b>include</b> <a href="script_documentation.md#0x1_PaymentScripts_PeerToPeer">PeerToPeer</a>&lt;Currency&gt;{payee: <a href="_spec_address_of">Signer::spec_address_of</a>(payee)};
+<pre><code><b>include</b> <a href="script_documentation.md#0x1_PaymentScripts_PeerToPeer">PeerToPeer</a>&lt;Currency&gt;{payer_signer: payer, payee: <a href="_spec_address_of">Signer::spec_address_of</a>(payee)};
 </code></pre>
 
 
@@ -2891,12 +2891,12 @@ Successful execution of this script emits two events:
 
 
 <pre><code><b>schema</b> <a href="script_documentation.md#0x1_PaymentScripts_PeerToPeer">PeerToPeer</a>&lt;Currency&gt; {
-    payer: signer;
+    payer_signer: signer;
     payee: address;
     amount: u64;
     metadata: vector&lt;u8&gt;;
-    <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: payer};
-    <b>let</b> payer_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(payer);
+    <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: payer_signer};
+    <b>let</b> payer_addr = <a href="_spec_address_of">Signer::spec_address_of</a>(payer_signer);
     <b>let</b> cap = <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(payer_addr);
     <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: payer_addr};
     <b>include</b> <a href="../../../../../releases/artifacts/current/docs/modules/DiemAccount.md#0x1_DiemAccount_PayFromAbortsIf">DiemAccount::PayFromAbortsIf</a>&lt;Currency&gt;{cap: cap};
@@ -3485,6 +3485,12 @@ on-chain with the updated <code><a href="../../../../../releases/artifacts/curre
                 fullnode_network_addresses,
            });
 <b>include</b> is_validator_info_updated ==&gt; <a href="../../../../../releases/artifacts/current/docs/modules/DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">DiemConfig::ReconfigureAbortsIf</a>;
+<b>let</b> validator_index = <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_spec_index_of_validator">DiemSystem::spec_index_of_validator</a>(<a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_spec_get_validators">DiemSystem::spec_get_validators</a>(), validator_account);
+<b>let</b> last_config_time = <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_spec_get_validators">DiemSystem::spec_get_validators</a>()[validator_index].last_config_update_time;
+<b>aborts_if</b> is_validator_info_updated && last_config_time &gt; <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_MAX_U64">DiemSystem::MAX_U64</a> - <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_FIVE_MINUTES">DiemSystem::FIVE_MINUTES</a>
+    <b>with</b> <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+<b>aborts_if</b> is_validator_info_updated && <a href="../../../../../releases/artifacts/current/docs/modules/DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>() &lt;= last_config_time + <a href="../../../../../releases/artifacts/current/docs/modules/DiemSystem.md#0x1_DiemSystem_FIVE_MINUTES">DiemSystem::FIVE_MINUTES</a>
+    <b>with</b> <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 </code></pre>
 
 

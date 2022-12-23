@@ -1,0 +1,8 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+    // positive stack
+    x, y = (1, 2, 4);
+    return;
+}

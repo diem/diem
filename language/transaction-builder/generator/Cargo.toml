@@ -15,14 +15,14 @@ heck = "0.3.2"
 regex = "1.5.5"
 structopt = "0.3.21"
 textwrap = "0.13.4"
-serde-reflection = "0.3.2"
-serde-generate = "0.19.1"
+serde-reflection = { git = "https://github.com/diem/serde-reflection-diem.git", rev = "bb38a0fdb7b9c219cbbb646097e847587d059086" }
+serde-generate = { git = "https://github.com/diem/serde-reflection-diem.git", rev = "bb38a0fdb7b9c219cbbb646097e847587d059086" }
 serde_yaml = "0.8.17"
 
 diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 
 [dev-dependencies]
 tempfile = "3.2.0"

@@ -118,9 +118,7 @@ module DiemFramework::DiemConfig {
         reconfigure_();
     }
     spec set {
-        /// TODO: turned off verification until we solve the
-        /// generic type/specific invariant issue
-        pragma opaque, verify = false;
+        pragma opaque;
         modifies global<Configuration>(@DiemRoot);
         modifies global<DiemConfig<Config>>(@DiemRoot);
         include SetAbortsIf<Config>;
@@ -161,9 +159,7 @@ module DiemFramework::DiemConfig {
         reconfigure_();
     }
     spec set_with_capability_and_reconfigure {
-        /// TODO: turned off verification until we solve the
-        /// generic type/specific invariant issue
-        pragma opaque, verify = false;
+        pragma opaque;
         modifies global<Configuration>(@DiemRoot);
         include AbortsIfNotPublished<Config>;
         include ReconfigureAbortsIf;
@@ -218,9 +214,7 @@ module DiemFramework::DiemConfig {
         ModifyConfigCapability<Config> {}
     }
     spec publish_new_config_and_get_capability {
-        /// TODO: turned off verification until we solve the
-        /// generic type/specific invariant issue
-        pragma opaque, verify = false;
+        pragma opaque;
         modifies global<DiemConfig<Config>>(@DiemRoot);
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include AbortsIfPublished<Config>;
@@ -413,23 +407,18 @@ module DiemFramework::DiemConfig {
     /// # Invariants
     spec module {
         /// Configurations are only stored at the diem root address.
-        invariant
-            forall config_address: address, config_type: type where exists<DiemConfig<config_type>>(config_address):
+        invariant<ConfigType>
+            forall config_address: address where exists<DiemConfig<ConfigType>>(config_address):
                 config_address == @DiemRoot;
 
-        /// After genesis, no new configurations are added.
-        invariant update
-            DiemTimestamp::is_operating() ==>
-                (forall config_type: type where spec_is_published<config_type>(): old(spec_is_published<config_type>()));
-
         /// Published configurations are persistent.
-        invariant update
-            (forall config_type: type where old(spec_is_published<config_type>()): spec_is_published<config_type>());
+        invariant<ConfigType> update
+            old(spec_is_published<ConfigType>()) ==> spec_is_published<ConfigType>();
 
         /// If `ModifyConfigCapability<Config>` is published, it is persistent.
-        invariant update forall config_type: type
-            where old(exists<ModifyConfigCapability<config_type>>(@DiemRoot)):
-                exists<ModifyConfigCapability<config_type>>(@DiemRoot);
+        invariant<ConfigType> update
+            old(exists<ModifyConfigCapability<ConfigType>>(@DiemRoot)) ==>
+                exists<ModifyConfigCapability<ConfigType>>(@DiemRoot);
     }
 
     /// # Helper Functions

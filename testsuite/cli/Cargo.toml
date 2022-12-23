@@ -28,7 +28,7 @@ diem-config = { path = "../../config" }
 generate-key = { path = "../../config/generate-key" }
 crash-handler = { path = "../../crates/crash-handler" }
 diem-crypto = { path = "../../crates/diem-crypto" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-wallet = { path = "diem-wallet" }
 diem-client = { path = "../../crates/diem-client" }
 diem-infallible = { path = "../../crates/diem-infallible" }

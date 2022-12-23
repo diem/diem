@@ -518,15 +518,14 @@ impl<'env> FunctionTranslator<'env> {
                 env,
                 type_param_names: None,
             };
-            emitln!(writer, "// function instantiation");
-            for (ty_var, ty_inst) in instantiation {
-                emitln!(
-                    writer,
-                    "// #{} := {};",
-                    ty_var,
-                    ty_inst.display(&display_ctxt)
-                );
-            }
+            emitln!(
+                writer,
+                "// function instantiation <{}>",
+                instantiation
+                    .iter()
+                    .map(|ty| ty.display(&display_ctxt))
+                    .join(", ")
+            );
             emitln!(writer, "");
         }
 
@@ -1080,7 +1079,7 @@ impl<'env> FunctionTranslator<'env> {
                         let signer_str = str_local(srcs[1]);
                         emitln!(
                             writer,
-                            "if ($ResourceExists({}, {})) {{",
+                            "if ($ResourceExists({}, $1_Signer_spec_address_of({}))) {{",
                             memory,
                             signer_str
                         );
@@ -1089,7 +1088,7 @@ impl<'env> FunctionTranslator<'env> {
                         writer.with_indent(|| {
                             emitln!(
                                 writer,
-                                "{} := $ResourceUpdate({}, {}, {});",
+                                "{} := $ResourceUpdate({}, $1_Signer_spec_address_of({}), {});",
                                 memory,
                                 memory,
                                 signer_str,

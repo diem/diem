@@ -58,7 +58,7 @@ def create_forge_job(context, user, tag, timeout_secs, forge_envs, forge_args):
     cmd = template["spec"]["template"]["spec"]["containers"][0]["command"][2]
     template["spec"]["template"]["spec"]["containers"][0]["command"][2] = cmd.replace(
         "tail -f /dev/null",
-        f"timeout {timeout_secs} forge {' '.join(forge_args)}".strip(),
+        f"timeout {timeout_secs} forge --image-tag {tag} {' '.join(forge_args)}".strip(),
     )
     # additional environment variables
     for env_var in forge_envs:
@@ -174,7 +174,7 @@ def kube_wait_job(job_name, context):
 
 
 # init the kube context for each available cluster
-def kube_init_context():
+def kube_init_context(workspace=None):
     try:
         subprocess.run(
             [
@@ -191,7 +191,9 @@ def kube_init_context():
     except subprocess.CalledProcessError:
         print("Failed to access EKS, try awsmfa?")
         raise
-    for cluster in FORGE_K8S_CLUSTERS:
+    # preserve the kube context by updating kubeconfig for the specified workspace
+    clusters = FORGE_K8S_CLUSTERS + [workspace] if workspace else FORGE_K8S_CLUSTERS
+    for cluster in clusters:
         subprocess.run(
             [
                 "aws",

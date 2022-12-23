@@ -146,7 +146,7 @@ edition = "2018"
 diem-types = {{ path = "../diem-types", version = "0.1.0" }}
 serde_bytes = "0.11"
 serde = {{ version = "1.0.114", features = ["derive"] }}
-bcs = "0.1.1"
+bcs = {{ git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }}
 once_cell = "1.4.0"
 
 [[bin]]

@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'publish'. lines 1-12:
+Error: Unable to publish module '00000000000000000000000000000001::M'. Got VMError: {
+    major_status: BORROWGLOBAL_WITHOUT_KEY_ABILITY,
+    sub_status: None,
+    location: 0x1::M,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 1)],
+}

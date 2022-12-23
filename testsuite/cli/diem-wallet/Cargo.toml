@@ -18,7 +18,7 @@ byteorder = "1.4.3"
 pbkdf2 = "0.7.3"
 serde = "1.0.124"
 sha2 = "0.9.3"
-thiserror = "1.0.24"
+thiserror = "1.0.37"
 ed25519-dalek = { version = "0.1.0", package = "ed25519-dalek-fiat", default-features = false, features = ["std", "fiat_u64_backend"] }
 diem-crypto = { path = "../../../crates/diem-crypto", features = ["fuzzing"] }
 diem-temppath = { path = "../../../crates/diem-temppath/" }

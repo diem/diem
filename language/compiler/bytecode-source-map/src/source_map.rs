@@ -11,6 +11,7 @@ use move_binary_format::{
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::ast::{ConstantName, ModuleName, NopLabel, QualifiedModuleIdent};
+use move_symbol_pool::Symbol;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, ops::Bound};
 
@@ -318,7 +319,7 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
 impl<Location: Clone + Eq> SourceMap<Location> {
     pub fn new(module_name_opt: Option<QualifiedModuleIdent>) -> Self {
         let module_name_opt = module_name_opt.map(|module_name| {
-            let ident = Identifier::new(module_name.name.into_inner()).unwrap();
+            let ident = Identifier::new(module_name.name.0.as_str()).unwrap();
             (module_name.address, ident)
         });
         Self {
@@ -535,7 +536,9 @@ impl<Location: Clone + Eq> SourceMap<Location> {
     /// with generated or real names depending upon if the source map is available or not.
     pub fn dummy_from_view(view: &BinaryIndexedView, default_loc: Location) -> Result<Self> {
         let module_handle = view.module_handle_at(ModuleHandleIndex::new(0));
-        let module_name = ModuleName::new(view.identifier_at(module_handle.name).to_string());
+        let module_name = ModuleName(Symbol::from(
+            view.identifier_at(module_handle.name).as_str(),
+        ));
         let address = *view.address_identifier_at(module_handle.address);
         let module_ident = QualifiedModuleIdent::new(module_name, address);
 
@@ -568,7 +571,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
         for const_idx in 0..view.constant_pool().len() {
             empty_source_map.add_const_mapping(
                 ConstantPoolIndex(const_idx as TableIndex),
-                ConstantName::new(format!("CONST{}", const_idx)),
+                ConstantName(Symbol::from(format!("CONST{}", const_idx))),
             )?;
         }
 

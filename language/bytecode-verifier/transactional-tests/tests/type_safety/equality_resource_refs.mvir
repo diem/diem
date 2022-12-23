@@ -1,0 +1,24 @@
+//# publish --address 0x1
+module Token {
+    struct T has key { b: bool }
+
+    public test() {
+        let t: Self.T;
+        let t_ref: &Self.T;
+        let b: bool;
+        t = T{ b: true };
+        t_ref = &t;
+        // == works over refs, even if resources without drop
+        assert(copy(t_ref) == move(t_ref), 42);
+        T{ b } = move(t);
+        return;
+    }
+}
+
+//# run
+import 0x1.Token;
+
+main() {
+    Token.test();
+    return;
+}

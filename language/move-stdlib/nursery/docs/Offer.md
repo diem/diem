@@ -310,12 +310,12 @@ under the <code>offer_address</code>.
 
 <a name="0x1_Offer_NoOfferCreated"></a>
 
-Says no offer is created or any type or address. Later, it is applied to all functions
+Says no offer is created for any address. Later, it is applied to all functions
 except <code>create</code>
 
 
-<pre><code><b>schema</b> <a href="Offer.md#0x1_Offer_NoOfferCreated">NoOfferCreated</a> {
-    <b>ensures</b> <b>forall</b> ty: type, addr: address <b>where</b> !<b>old</b>(<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr)) : !<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr);
+<pre><code><b>schema</b> <a href="Offer.md#0x1_Offer_NoOfferCreated">NoOfferCreated</a>&lt;Offered&gt; {
+    <b>ensures</b> <b>forall</b> addr: address <b>where</b> !<b>old</b>(<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(addr)) : !<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(addr);
 }
 </code></pre>
 
@@ -324,7 +324,7 @@ except <code>create</code>
 Apply OnlyCreateCanCreateOffer to every function except <code>create</code>
 
 
-<pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_NoOfferCreated">NoOfferCreated</a> <b>to</b> *&lt;Offered&gt;, * <b>except</b> create;
+<pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_NoOfferCreated">NoOfferCreated</a>&lt;Offered&gt; <b>to</b> *&lt;Offered&gt;, * <b>except</b> create;
 </code></pre>
 
 
@@ -337,12 +337,12 @@ Apply OnlyCreateCanCreateOffer to every function except <code>create</code>
 
 <a name="0x1_Offer_NoOfferRemoved"></a>
 
-Says no offer is removed for any type or address. Applied below to everything except <code>redeem</code>
+Says no offer is removed for any address. Applied below to everything except <code>redeem</code>
 
 
-<pre><code><b>schema</b> <a href="Offer.md#0x1_Offer_NoOfferRemoved">NoOfferRemoved</a> {
-    <b>ensures</b> <b>forall</b> ty: type, addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr)) :
-              (<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr) && <b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr) == <b>old</b>(<b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr)));
+<pre><code><b>schema</b> <a href="Offer.md#0x1_Offer_NoOfferRemoved">NoOfferRemoved</a>&lt;Offered&gt; {
+    <b>ensures</b> <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(addr)) :
+              (<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(addr) && <b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(addr) == <b>old</b>(<b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(addr)));
 }
 </code></pre>
 
@@ -351,7 +351,7 @@ Says no offer is removed for any type or address. Applied below to everything ex
 Only <code>redeem</code> can remove an offer from the global store.
 
 
-<pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_NoOfferRemoved">NoOfferRemoved</a> <b>to</b> *&lt;Offered&gt;, * <b>except</b> redeem;
+<pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_NoOfferRemoved">NoOfferRemoved</a>&lt;Offered&gt; <b>to</b> *&lt;Offered&gt;, * <b>except</b> redeem;
 </code></pre>
 
 

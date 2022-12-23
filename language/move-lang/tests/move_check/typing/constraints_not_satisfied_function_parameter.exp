@@ -1,14 +1,14 @@
 error[E05001]: ability constraint not satisfied
-  ┌─ tests/move_check/typing/constraints_not_satisfied_function_parameter.move:5:16
+  ┌─ tests/move_check/typing/constraints_not_satisfied_function_parameter.move:5:17
   │
 2 │     struct CupC<T: copy> { f: T }
   │                    ---- 'copy' constraint declared here
 3 │     struct R {}
   │            - To satisfy the constraint, the 'copy' ability would need to be added here
 4 │ 
-5 │     fun foo(x: CupC<R>) {}
-  │                ^^^^^^^
-  │                │    │
-  │                │    The type '0x8675309::M::R' does not have the ability 'copy'
-  │                'copy' constraint not satisifed
+5 │     fun foo(_x: CupC<R>) { abort 0 }
+  │                 ^^^^^^^
+  │                 │    │
+  │                 │    The type '0x8675309::M::R' does not have the ability 'copy'
+  │                 'copy' constraint not satisifed
 

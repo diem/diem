@@ -12,6 +12,8 @@ use crate::{
     FullyCompiledProgram,
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use once_cell::sync::Lazy;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 //**************************************************************************************************
@@ -20,17 +22,18 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 const NEW_NAME_DELIM: &str = "#";
 
-fn new_name(context: &mut Context, n: &str) -> String {
-    format!("{}{}{}", n, NEW_NAME_DELIM, context.counter_next())
+fn new_name(context: &mut Context, n: Symbol) -> Symbol {
+    format!("{}{}{}", n, NEW_NAME_DELIM, context.counter_next()).into()
 }
 
 const TEMP_PREFIX: &str = "%";
+static TEMP_PREFIX_SYMBOL: Lazy<Symbol> = Lazy::new(|| TEMP_PREFIX.into());
 
-fn new_temp_name(context: &mut Context) -> String {
-    new_name(context, TEMP_PREFIX)
+fn new_temp_name(context: &mut Context) -> Symbol {
+    new_name(context, *TEMP_PREFIX_SYMBOL)
 }
 
-pub fn is_temp_name(s: &str) -> bool {
+pub fn is_temp_name(s: Symbol) -> bool {
     s.starts_with(TEMP_PREFIX)
 }
 
@@ -39,12 +42,12 @@ pub enum DisplayVar {
     Tmp,
 }
 
-pub fn display_var(s: &str) -> DisplayVar {
+pub fn display_var(s: Symbol) -> DisplayVar {
     if is_temp_name(s) {
         DisplayVar::Tmp
     } else {
-        let mut orig = s.to_owned();
-        orig.truncate(orig.find('#').unwrap_or(s.len()));
+        let mut orig = s.as_str().to_string();
+        orig.truncate(orig.find('#').unwrap_or_else(|| s.len()));
         DisplayVar::Orig(orig)
     }
 }
@@ -90,29 +93,27 @@ impl<'env> Context<'env> {
 
     pub fn new_temp(&mut self, loc: Loc, t: H::SingleType) -> Var {
         let new_var = Var(sp(loc, new_temp_name(self)));
-        self.function_locals.add(new_var.clone(), t).unwrap();
-        self.local_scope
-            .add(new_var.clone(), new_var.clone())
-            .unwrap();
-        self.used_locals.insert(new_var.clone());
+        self.function_locals.add(new_var, t).unwrap();
+        self.local_scope.add(new_var, new_var).unwrap();
+        self.used_locals.insert(new_var);
         new_var
     }
 
     pub fn bind_local(&mut self, v: Var, t: H::SingleType) {
         let new_var = if !self.function_locals.contains_key(&v) {
-            v.clone()
+            v
         } else {
             Var(sp(v.loc(), new_name(self, v.value())))
         };
-        self.function_locals.add(new_var.clone(), t).unwrap();
+        self.function_locals.add(new_var, t).unwrap();
         self.local_scope.remove(&v);
         assert!(!self.local_scope.contains_key(&new_var));
         self.local_scope.add(v, new_var).unwrap();
     }
 
     pub fn remapped_local(&mut self, v: Var) -> Var {
-        let remapped = self.local_scope.get(&v).unwrap().clone();
-        self.used_locals.insert(remapped.clone());
+        let remapped = *self.local_scope.get(&v).unwrap();
+        self.used_locals.insert(remapped);
         remapped
     }
 
@@ -125,14 +126,18 @@ impl<'env> Context<'env> {
                 H::StructFields::Defined(m) => m,
             };
             for (idx, (field, _)) in field_map.iter().enumerate() {
-                fields.add(field.clone(), idx).unwrap();
+                fields.add(*field, idx).unwrap();
             }
             self.structs.add(sname, fields).unwrap();
         }
     }
 
-    pub fn fields(&self, struct_name: &StructName) -> &UniqueMap<Field, usize> {
-        self.structs.get(struct_name).unwrap()
+    pub fn fields(&self, struct_name: &StructName) -> Option<&UniqueMap<Field, usize>> {
+        let fields = self.structs.get(struct_name);
+        // if fields are none, the struct must be defined in another module,
+        // in that case, there should be errors
+        assert!(fields.is_some() || self.env.has_diags());
+        fields
     }
 
     fn counter_next(&mut self) -> usize {
@@ -152,18 +157,13 @@ pub fn program(
 ) -> H::Program {
     let mut context = Context::new(compilation_env);
     let T::Program {
-        addresses,
         modules: tmodules,
         scripts: tscripts,
     } = prog;
     let modules = modules(&mut context, tmodules);
     let scripts = scripts(&mut context, tscripts);
 
-    H::Program {
-        addresses,
-        modules,
-        scripts,
-    }
+    H::Program { modules, scripts }
 }
 
 fn modules(
@@ -214,8 +214,8 @@ fn module(
 
 fn scripts(
     context: &mut Context,
-    tscripts: BTreeMap<String, T::Script>,
-) -> BTreeMap<String, H::Script> {
+    tscripts: BTreeMap<Symbol, T::Script>,
+) -> BTreeMap<Symbol, H::Script> {
     tscripts
         .into_iter()
         .map(|(n, s)| (n, script(context, s)))
@@ -231,7 +231,7 @@ fn script(context: &mut Context, tscript: T::Script) -> H::Script {
         function: tfunction,
     } = tscript;
     let constants = tconstants.map(|name, c| constant(context, name, c));
-    let function = function(context, function_name.clone(), tfunction);
+    let function = function(context, function_name, tfunction);
     H::Script {
         attributes,
 
@@ -270,7 +270,7 @@ fn function_signature(context: &mut Context, sig: N::FunctionSignature) -> H::Fu
         .into_iter()
         .map(|(v, tty)| {
             let ty = single_type(context, tty);
-            context.bind_local(v.clone(), ty.clone());
+            context.bind_local(v, ty.clone());
             (v, ty)
         })
         .collect();
@@ -630,7 +630,7 @@ fn declare_bind(context: &mut Context, sp!(_, bind_): &T::LValue) {
         L::Ignore => (),
         L::Var(v, ty) => {
             let st = single_type(context, *ty.clone());
-            context.bind_local(v.clone(), st)
+            context.bind_local(*v, st)
         }
         L::Unpack(_, _, _, fields) | L::BorrowUnpack(_, _, _, _, fields) => fields
             .iter()
@@ -695,7 +695,7 @@ fn assign(
             let copy_tmp = || {
                 let copy_tmp_ = E::Copy {
                     from_user: false,
-                    var: tmp.clone(),
+                    var: tmp,
                 };
                 H::exp(H::Type_::single(rvalue_ty.clone()), sp(loc, copy_tmp_))
             };
@@ -720,7 +720,18 @@ fn assign_fields(
     tfields: Fields<(N::Type, T::LValue)>,
 ) -> Vec<(usize, Field, H::BaseType, T::LValue)> {
     let decl_fields = context.fields(s);
-    let decl_field = |f: &Field| -> usize { *decl_fields.get(f).unwrap() };
+    let mut count = 0;
+    let mut decl_field = |f: &Field| -> usize {
+        match decl_fields {
+            Some(m) => *m.get(f).unwrap(),
+            None => {
+                // none can occur with errors in typing
+                let i = count;
+                count += 1;
+                i
+            }
+        }
+    };
     let mut tfields_vec = tfields
         .into_iter()
         .map(|(f, (_idx, (tbt, tfa)))| (decl_field(&f), f, base_type(context, tbt), tfa))
@@ -792,7 +803,7 @@ fn exp_<'env>(
     ) -> H::Exp {
         match (&e.exp.value, expected_type_opt.as_ref()) {
             (H::UnannotatedExp_::Unreachable, _) => e,
-            (_, Some(exty)) if needs_freeze(&e.ty, exty) != Freeze::NotNeeded => {
+            (_, Some(exty)) if needs_freeze(context, &e.ty, exty) != Freeze::NotNeeded => {
                 freeze(context, result, exty, e)
             }
             _ => e,
@@ -920,8 +931,8 @@ fn exp_<'env>(
                 let bind_list = sp(
                     loc,
                     vec![
-                        bvar(vcond.clone(), Box::new(tbool.clone())),
-                        bvar(vcode.clone(), Box::new(tu64.clone())),
+                        bvar(vcond, Box::new(tbool.clone())),
+                        bvar(vcode, Box::new(tu64.clone())),
                     ],
                 );
                 let tys = vec![Some(tbool.clone()), Some(tu64.clone())];
@@ -1136,7 +1147,18 @@ fn exp_impl(
             let bs = base_types(context, tbs);
 
             let decl_fields = context.fields(&s);
-            let decl_field = |f: &Field| -> usize { *decl_fields.get(f).unwrap() };
+            let mut count = 0;
+            let mut decl_field = |f: &Field| -> usize {
+                match decl_fields {
+                    Some(m) => *m.get(f).unwrap(),
+                    None => {
+                        // none can occur with errors in typing
+                        let i = count;
+                        count += 1;
+                        i
+                    }
+                }
+            };
 
             let mut texp_fields: Vec<(usize, Field, usize, N::Type, T::Exp)> = tfields
                 .into_iter()
@@ -1168,8 +1190,14 @@ fn exp_impl(
                     .map(|(e, (f, bt))| (f, bt, e))
                     .collect()
             } else {
-                let mut fields = (0..decl_fields.len()).map(|_| None).collect::<Vec<_>>();
+                let num_fields = decl_fields.as_ref().map(|m| m.len()).unwrap_or(0);
+                let mut fields = (0..num_fields).map(|_| None).collect::<Vec<_>>();
                 for (decl_idx, f, _exp_idx, bt, tf) in texp_fields {
+                    // Might have too many arguments, there will be an error from typing
+                    if decl_idx > fields.len() {
+                        debug_assert!(context.env.has_diags());
+                        break;
+                    }
                     let bt = base_type(context, bt);
                     let t = H::Type_::base(bt.clone());
                     let ef = exp_(context, result, Some(&t), tf);
@@ -1177,7 +1205,15 @@ fn exp_impl(
                     let move_tmp = bind_exp(context, result, ef);
                     fields[decl_idx] = Some((f, bt, move_tmp))
                 }
-                fields.into_iter().map(|o| o.unwrap()).collect()
+                // Might have too few arguments, there will be an error from typing if so
+                fields
+                    .into_iter()
+                    .filter_map(|o| {
+                        // if o is None, context should have errors
+                        debug_assert!(o.is_some() || context.env.has_diags());
+                        o
+                    })
+                    .collect()
             };
             HE::Pack(s, bs, fields)
         }
@@ -1361,7 +1397,7 @@ fn bind_exp_impl_(
     }
     let lvalues = tmps
         .iter()
-        .map(|(v, st)| sp(v.loc(), H::LValue_::Var(v.clone(), Box::new(st.clone()))))
+        .map(|(v, st)| sp(v.loc(), H::LValue_::Var(*v, Box::new(st.clone()))))
         .collect();
     let asgn = sp(loc, C::Assign(lvalues, Box::new(e)));
     result.push_back(sp(loc, S::Command(asgn)));
@@ -1452,7 +1488,7 @@ enum Freeze {
     Sub(Vec<bool>),
 }
 
-fn needs_freeze(sp!(_, actual): &H::Type, sp!(_, expected): &H::Type) -> Freeze {
+fn needs_freeze(context: &Context, sp!(_, actual): &H::Type, sp!(_, expected): &H::Type) -> Freeze {
     use H::Type_ as T;
     match (actual, expected) {
         (T::Unit, T::Unit) => Freeze::NotNeeded,
@@ -1477,8 +1513,9 @@ fn needs_freeze(sp!(_, actual): &H::Type, sp!(_, expected): &H::Type) -> Freeze 
                 Freeze::NotNeeded
             }
         }
-        (actual, expected) => {
-            unreachable!("ICE type checking failed, {:#?} !~ {:#?}", actual, expected)
+        (_actual, _expected) => {
+            assert!(context.env.has_diags());
+            Freeze::NotNeeded
         }
     }
 }
@@ -1491,7 +1528,7 @@ fn needs_freeze_single(sp!(_, actual): &H::SingleType, sp!(_, expected): &H::Sin
 fn freeze(context: &mut Context, result: &mut Block, expected_type: &H::Type, e: H::Exp) -> H::Exp {
     use H::{Type_ as T, UnannotatedExp_ as E};
 
-    match needs_freeze(&e.ty, expected_type) {
+    match needs_freeze(context, &e.ty, expected_type) {
         Freeze::NotNeeded => e,
         Freeze::Point => freeze_point(e),
 

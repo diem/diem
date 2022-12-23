@@ -164,7 +164,7 @@ When a client performs a read query on the Diem Blockchain (for example, to get 
 ![Figure 1.2 Virtual machine](/img/docs/virtual-machine.svg)
 <small className="figure">Figure 1.2 Virtual machine</small>
 
-The [Move virtual machine](/docs/move/move-start-here/move-introduction) (VM) verifies and executes transaction scripts written in Move bytecode.
+The Move virtual machine (VM) verifies and executes transaction scripts written in Move bytecode.
 
 #### 1. Virtual Machine → Storage
 

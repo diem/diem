@@ -527,27 +527,27 @@ module DiemFramework::AccountLimits {
 
     spec module {
         /// `LimitsDefinition<CoinType>` persists after publication.
-        invariant update
-            forall addr: address, coin_type: type where old(exists<LimitsDefinition<coin_type>>(addr)):
-                exists<LimitsDefinition<coin_type>>(addr);
+        invariant<CoinType> update
+            forall addr: address where old(exists<LimitsDefinition<CoinType>>(addr)):
+                exists<LimitsDefinition<CoinType>>(addr);
 
         /// `Window<CoinType>` persists after publication
-        invariant update
-            forall window_addr: address, coin_type: type where old(exists<Window<coin_type>>(window_addr)):
-                exists<Window<coin_type>>(window_addr);
+        invariant<CoinType> update
+            forall window_addr: address where old(exists<Window<CoinType>>(window_addr)):
+                exists<Window<CoinType>>(window_addr);
 
         /// Invariant that `LimitsDefinition` exists if a `Window` exists.
-        invariant
-           forall window_addr: address, coin_type: type where exists<Window<coin_type>>(window_addr):
-                exists<LimitsDefinition<coin_type>>(global<Window<coin_type>>(window_addr).limit_address);
+        invariant<CoinType>
+           forall window_addr: address where exists<Window<CoinType>>(window_addr):
+                exists<LimitsDefinition<CoinType>>(global<Window<CoinType>>(window_addr).limit_address);
     }
 
     /// # Access Control
 
     spec module {
         /// Only ParentVASP and ChildVASP can have the account limits [[E1]][ROLE][[E2]][ROLE][[E3]][ROLE][[E4]][ROLE][[E5]][ROLE][[E6]][ROLE][[E7]][ROLE].
-        invariant
-            forall addr: address, coin_type: type where exists<Window<coin_type>>(addr):
+        invariant<CoinType>
+            forall addr: address where exists<Window<CoinType>>(addr):
                 exists<Roles::RoleId>(addr) &&
                 (global<Roles::RoleId>(addr).role_id == Roles::PARENT_VASP_ROLE_ID ||
                     global<Roles::RoleId>(addr).role_id == Roles::CHILD_VASP_ROLE_ID);

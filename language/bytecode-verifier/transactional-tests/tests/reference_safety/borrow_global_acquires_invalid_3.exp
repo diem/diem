@@ -1,0 +1,28 @@
+processed 3 tasks
+
+task 0 'publish'. lines 1-31:
+Error: Unable to publish module '00000000000000000000000000000001::A'. Got VMError: {
+    major_status: GLOBAL_REFERENCE_ERROR,
+    sub_status: None,
+    location: 0x1::A,
+    indices: [(FunctionDefinition, 3)],
+    offsets: [(FunctionDefinitionIndex(3), 8)],
+}
+
+task 1 'publish'. lines 33-63:
+Error: Unable to publish module '00000000000000000000000000000001::A2'. Got VMError: {
+    major_status: GLOBAL_REFERENCE_ERROR,
+    sub_status: None,
+    location: 0x1::A2,
+    indices: [(FunctionDefinition, 3)],
+    offsets: [(FunctionDefinitionIndex(3), 10)],
+}
+
+task 2 'publish'. lines 65-95:
+Error: Unable to publish module '00000000000000000000000000000001::A3'. Got VMError: {
+    major_status: GLOBAL_REFERENCE_ERROR,
+    sub_status: None,
+    location: 0x1::A3,
+    indices: [(FunctionDefinition, 3)],
+    offsets: [(FunctionDefinitionIndex(3), 8)],
+}

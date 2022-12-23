@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'run'. lines 1-19:
+Error: Script execution failed with VMError: {
+    major_status: COPYLOC_UNAVAILABLE_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 14)],
+}

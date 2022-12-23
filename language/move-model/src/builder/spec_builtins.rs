@@ -124,7 +124,6 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
     {
         // Builtin functions.
         let vector_t = &Type::Vector(Box::new(param_t.clone()));
-        let type_t = &Type::Primitive(PrimitiveType::TypeValue);
         let domain_t = &Type::TypeDomain(Box::new(param_t.clone()));
 
         // Constants (max_u8(), etc.)
@@ -308,17 +307,6 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             },
         );
 
-        // Type values, domains and quantifiers
-        trans.define_spec_fun(
-            trans.builtin_qualified_symbol("type"),
-            SpecFunEntry {
-                loc: loc.clone(),
-                oper: Operation::TypeValue,
-                type_params: vec![param_t.clone()],
-                arg_types: vec![],
-                result_type: type_t.clone(),
-            },
-        );
         trans.define_spec_fun(
             trans.builtin_qualified_symbol("$spec_domain"),
             SpecFunEntry {

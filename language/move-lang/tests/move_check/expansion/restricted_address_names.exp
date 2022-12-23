@@ -1,6 +1,6 @@
-error[E02010]: invalid name
-  ┌─ tests/move_check/expansion/restricted_address_names.move:1:9
+error[E03011]: Invalid use of reserved name
+  ┌─ tests/move_check/expansion/restricted_address_names.move:1:8
   │
-1 │ address Self;
-  │         ^^^^ Invalid address name 'Self'. 'Self' is restricted and cannot be used to name a address
+1 │ module Self::A {}
+  │        ^^^^ Invalid named address 'Self'. 'Self' is restricted and cannot be used to name an address
 

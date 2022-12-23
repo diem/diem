@@ -3,7 +3,8 @@
 
 use log::LevelFilter;
 use move_command_line_common::files::{extension_equals, find_filenames, MOVE_EXTENSION};
-use std::path::PathBuf;
+use move_lang::shared::AddressBytes;
+use std::{collections::BTreeMap, path::PathBuf};
 
 #[cfg(test)]
 mod tests;
@@ -21,13 +22,10 @@ const REFERENCES_TEMPLATE: &str = "templates/references.md";
 const OVERVIEW_TEMPLATE: &str = "templates/overview.md";
 
 pub fn unit_testing_files() -> Vec<String> {
-    vec![
-        path_in_crate("nursery/UnitTest.move"),
-        path_in_crate("modules/addresses.move"),
-    ]
-    .into_iter()
-    .map(|p| p.into_os_string().into_string().unwrap())
-    .collect()
+    vec![path_in_crate("nursery/UnitTest.move")]
+        .into_iter()
+        .map(|p| p.into_os_string().into_string().unwrap())
+        .collect()
 }
 
 pub fn path_in_crate<S>(relative: S) -> PathBuf
@@ -65,6 +63,14 @@ pub fn move_nursery_files() -> Vec<String> {
     find_filenames(&[path], |p| extension_equals(p, MOVE_EXTENSION)).unwrap()
 }
 
+pub fn move_stdlib_named_addresses() -> BTreeMap<String, AddressBytes> {
+    let mapping = [("Std", "0x1")];
+    mapping
+        .iter()
+        .map(|(name, addr)| (name.to_string(), AddressBytes::parse_str(addr).unwrap()))
+        .collect()
+}
+
 pub fn build_doc(
     output_path: &str,
     doc_path: &str,
@@ -73,10 +79,12 @@ pub fn build_doc(
     sources: &[String],
     dep_paths: Vec<String>,
     with_diagram: bool,
+    named_addresses: BTreeMap<String, AddressBytes>,
 ) {
     let options = move_prover::cli::Options {
         move_sources: sources.to_vec(),
         move_deps: dep_paths,
+        move_named_address_values: move_prover::cli::named_addresses_for_options(&named_addresses),
         verbosity_level: LevelFilter::Warn,
         run_docgen: true,
         docgen: docgen::DocgenOptions {
@@ -109,6 +117,7 @@ pub fn build_stdlib_doc(output_path: &str) {
         move_stdlib_files().as_slice(),
         vec![],
         false,
+        move_stdlib_named_addresses(),
     )
 }
 
@@ -121,6 +130,7 @@ pub fn build_nursery_doc(output_path: &str) {
         move_nursery_files().as_slice(),
         vec![move_stdlib_modules_full_path()],
         false,
+        move_stdlib_named_addresses(),
     )
 }
 
@@ -130,6 +140,9 @@ pub fn build_error_code_map(output_path: &str) {
         move_deps: vec![],
         verbosity_level: LevelFilter::Warn,
         run_errmapgen: true,
+        move_named_address_values: move_prover::cli::named_addresses_for_options(
+            &move_stdlib_named_addresses(),
+        ),
         errmapgen: errmapgen::ErrmapOptions {
             output_file: output_path.to_string(),
             ..Default::default()

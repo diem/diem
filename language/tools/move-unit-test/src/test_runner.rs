@@ -23,7 +23,7 @@ use move_core_types::{
     vm_status::StatusCode,
 };
 use move_lang::{
-    shared::Flags,
+    shared::{AddressBytes, Flags},
     unit_test::{ExpectedFailure, ModuleTestPlan, TestCase, TestPlan},
 };
 use move_model::{
@@ -35,7 +35,7 @@ use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
 use rayon::prelude::*;
 use resource_viewer::MoveValueAnnotator;
-use std::{io::Write, marker::Send, sync::Mutex, time::Instant};
+use std::{collections::BTreeMap, io::Write, marker::Send, sync::Mutex, time::Instant};
 
 /// Test state common to all tests
 pub struct SharedTestingConfig {
@@ -45,6 +45,7 @@ pub struct SharedTestingConfig {
     native_function_table: NativeFunctionTable,
     starting_storage_state: InMemoryStorage,
     source_files: Vec<String>,
+    named_address_values: BTreeMap<String, AddressBytes>,
     check_stackless_vm: bool,
     verbose: bool,
 }
@@ -119,6 +120,7 @@ impl TestRunner {
         save_storage_state_on_failure: bool,
         tests: TestPlan,
         native_function_table: Option<NativeFunctionTable>,
+        named_address_values: BTreeMap<String, AddressBytes>,
     ) -> Result<Self> {
         let source_files = tests
             .files
@@ -140,6 +142,7 @@ impl TestRunner {
                 source_files,
                 check_stackless_vm,
                 verbose,
+                named_address_values,
             },
             num_threads,
             tests,
@@ -302,6 +305,7 @@ impl SharedTestingConfig {
                 &[],
                 ModelBuilderOptions::default(),
                 Flags::testing(),
+                self.named_address_values.clone(),
             )
             .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
             Some(model)

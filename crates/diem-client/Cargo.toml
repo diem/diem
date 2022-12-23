@@ -18,7 +18,7 @@ websocket = ["async", "futures", "tokio-tungstenite"]
 
 [dependencies]
 anyhow = "1.0.38"
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 hex = "0.4.3"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
@@ -37,5 +37,12 @@ tokio-tungstenite = { version = "0.14", optional = true }
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false, optional = true }
 ipnet = { version = "2.3", optional = true }
 
+# Needed to fsync a directory on Windows apparently...
+[target.'cfg(windows)'.dependencies]
+winapi = "0.3.9"
+
 [dev-dependencies]
 diem-workspace-hack = { path = "../../crates/diem-workspace-hack" }
+diem-types = { path = "../../types", version = "0.0.2", features = ["fuzzing"] }
+proptest = "1.0.0"
+tempfile = "3.2.0"

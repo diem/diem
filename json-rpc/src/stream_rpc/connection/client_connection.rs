@@ -22,7 +22,7 @@ use diem_json_rpc_types::{
 };
 use diem_logger::debug;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
-use storage_interface::DbReader;
+use storage_interface::MoveDbReader;
 
 const UNKNOWN: &str = "unknown";
 
@@ -149,7 +149,7 @@ impl ClientConnection {
         }
     }
 
-    pub async fn received_message(&self, db: Arc<dyn DbReader>, message: String) {
+    pub async fn received_message(&self, db: Arc<dyn MoveDbReader>, message: String) {
         match StreamJsonRpcRequest::from_str(&message) {
             Ok(mut request) => {
                 debug!(
@@ -216,7 +216,7 @@ impl ClientConnection {
     /// 2. Returning `Ok(JoinHandle<()>)` indicates that the subscription has been successfully created.
     fn handle_rpc_request(
         &self,
-        db: Arc<dyn DbReader>,
+        db: Arc<dyn MoveDbReader>,
         request: &mut StreamJsonRpcRequest,
     ) -> Result<(), JsonRpcError> {
         // No task needs to spawn for an unsubscribe

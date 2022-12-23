@@ -1,5 +1,5 @@
 sandbox publish src/modules/M_no_named.move
 sandbox publish src/modules/N.move
 sandbox clean
-sandbox publish src/modules/M.move
+sandbox publish src/modules/M.move -a A=0x42
 sandbox publish src/modules/N.move

@@ -1,33 +1,33 @@
 error[E03002]: unbound module
-   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:13:9
+   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:11:9
    │
-13 │     use 0x42::M;
+11 │     use 0x42::M;
    │         ^^^^^^^ Invalid 'use'. Unbound module: '0x42::M'
 
 error[E02011]: invalid 'friend' declaration
-   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:14:5
+   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:12:5
    │
-14 │     friend 0x42::M;
+12 │     friend 0x42::M;
    │     ^^^^^^^^^^^^^^^
    │     │      │
    │     │      Cannot declare modules out of the current address as a friend
    │     Invalid friend declaration
 
 error[E03002]: unbound module
-   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:15:22
+   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:13:22
    │
-15 │     public fun ex(): 0x42::M::S {
+13 │     public fun ex(): 0x42::M::S {
    │                      ^^^^^^^ Unbound module '0x42::M'
 
 error[E03002]: unbound module
-   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:16:9
+   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:14:9
    │
-16 │         0x42::M::C;
+14 │         0x42::M::C;
    │         ^^^^^^^ Unbound module '0x42::M'
 
 error[E03002]: unbound module
-   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:17:9
+   ┌─ tests/move_check/naming/named_address_distinct_from_value.move:15:9
    │
-17 │         0x42::M::s()
+15 │         0x42::M::s()
    │         ^^^^^^^ Unbound module '0x42::M'
 

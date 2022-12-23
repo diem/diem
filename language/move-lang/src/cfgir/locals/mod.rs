@@ -236,7 +236,7 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
                     }
                 }
             }
-            context.set_state(v.clone(), LocalState::Available(*loc))
+            context.set_state(*v, LocalState::Available(*loc))
         }
         L::Unpack(_, _, fields) => fields.iter().for_each(|(_, l)| lvalue(context, l)),
     }
@@ -252,7 +252,7 @@ fn exp(context: &mut Context, parent_e: &Exp) {
 
         E::Move { var, .. } => {
             use_local(context, eloc, var);
-            context.set_state(var.clone(), LocalState::Unavailable(*eloc))
+            context.set_state(*var, LocalState::Unavailable(*eloc))
         }
 
         E::ModuleCall(mcall) => exp(context, &mcall.arguments),

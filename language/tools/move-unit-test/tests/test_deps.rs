@@ -10,7 +10,8 @@ use std::path::PathBuf;
 // Make sure the compiled bytecode for dependencies is included, but the tests in them are not run.
 #[test]
 fn test_deps_arent_tested() {
-    let mut testing_config = UnitTestingConfig::default_with_bound(None);
+    let mut testing_config = UnitTestingConfig::default_with_bound(None)
+        .with_named_addresses(move_stdlib::move_stdlib_named_addresses());
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let a_path = path.join("tests/sources/A.move");
     let b_path = path.join("tests/sources/B.move");

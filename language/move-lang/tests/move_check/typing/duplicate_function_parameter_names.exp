@@ -1,3 +1,9 @@
+warning[W09002]: unused variable
+  ┌─ tests/move_check/typing/duplicate_function_parameter_names.move:2:13
+  │
+2 │     fun foo(x: u64, x: u64) {}
+  │             ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
+
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/typing/duplicate_function_parameter_names.move:2:21
   │
@@ -5,4 +11,10 @@ error[E02001]: duplicate declaration, item, or annotation
   │             -       ^ Duplicate parameter with name 'x'
   │             │        
   │             Previously declared here
+
+warning[W09002]: unused variable
+  ┌─ tests/move_check/typing/duplicate_function_parameter_names.move:2:21
+  │
+2 │     fun foo(x: u64, x: u64) {}
+  │                     ^ Unused local variable 'x'. Consider removing or prefixing with an underscore: '_x'
 

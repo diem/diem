@@ -1,0 +1,19 @@
+processed 2 tasks
+
+task 0 'publish'. lines 1-50:
+Error: Unable to publish module '00000000000000000000000000000001::Tester'. Got VMError: {
+    major_status: BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
+    sub_status: None,
+    location: 0x1::Tester,
+    indices: [(FunctionDefinition, 2)],
+    offsets: [(FunctionDefinitionIndex(2), 23)],
+}
+
+task 1 'publish'. lines 52-101:
+Error: Unable to publish module '00000000000000000000000000000001::Tester2'. Got VMError: {
+    major_status: FREEZEREF_EXISTS_MUTABLE_BORROW_ERROR,
+    sub_status: None,
+    location: 0x1::Tester2,
+    indices: [(FunctionDefinition, 2)],
+    offsets: [(FunctionDefinitionIndex(2), 23)],
+}

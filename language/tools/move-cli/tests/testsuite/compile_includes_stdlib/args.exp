@@ -1,10 +1,10 @@
 Command `compile --check src/modules/UseSigner.move --mode bare -v`:
 Checking Move files...
-error[E03001]: unbound address
+error[E03001]: address with no value
   ┌─ src/modules/UseSigner.move:2:7
   │
 2 │   use Std::Signer;
-  │       ^^^ Unbound address 'Std'
+  │       ^^^ address 'Std' is not assigned a value
 
 error[E03002]: unbound module
   ┌─ src/modules/UseSigner.move:2:7

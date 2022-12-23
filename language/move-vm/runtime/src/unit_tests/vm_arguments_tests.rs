@@ -3,9 +3,9 @@
 
 use std::collections::HashMap;
 
-use crate::{data_cache::MoveStorage, move_vm::MoveVM};
+use crate::move_vm::MoveVM;
 use move_binary_format::{
-    errors::{PartialVMResult, VMResult},
+    errors::{VMError, VMResult},
     file_format::{
         empty_module, AbilitySet, AddressIdentifierIndex, Bytecode, CodeUnit, CompiledModule,
         CompiledScript, FieldDefinition, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
@@ -18,6 +18,7 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
+    resolver::{ModuleResolver, ResourceResolver},
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
@@ -234,16 +235,21 @@ impl RemoteStore {
     }
 }
 
-impl MoveStorage for RemoteStore {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl ModuleResolver for RemoteStore {
+    type Error = VMError;
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         Ok(self.modules.get(module_id).cloned())
     }
+}
+
+impl ResourceResolver for RemoteStore {
+    type Error = VMError;
 
     fn get_resource(
         &self,
         _address: &AccountAddress,
         _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
         Ok(None)
     }
 }

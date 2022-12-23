@@ -1,0 +1,34 @@
+//# publish --address 0x42
+
+// example using generics in a few common/interesting/non-trivial ways
+module Option {
+    import 0x1.Vector;
+
+    struct T<E> has copy, drop, store {
+        v: vector<E>
+    }
+
+    public none<E: store>(): Self.T<E> {
+        return T<E> { v: Vector.empty<E>() };
+    }
+
+    public some<E: store>(e: E): Self.T<E> {
+        let v: vector<E>;
+        v = Vector.empty<E>();
+        Vector.push_back<E>(&mut v, move(e));
+        return T<E> { v: move(v) };
+    }
+
+    public unwrap_or<E: copy + drop + store>(x: Self.T<E>, e: E): E {
+        let v: vector<E>;
+        T<E> { v: v } = move(x);
+        if (Vector.is_empty<E>(&v)) {
+            return move(e);
+        }
+        return Vector.pop_back<E>(&mut v);
+    }
+
+    public really_none<E: copy + drop + store>(): Self.T<E> {
+        return Self.unwrap_or<Self.T<E>>(Self.none<Self.T<E>>(), Self.none<E>());
+    }
+}

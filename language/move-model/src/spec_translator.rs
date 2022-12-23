@@ -225,20 +225,19 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         translator.result
     }
 
-    /// Translates a set of invariants. If there are any references to `old(...)` they
-    /// will be rewritten and respective memory/spec var saves will be generated.
+    /// Translates a set of invariants with type instantiations. If there are any references to
+    /// `old(...)` they will be rewritten and respective memory/spec var saves will be generated.
     pub fn translate_invariants(
         auto_trace: bool,
         builder: &'b mut T,
-        type_args: &'b [Type],
-        invariants: impl Iterator<Item = &'b GlobalInvariant>,
+        invariants: impl Iterator<Item = (&'b GlobalInvariant, Vec<Type>)>,
     ) -> TranslatedSpec {
         let fun_env = builder.function_env().clone();
         let mut translator = SpecTranslator {
             auto_trace,
             builder,
             fun_env: &fun_env,
-            type_args,
+            type_args: &[],
             param_substitution: Default::default(),
             ret_locals: Default::default(),
             in_post_state: false,
@@ -247,7 +246,10 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             let_locals: Default::default(),
             in_old: false,
         };
-        for inv in invariants {
+        // Clone invariants so `inst` lives for the entire loop
+        let invariants = invariants.collect_vec();
+        for (inv, inst) in &invariants {
+            translator.type_args = inst;
             let exp = translator.translate_exp(&translator.auto_trace(&inv.loc, &inv.cond), false);
             translator
                 .result
@@ -281,14 +283,14 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
     pub fn translate_invariants_by_id(
         auto_trace: bool,
         builder: &'b mut T,
-        type_args: &'b [Type],
-        inv_id_set: &BTreeSet<GlobalId>,
+        inv_ids: impl Iterator<Item = (GlobalId, Vec<Type>)>,
     ) -> TranslatedSpec {
         let global_env = builder.global_env();
-        let invariants = inv_id_set
-            .iter()
-            .map(|inv_id| global_env.get_global_invariant(*inv_id).unwrap());
-        SpecTranslator::translate_invariants(auto_trace, builder, type_args, invariants)
+        SpecTranslator::translate_invariants(
+            auto_trace,
+            builder,
+            inv_ids.map(|(inv_id, inst)| (global_env.get_global_invariant(inv_id).unwrap(), inst)),
+        )
     }
 
     fn translate_spec(&mut self, for_call: bool) {

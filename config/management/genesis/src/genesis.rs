@@ -35,7 +35,7 @@ impl Genesis {
         let chain_id = config.chain_id;
         let storage = Storage::from(&config.shared_backend);
         let genesis = GenesisBuilder::new(storage)
-            .build(chain_id)
+            .build(chain_id, None)
             .map_err(|e| Error::UnexpectedError(e.to_string()))?;
 
         if let Some(path) = self.path {

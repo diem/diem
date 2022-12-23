@@ -12,13 +12,13 @@ edition = "2018"
 [dependencies]
 rand = "0.8.3"
 serde = { version = "1.0.124", features = ["derive"] }
-serde-reflection = "0.3.2"
+serde-reflection = { git = "https://github.com/diem/serde-reflection-diem.git", rev = "bb38a0fdb7b9c219cbbb646097e847587d059086" }
 serde_yaml = "0.8.17"
 structopt = "0.3.21"
 
 consensus = { path = "../../consensus", features=["fuzzing"] }
 consensus-types = { path = "../../consensus/consensus-types", features=["fuzzing"] }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crates/diem-crypto", features=["fuzzing"] }
 diem-crypto-derive = { path = "../../crates/diem-crypto-derive"}

@@ -1,3 +1,9 @@
+warning[W09005]: dead or unreachable code
+  ┌─ tests/move_check/typing/constraints_not_satisfied_type_annotation.move:7:17
+  │
+7 │         ignore((abort 0: CupC<R>));
+  │                 ^^^^^^^ Invalid use of a divergent expression. The code following the evaluation of this expression will be dead and should be removed.
+
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/constraints_not_satisfied_type_annotation.move:7:26
   │

@@ -1,0 +1,20 @@
+//# run
+main() {
+    let x: u64;
+    let y: u64;
+    let ref: &u64;
+
+    x = 1;
+    y = 2;
+
+    if (true) {
+        ref = &x;
+    }
+    else {
+        ref = &y;
+    }
+
+    // valid to read reference even though different locals borrowed
+    assert(*move(ref) == 1, 42);
+    return;
+}

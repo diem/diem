@@ -83,7 +83,7 @@ pub enum TravelRuleMetadata {
 pub struct TravelRuleMetadataV0 {
     /// Off-chain reference_id.  Used when off-chain APIs are used.
     /// Specifies the off-chain reference ID that was agreed upon in off-chain APIs.
-    off_chain_reference_id: Option<String>,
+    pub off_chain_reference_id: Option<String>,
 }
 
 /// Opaque binary transaction metadata
@@ -91,7 +91,7 @@ pub struct TravelRuleMetadataV0 {
 pub struct UnstructuredBytesMetadata {
     /// Unstructured byte vector metadata
     #[serde(with = "serde_bytes")]
-    metadata: Option<Vec<u8>>,
+    pub metadata: Option<Vec<u8>>,
 }
 
 /// List of supported transaction metadata format versions for refund transaction
@@ -141,5 +141,5 @@ pub enum PaymentMetadata {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PaymentMetadataV0 {
     /// Reference ID needed for off-chain reference ID exchange.
-    reference_id: [u8; 16],
+    pub reference_id: [u8; 16],
 }

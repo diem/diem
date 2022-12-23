@@ -362,4 +362,9 @@ impl Swarm for LocalSwarm {
             self.chain_id,
         )
     }
+
+    fn logs_location(&mut self) -> String {
+        self.dir.persist();
+        self.dir.display().to_string()
+    }
 }

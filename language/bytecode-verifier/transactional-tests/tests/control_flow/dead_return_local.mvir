@@ -1,0 +1,7 @@
+//# run
+// TODO: should the verifier allow dead code?
+main() {
+    return;
+    assert(false, 42);
+    return;
+}

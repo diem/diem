@@ -7,6 +7,7 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use petgraph::{algo::toposort as petgraph_toposort, graphmap::DiGraphMap};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -17,7 +18,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub fn verify(
     compilation_env: &mut CompilationEnv,
     modules: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>,
-    scripts: &mut BTreeMap<String, E::Script>,
+    scripts: &mut BTreeMap<Symbol, E::Script>,
 ) {
     let imm_modules = &modules;
     let mut context = Context::new(imm_modules);
@@ -33,7 +34,7 @@ pub fn verify(
     let graph = dependency_graph(&module_neighbors);
     match petgraph_toposort(&graph, None) {
         Err(cycle_node) => {
-            let cycle_ident = cycle_node.node_id().clone();
+            let cycle_ident = *cycle_node.node_id();
             let error = cycle_error(&module_neighbors, cycle_ident);
             compilation_env.add_diag(error);
         }
@@ -78,7 +79,7 @@ enum DepType {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
 enum NodeIdent {
     Module(ModuleIdent),
-    Script(String),
+    Script(Symbol),
 }
 
 struct Context<'a> {
@@ -135,8 +136,8 @@ impl<'a> Context<'a> {
             .entry(current.clone())
             .or_insert_with(BTreeSet::new);
         current_neighbors.remove(&mident);
-        current_neighbors.add(mident.clone(), neighbor).unwrap();
-        current_used_addresses.insert(mident.value.address.clone());
+        current_neighbors.add(mident, neighbor).unwrap();
+        current_used_addresses.insert(mident.value.address);
 
         match current {
             NodeIdent::Module(current_mident) => {
@@ -289,13 +290,13 @@ fn module(context: &mut Context, mident: ModuleIdent, mdef: &E::ModuleDefinition
 // Scripts cannot affect the dependency graph because 1) a script cannot friend anything and 2)
 // nothing can depends on a script. Therefore, we iterate over the scripts just to collect their
 // immediate dependencies.
-fn script_defs(context: &mut Context, scripts: &BTreeMap<String, E::Script>) {
+fn script_defs(context: &mut Context, scripts: &BTreeMap<Symbol, E::Script>) {
     scripts
         .iter()
-        .for_each(|(sname, sdef)| script(context, sname.clone(), sdef))
+        .for_each(|(sname, sdef)| script(context, *sname, sdef))
 }
 
-fn script(context: &mut Context, sname: String, sdef: &E::Script) {
+fn script(context: &mut Context, sname: Symbol, sdef: &E::Script) {
     context.current_node = Some(NodeIdent::Script(sname));
     function(context, &sdef.function);
     sdef.specs
@@ -345,7 +346,7 @@ fn struct_def(context: &mut Context, sdef: &E::StructDefinition) {
 
 fn module_access(context: &mut Context, sp!(loc, ma_): &E::ModuleAccess) {
     if let E::ModuleAccess_::ModuleAccess(m, _) = ma_ {
-        context.add_usage(m.clone(), *loc)
+        context.add_usage(*m, *loc)
     }
 }
 
@@ -423,7 +424,7 @@ fn lvalue(context: &mut Context, sp!(_loc, a_): &E::LValue) {
 fn exp(context: &mut Context, sp!(_loc, e_): &E::Exp) {
     use crate::expansion::ast::{Exp_ as E, Value_ as V};
     match e_ {
-        E::Value(sp!(_, V::Address(a))) => context.add_address_usage(a.clone()),
+        E::Value(sp!(_, V::Address(a))) => context.add_address_usage(*a),
 
         E::Unit { .. }
         | E::UnresolvedError
@@ -553,14 +554,14 @@ fn spec_block_member(context: &mut Context, sp!(_, sbm_): &E::SpecBlockMember) {
         M::Pragma { properties } => {
             for prop in properties {
                 let pragma = &prop.value;
-                if pragma.name.value == "friend" {
+                if pragma.name.value.as_str() == "friend" {
                     match &pragma.value {
                         None => (),
                         Some(E::PragmaValue::Literal(_)) => (),
                         Some(E::PragmaValue::Ident(maccess)) => match &maccess.value {
                             E::ModuleAccess_::Name(_) => (),
                             E::ModuleAccess_::ModuleAccess(mident, _) => {
-                                context.add_friend(mident.clone(), maccess.loc);
+                                context.add_friend(*mident, maccess.loc);
                             }
                         },
                     }

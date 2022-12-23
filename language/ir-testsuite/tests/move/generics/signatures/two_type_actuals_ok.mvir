@@ -1,9 +1,0 @@
-module M {
-    struct R has key { b: bool}
-    struct S<T1: key, T2: copy + drop> { b: bool }
-
-    foo() {
-        let x: Self.S<Self.R, bool>;
-        return;
-    }
-}

@@ -10,14 +10,14 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
 move-binary-format = { path = "../../move-binary-format" }
+move-core-types = { path = "../../move-core/types" }
 diem-resource-viewer = { path = "../diem-resource-viewer"}
 vm-genesis = { path = "../vm-genesis" }
 diem-framework-releases = { path = "../../diem-framework/releases" }
-move-vm-runtime = { path = "../../move-vm/runtime" }
 move-vm-test-utils = { path = "../../move-vm/test-utils" }
 
 structopt = "0.3.21"

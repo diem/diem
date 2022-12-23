@@ -16,11 +16,15 @@ use diem_types::{
     account_state::AccountState, chain_id::ChainId, event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
 };
-use std::convert::{TryFrom, TryInto};
-use storage_interface::{DbReader, Order};
+use resource_viewer::{AnnotatedMoveStruct, MoveValueAnnotator};
+use std::{
+    collections::BTreeMap,
+    convert::{TryFrom, TryInto},
+};
+use storage_interface::{MoveDbReader, Order};
 
 pub fn get_account_state(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     address: AccountAddress,
     version: u64,
 ) -> Result<Option<AccountState>> {
@@ -38,7 +42,7 @@ pub fn get_account_state(
 /// returning the current blockchain metadata
 /// Can be used to verify that target Full Node is up-to-date
 pub fn get_metadata(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     ledger_version: u64,
     chain_id: ChainId,
     version: u64,
@@ -57,7 +61,7 @@ pub fn get_metadata(
 
 /// Returns account state (AccountView) by given address
 pub fn get_account(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     account_address: AccountAddress,
     version: u64,
 ) -> Result<Option<AccountView>, JsonRpcError> {
@@ -75,7 +79,7 @@ pub fn get_account(
 
 /// Returns transactions by range
 pub fn get_transactions(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     ledger_version: u64,
     start_version: u64,
     limit: u64,
@@ -90,7 +94,7 @@ pub fn get_transactions(
 
 /// Returns transactions by range with proofs
 pub fn get_transactions_with_proofs(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     ledger_version: u64,
     start_version: u64,
     limit: u64,
@@ -105,7 +109,7 @@ pub fn get_transactions_with_proofs(
 
 /// Returns account transaction by account and sequence_number
 pub fn get_account_transaction(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     account: AccountAddress,
     seq_num: u64,
     include_events: bool,
@@ -127,7 +131,7 @@ pub fn get_account_transaction(
 
 /// Returns all account transactions
 pub fn get_account_transactions(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     account: AccountAddress,
     start_seq_num: u64,
     limit: u64,
@@ -148,7 +152,7 @@ pub fn get_account_transactions(
 /// Return a serialized list of an account's transactions along with a proof for
 /// each transaction.
 pub fn get_account_transactions_with_proofs(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     account: AccountAddress,
     start: u64,
     limit: u64,
@@ -164,7 +168,7 @@ pub fn get_account_transactions_with_proofs(
 
 /// Returns events by given access path
 pub fn get_events(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     ledger_version: u64,
     event_key: EventKey,
     start: u64,
@@ -183,7 +187,7 @@ pub fn get_events(
 
 /// Returns events by given access path along with their proofs
 pub fn get_events_with_proofs(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     ledger_version: u64,
     event_key: EventKey,
     start: u64,
@@ -207,7 +211,7 @@ pub fn get_events_with_proofs(
 
 /// Returns the latest event at or below the requested version along with proof.
 pub fn get_event_by_version_with_proof(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     ledger_version: u64,
     event_key: EventKey,
     version: u64,
@@ -219,7 +223,7 @@ pub fn get_event_by_version_with_proof(
 
 /// Returns meta information about supported currencies
 pub fn get_currencies(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     ledger_version: u64,
 ) -> Result<Vec<CurrencyInfoView>, JsonRpcError> {
     if let Some(account_state) = get_account_state(db, diem_root_address(), ledger_version)? {
@@ -241,7 +245,7 @@ pub fn get_network_status(_role: &str) -> Result<u64, JsonRpcError> {
 
 /// Returns proof of new state relative to version known to client
 pub fn get_state_proof(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     version: u64,
     ledger_info: LedgerInfoWithSignatures,
 ) -> Result<StateProofView, JsonRpcError> {
@@ -252,9 +256,9 @@ pub fn get_state_proof(
 /// Returns a proof that allows a client to extend their accumulator summary from
 /// `client_known_version` (or pre-genesis if `None`) to `ledger_version`.
 ///
-/// See [`DbReader::get_accumulator_consistency_proof`]
+/// See [`MoveDbReader::get_accumulator_consistency_proof`]
 pub fn get_accumulator_consistency_proof(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     client_known_version: Option<u64>,
     ledger_version: u64,
 ) -> Result<AccumulatorConsistencyProofView, JsonRpcError> {
@@ -274,7 +278,7 @@ pub fn get_accumulator_consistency_proof(
 /// ledger_version specified by the client. If version or ledger_version are not specified,
 /// the latest known versions will be used.
 pub fn get_account_state_with_proof(
-    db: &dyn DbReader,
+    db: &dyn MoveDbReader,
     ledger_version: u64,
     account_address: AccountAddress,
     version: u64,
@@ -290,4 +294,26 @@ pub fn get_account_state_with_proof(
     Ok(AccountStateWithProofView::try_from(
         account_state_with_proof,
     )?)
+}
+
+/// Get all resources stored under `account_address` at `version`
+pub fn get_resources(
+    db: &dyn MoveDbReader,
+    ledger_version: u64,
+    account_address: AccountAddress,
+    version: u64,
+) -> Result<BTreeMap<String, AnnotatedMoveStruct>, JsonRpcError> {
+    let account_state_with_proof =
+        db.get_account_state_with_proof(account_address, version, ledger_version)?;
+    let mut resources = BTreeMap::new();
+    if let Some(account_state_blob) = account_state_with_proof.blob {
+        let account_state = AccountState::try_from(&account_state_blob)
+            .map_err(|e| JsonRpcError::internal_error(format!("{:?}", e)))?;
+        let annotator = MoveValueAnnotator::new(&db);
+        for (typ, bytes) in account_state.get_resources() {
+            let resource = annotator.view_resource(&typ, bytes)?;
+            resources.insert(format!("{}", typ), resource);
+        }
+    }
+    Ok(resources)
 }

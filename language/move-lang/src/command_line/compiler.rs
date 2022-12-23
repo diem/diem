@@ -6,16 +6,17 @@ use crate::{
     command_line::{DEFAULT_OUTPUT_DIR, MOVE_COMPILED_INTERFACES_DIR},
     compiled_unit,
     compiled_unit::CompiledUnit,
-    diagnostics::*,
+    diagnostics::{codes::Severity, *},
     expansion, hlir, interface_generator, naming, parser,
     parser::{comments::*, *},
-    shared::{CompilationEnv, Flags},
+    shared::{AddressBytes, CompilationEnv, Flags},
     to_bytecode, typing, unit_test,
 };
 use move_command_line_common::files::{
     extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
 use move_core_types::language_storage::ModuleId as CompiledModuleId;
+use move_symbol_pool::Symbol;
 use std::{
     collections::BTreeMap,
     fs,
@@ -35,6 +36,7 @@ pub struct Compiler<'a, 'b> {
     interface_files_dir_opt: Option<String>,
     pre_compiled_lib: Option<&'b FullyCompiledProgram>,
     compiled_module_named_address_mapping: BTreeMap<CompiledModuleId, String>,
+    named_address_mapping: BTreeMap<Symbol, AddressBytes>,
     flags: Flags,
 }
 
@@ -62,7 +64,7 @@ enum PassResult {
     Typing(typing::ast::Program),
     HLIR(hlir::ast::Program),
     CFGIR(cfgir::ast::Program),
-    Compilation(Vec<CompiledUnit>),
+    Compilation(Vec<CompiledUnit>, /* warnings */ Diagnostics),
 }
 
 #[derive(Clone)]
@@ -91,6 +93,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
             pre_compiled_lib: None,
             compiled_module_named_address_mapping: BTreeMap::new(),
             flags: Flags::empty(),
+            named_address_mapping: BTreeMap::new(),
         }
     }
 
@@ -136,6 +139,18 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self
     }
 
+    pub fn set_named_address_values(
+        mut self,
+        named_address_mapping: BTreeMap<impl Into<Symbol>, AddressBytes>,
+    ) -> Self {
+        assert!(self.named_address_mapping.is_empty());
+        self.named_address_mapping = named_address_mapping
+            .into_iter()
+            .map(|(k, v)| (k.into(), v))
+            .collect();
+        self
+    }
+
     pub fn run<const TARGET: Pass>(
         self,
     ) -> anyhow::Result<(
@@ -148,6 +163,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
             interface_files_dir_opt,
             pre_compiled_lib,
             compiled_module_named_address_mapping,
+            named_address_mapping,
             flags,
         } = self;
         let mut deps = deps.to_vec();
@@ -156,7 +172,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
             interface_files_dir_opt,
             &compiled_module_named_address_mapping,
         )?;
-        let compilation_env = CompilationEnv::new(flags);
+        let compilation_env = CompilationEnv::new(flags, named_address_mapping);
         let (source_text, pprog_and_comments_res) =
             parse_program(&compilation_env, targets, &deps)?;
         let res: Result<_, Diagnostics> = pprog_and_comments_res.and_then(|(pprog, comments)| {
@@ -180,7 +196,10 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     pub fn build(
         self,
-    ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Diagnostics>)> {
+    ) -> anyhow::Result<(
+        FilesSourceText,
+        Result<(Vec<CompiledUnit>, Diagnostics), Diagnostics>,
+    )> {
         let (files, res) = self.run::<PASS_COMPILATION>()?;
         Ok((
             files,
@@ -190,7 +209,8 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     pub fn build_and_report(self) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
         let (files, units_res) = self.build()?;
-        let units = unwrap_or_report_diagnostics(&files, units_res);
+        let (units, warnings) = unwrap_or_report_diagnostics(&files, units_res);
+        report_warnings(&files, warnings);
         Ok((files, units))
     }
 }
@@ -296,24 +316,24 @@ macro_rules! ast_stepped_compilers {
                     Ok(())
                 }
 
-                pub fn build(self) -> Result<Vec<CompiledUnit>, Diagnostics> {
+                pub fn build(self) -> Result<(Vec<CompiledUnit>, Diagnostics), Diagnostics> {
                     let units = self.run::<PASS_COMPILATION>()?.into_compiled_units();
                     Ok(units)
                 }
 
-                pub fn check_and_report(self, files: FilesSourceText) -> FilesSourceText {
+                pub fn check_and_report(self, files: &FilesSourceText)  {
                     let errors_result = self.check();
                     unwrap_or_report_diagnostics(&files, errors_result);
-                    files
                 }
 
                 pub fn build_and_report(
                     self,
-                    files: FilesSourceText,
-                ) -> (FilesSourceText, Vec<CompiledUnit>) {
+                    files: &FilesSourceText,
+                ) -> Vec<CompiledUnit> {
                     let units_result = self.build();
-                    let units = unwrap_or_report_diagnostics(&files, units_result);
-                    (files, units)
+                    let (units, warnings) = unwrap_or_report_diagnostics(&files, units_result);
+                    report_warnings(&files, warnings);
+                    units
                 }
             }
         )*
@@ -336,14 +356,14 @@ ast_stepped_compilers!(
 );
 
 impl<'a> SteppedCompiler<'a, PASS_COMPILATION> {
-    pub fn into_compiled_units(self) -> Vec<CompiledUnit> {
+    pub fn into_compiled_units(self) -> (Vec<CompiledUnit>, Diagnostics) {
         let Self {
             compilation_env: _,
             pre_compiled_lib: _,
             program,
         } = self;
         match program {
-            Some(PassResult::Compilation(units)) => units,
+            Some(PassResult::Compilation(units, warnings)) => (units, warnings),
             _ => panic!(),
         }
     }
@@ -355,10 +375,12 @@ pub fn construct_pre_compiled_lib(
     deps: &[String],
     interface_files_dir_opt: Option<String>,
     flags: Flags,
+    named_address_values: BTreeMap<String, AddressBytes>,
 ) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Diagnostics)>> {
     let (files, pprog_and_comments_res) = Compiler::new(&[], deps)
         .set_interface_files_dir_opt(interface_files_dir_opt)
         .set_flags(flags)
+        .set_named_address_values(named_address_values)
         .run::<PASS_PARSER>()?;
 
     let (_comments, stepped) = match pprog_and_comments_res {
@@ -411,7 +433,7 @@ pub fn construct_pre_compiled_lib(
             assert!(cfgir.is_none());
             cfgir = Some(cprog.clone());
         }
-        PassResult::Compilation(units) => {
+        PassResult::Compilation(units, _final_diags) => {
             assert!(compiled.is_none());
             compiled = Some(units.clone())
         }
@@ -519,7 +541,7 @@ pub fn output_compiled_units(
         std::fs::create_dir_all(dir_path!(out_dir, SCRIPT_SUB_DIR))?;
     }
     for unit in scripts {
-        let mut path = dir_path!(out_dir, SCRIPT_SUB_DIR, unit.name());
+        let mut path = dir_path!(out_dir, SCRIPT_SUB_DIR, unit.name().as_str());
         emit_unit!(path, unit);
     }
 
@@ -644,7 +666,7 @@ impl PassResult {
             PassResult::Typing(_) => PASS_TYPING,
             PassResult::HLIR(_) => PASS_HLIR,
             PassResult::CFGIR(_) => PASS_CFGIR,
-            PassResult::Compilation(_) => PASS_COMPILATION,
+            PassResult::Compilation(_, _) => PASS_COMPILATION,
         }
     }
 }
@@ -671,6 +693,7 @@ fn run(
             let prog = parser::merge_spec_modules::program(compilation_env, prog);
             let prog = unit_test::filter_test_members::program(compilation_env, prog);
             let eprog = expansion::translate::program(compilation_env, pre_compiled_lib, prog);
+            compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -681,6 +704,7 @@ fn run(
         }
         PassResult::Expansion(eprog) => {
             let nprog = naming::translate::program(compilation_env, pre_compiled_lib, eprog);
+            compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -691,7 +715,7 @@ fn run(
         }
         PassResult::Naming(nprog) => {
             let tprog = typing::translate::program(compilation_env, pre_compiled_lib, nprog);
-            compilation_env.check_diags()?;
+            compilation_env.check_diags_at_or_above_severity(Severity::BlockingError)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -702,6 +726,7 @@ fn run(
         }
         PassResult::Typing(tprog) => {
             let hprog = hlir::translate::program(compilation_env, pre_compiled_lib, tprog);
+            compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -712,7 +737,7 @@ fn run(
         }
         PassResult::HLIR(hprog) => {
             let cprog = cfgir::translate::program(compilation_env, pre_compiled_lib, hprog);
-            compilation_env.check_diags()?;
+            compilation_env.check_diags_at_or_above_severity(Severity::NonblockingError)?;
             run(
                 compilation_env,
                 pre_compiled_lib,
@@ -724,16 +749,17 @@ fn run(
         PassResult::CFGIR(cprog) => {
             let compiled_units =
                 to_bytecode::translate::program(compilation_env, pre_compiled_lib, cprog);
-            compilation_env.check_diags()?;
+            compilation_env.check_diags_at_or_above_severity(Severity::NonblockingError)?;
+            let warnings = compilation_env.take_final_warning_diags();
             assert!(until == PASS_COMPILATION);
             run(
                 compilation_env,
                 pre_compiled_lib,
-                PassResult::Compilation(compiled_units),
+                PassResult::Compilation(compiled_units, warnings),
                 PASS_COMPILATION,
                 result_check,
             )
         }
-        PassResult::Compilation(_) => unreachable!("ICE Pass::Compilation is >= all passes"),
+        PassResult::Compilation(_, _) => unreachable!("ICE Pass::Compilation is >= all passes"),
     }
 }

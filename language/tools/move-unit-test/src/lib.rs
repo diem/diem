@@ -7,12 +7,15 @@ pub mod test_runner;
 use crate::test_runner::TestRunner;
 use move_core_types::language_storage::ModuleId;
 use move_lang::{
-    self, diagnostics,
+    self,
+    diagnostics::{self, codes::Severity},
+    shared::{self, AddressBytes},
     unit_test::{self, TestPlan},
     Compiler, Flags, PASS_CFGIR,
 };
 use move_vm_runtime::native_functions::NativeFunctionTable;
 use std::{
+    collections::BTreeMap,
     io::{Result, Write},
     marker::Send,
     sync::Mutex,
@@ -60,6 +63,15 @@ pub struct UnitTestingConfig {
     #[structopt(name = "global_state_on_error", short = "g", long = "state_on_error")]
     pub report_storage_on_error: bool,
 
+    /// Named address mapping
+    #[structopt(
+        name = "NAMED_ADDRESSES",
+        short = "a",
+        long = "addresses",
+        parse(try_from_str = shared::parse_named_address)
+    )]
+    pub named_address_values: Vec<(String, AddressBytes)>,
+
     /// Source files
     #[structopt(name = "sources")]
     pub source_files: Vec<String>,
@@ -96,12 +108,26 @@ impl UnitTestingConfig {
             check_stackless_vm: false,
             verbose: false,
             list: false,
+            named_address_values: vec![],
         }
+    }
+
+    pub fn with_named_addresses(
+        mut self,
+        named_address_values: BTreeMap<String, AddressBytes>,
+    ) -> Self {
+        assert!(self.named_address_values.is_empty());
+        self.named_address_values = named_address_values.into_iter().collect();
+        self
     }
 
     fn compile_to_test_plan(&self, source_files: &[String], deps: &[String]) -> Option<TestPlan> {
         let (files, comments_and_compiler_res) = Compiler::new(source_files, deps)
             .set_flags(Flags::testing())
+            .set_named_address_values(
+                shared::verify_and_create_named_address_mapping(self.named_address_values.clone())
+                    .ok()?,
+            )
             .run::<PASS_CFGIR>()
             .unwrap();
         let (_, compiler) =
@@ -111,13 +137,15 @@ impl UnitTestingConfig {
         let compilation_env = compiler.compilation_env();
         let test_plan = unit_test::plan_builder::construct_test_plan(compilation_env, &cfgir);
 
-        if let Err(diags) = compilation_env.check_diags() {
+        if let Err(diags) = compilation_env.check_diags_at_or_above_severity(Severity::Warning) {
             diagnostics::report_diagnostics(&files, diags);
         }
 
         let compilation_result = compiler.at_cfgir(cfgir).build();
 
-        let units = diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
+        let (units, warnings) =
+            diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
+        diagnostics::report_warnings(&files, warnings);
         test_plan.map(|tests| TestPlan::new(tests, files, units))
     }
 
@@ -170,6 +198,8 @@ impl UnitTestingConfig {
             self.report_storage_on_error,
             test_plan,
             native_function_table,
+            shared::verify_and_create_named_address_mapping(self.named_address_values.clone())
+                .unwrap(),
         )
         .unwrap();
 

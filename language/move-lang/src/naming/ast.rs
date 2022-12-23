@@ -10,6 +10,7 @@ use crate::{
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use once_cell::sync::Lazy;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
@@ -22,10 +23,8 @@ use std::{
 
 #[derive(Debug, Clone)]
 pub struct Program {
-    // Map of known named address values. Not all addresses will be present
-    pub addresses: UniqueMap<Name, AddressBytes>,
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
-    pub scripts: BTreeMap<String, Script>,
+    pub scripts: BTreeMap<Symbol, Script>,
 }
 
 //**************************************************************************************************
@@ -278,7 +277,7 @@ pub type SequenceItem = Spanned<SequenceItem_>;
 // impls
 //**************************************************************************************************
 
-static BUILTIN_TYPE_ALL_NAMES: Lazy<BTreeSet<&'static str>> = Lazy::new(|| {
+static BUILTIN_TYPE_ALL_NAMES: Lazy<BTreeSet<Symbol>> = Lazy::new(|| {
     [
         BuiltinTypeName_::ADDRESS,
         BuiltinTypeName_::SIGNER,
@@ -289,7 +288,7 @@ static BUILTIN_TYPE_ALL_NAMES: Lazy<BTreeSet<&'static str>> = Lazy::new(|| {
         BuiltinTypeName_::VECTOR,
     ]
     .iter()
-    .cloned()
+    .map(|n| Symbol::from(*n))
     .collect()
 });
 
@@ -319,7 +318,7 @@ impl BuiltinTypeName_ {
     pub const BOOL: &'static str = "bool";
     pub const VECTOR: &'static str = "vector";
 
-    pub fn all_names() -> &'static BTreeSet<&'static str> {
+    pub fn all_names() -> &'static BTreeSet<Symbol> {
         &*BUILTIN_TYPE_ALL_NAMES
     }
 
@@ -385,16 +384,19 @@ impl TVar {
     }
 }
 
-static BUILTIN_FUNCTION_ALL_NAMES: Lazy<BTreeSet<&'static str>> = Lazy::new(|| {
-    let mut s = BTreeSet::new();
-    s.insert(BuiltinFunction_::MOVE_TO);
-    s.insert(BuiltinFunction_::MOVE_FROM);
-    s.insert(BuiltinFunction_::BORROW_GLOBAL);
-    s.insert(BuiltinFunction_::BORROW_GLOBAL_MUT);
-    s.insert(BuiltinFunction_::EXISTS);
-    s.insert(BuiltinFunction_::FREEZE);
-    s.insert(BuiltinFunction_::ASSERT);
-    s
+static BUILTIN_FUNCTION_ALL_NAMES: Lazy<BTreeSet<Symbol>> = Lazy::new(|| {
+    [
+        BuiltinFunction_::MOVE_TO,
+        BuiltinFunction_::MOVE_FROM,
+        BuiltinFunction_::BORROW_GLOBAL,
+        BuiltinFunction_::BORROW_GLOBAL_MUT,
+        BuiltinFunction_::EXISTS,
+        BuiltinFunction_::FREEZE,
+        BuiltinFunction_::ASSERT,
+    ]
+    .iter()
+    .map(|n| Symbol::from(*n))
+    .collect()
 });
 
 impl BuiltinFunction_ {
@@ -406,7 +408,7 @@ impl BuiltinFunction_ {
     pub const FREEZE: &'static str = "freeze";
     pub const ASSERT: &'static str = "assert";
 
-    pub fn all_names() -> &'static BTreeSet<&'static str> {
+    pub fn all_names() -> &'static BTreeSet<Symbol> {
         &*BUILTIN_FUNCTION_ALL_NAMES
     }
 
@@ -557,15 +559,7 @@ impl fmt::Display for TypeName_ {
 
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let Program {
-            addresses,
-            modules,
-            scripts,
-        } = self;
-        for (_, addr, bytes) in addresses {
-            w.writeln(&format!("address {} = {};", addr, bytes));
-        }
-
+        let Program { modules, scripts } = self;
         for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));
@@ -594,7 +588,7 @@ impl AstDebug for Script {
             cdef.ast_debug(w);
             w.new_line();
         }
-        (function_name.clone(), function).ast_debug(w);
+        (*function_name, function).ast_debug(w);
     }
 }
 

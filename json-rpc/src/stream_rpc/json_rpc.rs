@@ -3,7 +3,7 @@
 
 use crate::errors::JsonRpcError;
 use std::sync::Arc;
-use storage_interface::DbReader;
+use storage_interface::MoveDbReader;
 use tokio::task::JoinHandle;
 
 use crate::stream_rpc::{
@@ -18,7 +18,7 @@ pub struct CallableStreamMethod(pub StreamMethodRequest);
 impl CallableStreamMethod {
     pub fn call_method(
         self,
-        db: Arc<dyn DbReader>,
+        db: Arc<dyn MoveDbReader>,
         client: ClientConnection,
         jsonrpc_id: Id,
     ) -> Result<JoinHandle<()>, JsonRpcError> {

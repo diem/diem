@@ -1,0 +1,13 @@
+//# run
+main() {
+    let x: u64;
+    let x_ref: &mut u64;
+    let dead: u64;
+    x = 5;
+    x_ref = &mut x;
+    assert(*copy(x_ref) == 5, 42);
+    // cannot move x, still borrowed
+    dead = move(x);
+    *move(x_ref) = 42;
+    return;
+}

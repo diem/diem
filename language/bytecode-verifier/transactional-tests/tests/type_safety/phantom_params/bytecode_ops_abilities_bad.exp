@@ -1,0 +1,73 @@
+processed 9 tasks
+
+task 1 'publish'. lines 10-21:
+Error: Unable to publish module '00000000000000000000000000000001::M2'. Got VMError: {
+    major_status: WRITEREF_WITHOUT_DROP_ABILITY,
+    sub_status: None,
+    location: 0x1::M2,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 3)],
+}
+
+task 2 'publish'. lines 23-34:
+Error: Unable to publish module '00000000000000000000000000000001::M3'. Got VMError: {
+    major_status: POP_WITHOUT_DROP_ABILITY,
+    sub_status: None,
+    location: 0x1::M3,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 2)],
+}
+
+task 3 'publish'. lines 36-46:
+Error: Unable to publish module '00000000000000000000000000000001::M4'. Got VMError: {
+    major_status: UNSAFE_RET_UNUSED_VALUES_WITHOUT_DROP,
+    sub_status: None,
+    location: 0x1::M4,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 0)],
+}
+
+task 4 'publish'. lines 48-57:
+Error: Unable to publish module '00000000000000000000000000000001::M5'. Got VMError: {
+    major_status: COPYLOC_WITHOUT_COPY_ABILITY,
+    sub_status: None,
+    location: 0x1::M5,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 0)],
+}
+
+task 5 'publish'. lines 59-71:
+Error: Unable to publish module '00000000000000000000000000000001::M6'. Got VMError: {
+    major_status: VERIFIER_INVARIANT_VIOLATION,
+    sub_status: None,
+    location: 0x1::M6,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [],
+}
+
+task 6 'publish'. lines 73-83:
+Error: Unable to publish module '00000000000000000000000000000001::M7'. Got VMError: {
+    major_status: VERIFIER_INVARIANT_VIOLATION,
+    sub_status: None,
+    location: 0x1::M7,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [],
+}
+
+task 7 'publish'. lines 85-95:
+Error: Unable to publish module '00000000000000000000000000000001::M8'. Got VMError: {
+    major_status: EXISTS_WITHOUT_KEY_ABILITY_OR_BAD_ARGUMENT,
+    sub_status: None,
+    location: 0x1::M8,
+    indices: [(FunctionDefinition, 0)],
+    offsets: [(FunctionDefinitionIndex(0), 1)],
+}
+
+task 8 'publish'. lines 97-107:
+Error: Unable to publish module '00000000000000000000000000000001::M9'. Got VMError: {
+    major_status: CONSTRAINT_NOT_SATISFIED,
+    sub_status: None,
+    location: 0x1::M9,
+    indices: [(Signature, 0), (FunctionHandle, 0)],
+    offsets: [],
+}

@@ -1,0 +1,10 @@
+processed 1 task
+
+task 0 'publish'. lines 1-15:
+Error: Unable to publish module '00000000000000000000000000000001::A'. Got VMError: {
+    major_status: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED,
+    sub_status: None,
+    location: 0x1::A,
+    indices: [(FunctionDefinition, 1)],
+    offsets: [(FunctionDefinitionIndex(1), 3)],
+}

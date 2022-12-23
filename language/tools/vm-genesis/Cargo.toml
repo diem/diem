@@ -15,7 +15,7 @@ once_cell = "1.7.2"
 rand = "0.8.3"
 
 bytecode-verifier = { path = "../../bytecode-verifier" }
-bcs = "0.1.2"
+bcs = { git = "https://github.com/diem/bcs", rev = "30ce9f4ac51342d2fb4c04c4f5b40683d9652dc6" }
 diem-config = { path = "../../../config" }
 diem-crypto = { path = "../../../crates/diem-crypto" }
 diem-state-view = { path = "../../../storage/state-view" }

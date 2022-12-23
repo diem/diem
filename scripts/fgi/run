@@ -121,7 +121,7 @@ if not cli_tool_installed("kubectl"):
     sys.exit(1)
 
 print("\nAttempting to reach Forge Kubernetes testnets...")
-kube_init_context()
+kube_init_context(args.workspace)
 print("Grabbing a testnet...")
 workspace = args.workspace
 if not args.workspace:
@@ -175,20 +175,25 @@ subprocess.call(
 )
 print("==========end-pod-logs==========")
 
-job_status = json.loads(
-    subprocess.check_output(
-        [
-            "kubectl",
-            f"--context={context}",
-            "get",
-            "job",
-            job_name,
-            "-o",
-            "jsonpath={.status}",
-        ],
-        encoding="UTF-8",
-    )
-)
+try:
+    job_status = json.loads(
+        subprocess.check_output(
+            [
+                "kubectl",
+                f"--context={context}",
+                "get",
+                "job",
+                job_name,
+                "-o",
+                "json",
+            ],
+            encoding="UTF-8",
+        )
+    )["status"]
+except Exception as e:
+    print(f"Failed to get job status for {job_name}, assuming failure: {e}")
+    job_status = {"failed": 1}
+
 end_ts_ms = int(time.time() * 1000)
 print("\n**********")
 print(

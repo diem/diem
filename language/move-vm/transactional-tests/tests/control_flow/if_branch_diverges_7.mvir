@@ -1,0 +1,11 @@
+//# run
+main() {
+    let ret_if_val: bool;
+    ret_if_val = true;
+    if (move(ret_if_val)) {
+        loop { if (true) { return; } else { continue; }; break; }
+    } else {
+        assert(false, 42);
+        return;
+    }
+}

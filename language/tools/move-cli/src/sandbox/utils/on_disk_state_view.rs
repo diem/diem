@@ -7,7 +7,6 @@ use disassembler::disassembler::Disassembler;
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::BinaryIndexedView,
-    errors::*,
     file_format::{CompiledModule, CompiledScript, FunctionDefinitionIndex},
 };
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
@@ -16,10 +15,10 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
     parser,
-    vm_status::StatusCode,
+    resolver::{ModuleResolver, ResourceResolver},
 };
-use move_lang::MOVE_COMPILED_INTERFACES_DIR;
-use move_vm_runtime::data_cache::MoveStorage;
+use move_lang::{shared::AddressBytes, MOVE_COMPILED_INTERFACES_DIR};
+use move_symbol_pool::Symbol;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -38,11 +37,12 @@ pub const MODULES_DIR: &str = "modules";
 /// subdirectory of `DEFAULT_STORAGE_DIR`/<addr> where events are stored
 pub const EVENTS_DIR: &str = "events";
 
-pub type ModuleIdWithNamedAddress = (ModuleId, Option<String>);
+pub type ModuleIdWithNamedAddress = (ModuleId, Option<Symbol>);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct InterfaceFilesMetadata {
     named_address_mapping: BTreeMap<ModuleId, String>,
+    named_address_values: BTreeMap<String, String>,
 }
 
 #[derive(Debug)]
@@ -94,17 +94,34 @@ impl OnDiskStateView {
         Ok(match bytes_opt {
             None => InterfaceFilesMetadata {
                 named_address_mapping: BTreeMap::new(),
+                named_address_values: BTreeMap::new(),
             },
             Some(bytes) => serde_yaml::from_slice::<InterfaceFilesMetadata>(&bytes)?,
         })
     }
 
+    pub(crate) fn get_named_addresses(
+        &self,
+        additional_named_address_values: BTreeMap<String, AddressBytes>,
+    ) -> Result<BTreeMap<String, AddressBytes>> {
+        let mut save_named_addrs: BTreeMap<_, _> = self
+            .read_interface_files_metadata()?
+            .named_address_values
+            .iter()
+            .map(|(name, addr_str)| (name.clone(), AddressBytes::parse_str(addr_str).unwrap()))
+            .collect();
+        save_named_addrs.extend(additional_named_address_values);
+        Ok(save_named_addrs)
+    }
+
     fn update_interface_files_metadata(
         &self,
         additional_named_address_mapping: BTreeMap<ModuleId, Option<String>>,
+        additional_named_address_values: BTreeMap<String, AddressBytes>,
     ) -> Result<()> {
         let InterfaceFilesMetadata {
             mut named_address_mapping,
+            mut named_address_values,
         } = self.read_interface_files_metadata()?;
         for (id, address_name_opt) in additional_named_address_mapping {
             match address_name_opt {
@@ -116,8 +133,14 @@ impl OnDiskStateView {
                 }
             }
         }
+        named_address_values.extend(
+            additional_named_address_values
+                .into_iter()
+                .map(|(name, addr)| (name, format!("0x{:#X}", addr))),
+        );
         self.write_interface_files_metadata(InterfaceFilesMetadata {
             named_address_mapping,
+            named_address_values,
         })
     }
 
@@ -382,8 +405,9 @@ impl OnDiskStateView {
     fn sync_interface_files(
         &self,
         named_address_mapping_changes: BTreeMap<ModuleId, Option<String>>,
+        named_address_values: BTreeMap<String, AddressBytes>,
     ) -> Result<()> {
-        self.update_interface_files_metadata(named_address_mapping_changes)?;
+        self.update_interface_files_metadata(named_address_mapping_changes, named_address_values)?;
         move_lang::generate_interface_files(
             &[self
                 .storage_dir
@@ -408,18 +432,20 @@ impl OnDiskStateView {
     pub fn save_modules<'a>(
         &self,
         modules: impl IntoIterator<Item = &'a (ModuleIdWithNamedAddress, Vec<u8>)>,
+        named_address_values: BTreeMap<String, AddressBytes>,
     ) -> Result<()> {
         let mut named_address_mapping_changes = BTreeMap::new();
         let mut is_empty = true;
         for ((module_id, address_name_opt), module_bytes) in modules {
             self.save_module(module_id, module_bytes)?;
-            named_address_mapping_changes.insert(module_id.clone(), address_name_opt.clone());
+            named_address_mapping_changes
+                .insert(module_id.clone(), address_name_opt.map(|n| n.to_string()));
             is_empty = false;
         }
 
         // sync with build_dir for updates of mv_interfaces if new modules are added
         if !is_empty {
-            self.sync_interface_files(named_address_mapping_changes)?;
+            self.sync_interface_files(named_address_mapping_changes, named_address_values)?;
         }
 
         Ok(())
@@ -472,19 +498,22 @@ impl OnDiskStateView {
     }
 }
 
-impl MoveStorage for OnDiskStateView {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+impl ModuleResolver for OnDiskStateView {
+    type Error = anyhow::Error;
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         self.get_module_bytes(module_id)
-            .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR).finish(Location::Undefined))
     }
+}
+
+impl ResourceResolver for OnDiskStateView {
+    type Error = anyhow::Error;
 
     fn get_resource(
         &self,
         address: &AccountAddress,
         struct_tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
         self.get_resource_bytes(*address, struct_tag.clone())
-            .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR))
     }
 }
 

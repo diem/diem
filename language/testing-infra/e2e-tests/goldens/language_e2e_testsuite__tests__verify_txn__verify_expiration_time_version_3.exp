@@ -1,0 +1,2 @@
+Ok([TransactionOutput { write_set: WriteSet(WriteSetMut { write_set: [] }), events: [], gas_used: 0, status: Discard(TRANSACTION_EXPIRED) }])
+Ok([TransactionOutput { write_set: WriteSet(WriteSetMut { write_set: [] }), events: [], gas_used: 0, status: Discard(TRANSACTION_EXPIRED) }])

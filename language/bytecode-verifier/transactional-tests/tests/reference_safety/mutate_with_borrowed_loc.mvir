@@ -1,0 +1,12 @@
+//# publish --address 0x1
+module M {
+    t1() {
+        let x: u64;
+        let y: &u64;
+        x = 0;
+        y = &x;
+        // it is okay to write to a local holding a reference, even if immutable
+        y = &x;
+        return;
+    }
+}

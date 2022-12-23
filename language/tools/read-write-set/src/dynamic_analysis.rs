@@ -5,12 +5,12 @@ use anyhow::Result;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ResourceKey, TypeTag},
+    resolver::MoveResolver,
 };
 use move_model::{
     model::{FunctionEnv, GlobalEnv},
     ty::Type,
 };
-use move_vm_runtime::data_cache::MoveStorage;
 use prover_bytecode::{
     access_path::{AbsAddr, AccessPath, Offset, Root},
     access_path_trie::AccessPathTrie,
@@ -81,7 +81,7 @@ impl ConcretizedFormals {
     /// return { 0x7/0x1::AModule::AResource/addr_field -> Read, 0xA/0x2::M2::R/f -> Write }
     fn concretize_secondary_indexes(
         self,
-        blockchain_view: &dyn MoveStorage,
+        blockchain_view: &impl MoveResolver,
         env: &GlobalEnv,
     ) -> ConcretizedSecondaryIndexes {
         // TODO: check if there are no secondary indexes and return accesses if so
@@ -171,8 +171,8 @@ impl ConcretizedFormals {
 
     /// Concretize the secondary in `offsets` -> `access` using `annotator` and add the results to
     /// `acc`.
-    fn concretize_offsets(
-        annotator: &MoveValueAnnotator,
+    fn concretize_offsets<T: MoveResolver>(
+        annotator: &MoveValueAnnotator<T>,
         access_path: AccessPath,
         mut next_value: AnnotatedMoveValue,
         next_offset_index: usize,
@@ -251,8 +251,8 @@ impl ConcretizedFormals {
     }
 
     /// Concretize the secondary indexes in `access_path` and add the result to `acc`. For example
-    fn concretize_secondary_indexes_(
-        annotator: &MoveValueAnnotator,
+    fn concretize_secondary_indexes_<T: MoveResolver>(
+        annotator: &MoveValueAnnotator<T>,
         access_path: &AccessPath,
         access: &Access,
         env: &GlobalEnv,
@@ -308,7 +308,7 @@ pub fn concretize(
     actuals: &[Vec<u8>],
     type_actuals: &[TypeTag],
     fun_env: &FunctionEnv,
-    blockchain_view: &dyn MoveStorage,
+    blockchain_view: &impl MoveResolver,
 ) -> Result<ConcretizedSecondaryIndexes> {
     let concretized_formals =
         ConcretizedFormals::from_args(accesses, signers, actuals, type_actuals, fun_env)?;

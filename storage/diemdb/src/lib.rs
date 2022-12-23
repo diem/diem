@@ -62,6 +62,7 @@ use diem_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use diem_logger::prelude::*;
 use diem_types::{
     account_address::AccountAddress,
+    account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventByVersionWithProof, EventWithProof},
     epoch_change::EpochChangeProof,
@@ -78,17 +79,22 @@ use diem_types::{
     },
 };
 use itertools::{izip, zip_eq};
+use move_core_types::{
+    language_storage::{ModuleId, StructTag},
+    resolver::{ModuleResolver, ResourceResolver},
+};
 use once_cell::sync::Lazy;
 use schemadb::{ColumnFamilyName, Options, DB, DEFAULT_CF_NAME};
 use std::{
     collections::HashMap,
+    convert::TryFrom,
     iter::Iterator,
     path::Path,
     sync::{mpsc, Arc, Mutex},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
-use storage_interface::{DbReader, DbWriter, Order, StartupInfo, TreeState};
+use storage_interface::{DbReader, DbWriter, MoveDbReader, Order, StartupInfo, TreeState};
 
 const MAX_LIMIT: u64 = 1000;
 
@@ -1051,6 +1057,40 @@ impl DbReader for DiemDB {
         })
     }
 }
+
+impl ModuleResolver for DiemDB {
+    type Error = anyhow::Error;
+
+    fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>> {
+        let (account_state_with_proof, _) = self.get_account_state_with_proof_by_version(
+            *module_id.address(),
+            self.get_latest_version()?,
+        )?;
+        if let Some(account_state_blob) = account_state_with_proof {
+            let account_state = AccountState::try_from(&account_state_blob)?;
+            Ok(account_state.get(&module_id.access_vector()).cloned())
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+impl ResourceResolver for DiemDB {
+    type Error = anyhow::Error;
+
+    fn get_resource(&self, address: &AccountAddress, tag: &StructTag) -> Result<Option<Vec<u8>>> {
+        let (account_state_with_proof, _) =
+            self.get_account_state_with_proof_by_version(*address, self.get_latest_version()?)?;
+        if let Some(account_state_blob) = account_state_with_proof {
+            let account_state = AccountState::try_from(&account_state_blob)?;
+            Ok(account_state.get(&tag.access_vector()).cloned())
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+impl MoveDbReader for DiemDB {}
 
 impl DbWriter for DiemDB {
     /// `first_version` is the version of the first transaction in `txns_to_commit`.

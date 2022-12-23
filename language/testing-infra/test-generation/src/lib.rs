@@ -32,11 +32,12 @@ use move_core_types::{
     account_address::AccountAddress,
     effects::ChangeSet,
     language_storage::TypeTag,
+    resolver::MoveResolver,
     value::MoveValue,
     vm_status::{StatusCode, VMStatus},
 };
 use move_lang::{compiled_unit::CompiledUnit, Compiler};
-use move_vm_runtime::{data_cache::MoveStorage, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
@@ -58,6 +59,7 @@ fn run_verifier(module: CompiledModule) -> Result<CompiledModule, String> {
 static STORAGE_WITH_MOVE_STDLIB: Lazy<InMemoryStorage> = Lazy::new(|| {
     let mut storage = InMemoryStorage::new();
     let (_, compiled_units) = Compiler::new(&move_stdlib::move_stdlib_files(), &[])
+        .set_named_address_values(move_stdlib::move_stdlib_named_addresses())
         .build_and_report()
         .unwrap();
     let compiled_modules = compiled_units.into_iter().map(|unit| match unit {
@@ -113,7 +115,7 @@ fn execute_function_in_module(
     idx: FunctionDefinitionIndex,
     ty_args: Vec<TypeTag>,
     args: Vec<Vec<u8>>,
-    storage: &impl MoveStorage,
+    storage: &impl MoveResolver,
 ) -> Result<(), VMStatus> {
     let module_id = module.self_id();
     let entry_name = {

@@ -11,6 +11,7 @@ use diem_management::constants::{self, VALIDATOR_CONFIG, VALIDATOR_OPERATOR};
 use diem_secure_storage::{KVStorage, Namespaced};
 use diem_types::{
     chain_id::ChainId,
+    on_chain_config::VMPublishingOption,
     transaction::{
         authenticator::AuthenticationKey, ScriptFunction, Transaction, TransactionPayload,
     },
@@ -210,21 +211,22 @@ impl<S: KVStorage> GenesisBuilder<S> {
         .ok_or_else(|| anyhow::anyhow!("Invalid Validator Config"))
     }
 
-    pub fn build(&self, chain_id: ChainId) -> Result<Transaction> {
+    pub fn build(
+        &self,
+        chain_id: ChainId,
+        publishing_option: Option<VMPublishingOption>,
+    ) -> Result<Transaction> {
         let diem_root_key = self.root_key()?;
         let treasury_compliance_key = self.treasury_compliance_key()?;
         let validators = self.validators()?;
         let move_modules = self.move_modules()?;
-
-        // Only have an allowlist of stdlib scripts
-        let script_policy = None;
 
         let genesis = vm_genesis::encode_genesis_transaction(
             diem_root_key,
             treasury_compliance_key,
             &validators,
             &move_modules,
-            script_policy,
+            publishing_option,
             chain_id,
         );
 

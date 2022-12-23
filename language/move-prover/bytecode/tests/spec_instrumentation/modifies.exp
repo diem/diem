@@ -239,38 +239,34 @@ public fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): 
   2: assume forall $rsc: ResourceDomain<A::S>(): WellFormed($rsc)
   3: assume forall $rsc: ResourceDomain<B::T>(): WellFormed($rsc)
   4: assume CanModify<B::T>($t1)
-     # >> opaque call: $t5 := A::read_at($t1)
-  5: nop
-  6: $t5 := opaque begin: A::read_at($t1)
-  7: assume Identical($t6, Not(exists<A::S>($t1)))
-  8: if ($t6) goto 9 else goto 12
-  9: label L4
- 10: trace_abort($t7)
- 11: goto 32
- 12: label L3
- 13: assume WellFormed($t5)
- 14: assume Eq<u64>($t5, select A::S.x(global<A::S>($t1)))
- 15: $t5 := opaque end: A::read_at($t1)
+  5: $t5 := opaque begin: A::read_at($t1)
+  6: assume Identical($t6, Not(exists<A::S>($t1)))
+  7: if ($t6) goto 8 else goto 11
+  8: label L4
+  9: trace_abort($t7)
+ 10: goto 30
+ 11: label L3
+ 12: assume WellFormed($t5)
+ 13: assume Eq<u64>($t5, select A::S.x(global<A::S>($t1)))
+ 14: $t5 := opaque end: A::read_at($t1)
      # VC: caller does not have permission to modify `B::T` at given address at tests/spec_instrumentation/modifies.move:65:17+9
- 16: assert CanModify<B::T>($t0)
- 17: $t8 := move_from<B::T>($t0) on_abort goto 32 with $t7
-     # >> opaque call: $t7 := A::read_at($t1)
- 18: nop
- 19: $t9 := opaque begin: A::read_at($t1)
- 20: assume Identical($t10, Not(exists<A::S>($t1)))
- 21: if ($t10) goto 22 else goto 25
- 22: label L6
- 23: trace_abort($t7)
- 24: goto 32
- 25: label L5
- 26: assume WellFormed($t9)
- 27: assume Eq<u64>($t9, select A::S.x(global<A::S>($t1)))
- 28: $t9 := opaque end: A::read_at($t1)
- 29: assert Eq<u64>($t5, $t9)
- 30: label L1
- 31: return $t8
- 32: label L2
- 33: abort($t7)
+ 15: assert CanModify<B::T>($t0)
+ 16: $t8 := move_from<B::T>($t0) on_abort goto 30 with $t7
+ 17: $t9 := opaque begin: A::read_at($t1)
+ 18: assume Identical($t10, Not(exists<A::S>($t1)))
+ 19: if ($t10) goto 20 else goto 23
+ 20: label L6
+ 21: trace_abort($t7)
+ 22: goto 30
+ 23: label L5
+ 24: assume WellFormed($t9)
+ 25: assume Eq<u64>($t9, select A::S.x(global<A::S>($t1)))
+ 26: $t9 := opaque end: A::read_at($t1)
+ 27: assert Eq<u64>($t5, $t9)
+ 28: label L1
+ 29: return $t8
+ 30: label L2
+ 31: abort($t7)
 }
 
 
@@ -290,40 +286,36 @@ public fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
   2: assume forall $rsc: ResourceDomain<A::S>(): WellFormed($rsc)
   3: assume forall $rsc: ResourceDomain<B::T>(): WellFormed($rsc)
   4: assume CanModify<B::T>($t1)
-     # >> opaque call: $t4 := A::read_at($t1)
-  5: nop
-  6: $t4 := opaque begin: A::read_at($t1)
-  7: assume Identical($t5, Not(exists<A::S>($t1)))
-  8: if ($t5) goto 9 else goto 12
-  9: label L4
- 10: trace_abort($t6)
- 11: goto 34
- 12: label L3
- 13: assume WellFormed($t4)
- 14: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
- 15: $t4 := opaque end: A::read_at($t1)
- 16: $t7 := 2
- 17: $t8 := pack B::T($t7)
+  5: $t4 := opaque begin: A::read_at($t1)
+  6: assume Identical($t5, Not(exists<A::S>($t1)))
+  7: if ($t5) goto 8 else goto 11
+  8: label L4
+  9: trace_abort($t6)
+ 10: goto 32
+ 11: label L3
+ 12: assume WellFormed($t4)
+ 13: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
+ 14: $t4 := opaque end: A::read_at($t1)
+ 15: $t7 := 2
+ 16: $t8 := pack B::T($t7)
      # VC: caller does not have permission to modify `B::T` at given address at tests/spec_instrumentation/modifies.move:52:9+7
- 18: assert CanModify<B::T>($t0)
- 19: move_to<B::T>($t8, $t0) on_abort goto 34 with $t6
-     # >> opaque call: $t7 := A::read_at($t1)
- 20: nop
- 21: $t9 := opaque begin: A::read_at($t1)
- 22: assume Identical($t10, Not(exists<A::S>($t1)))
- 23: if ($t10) goto 24 else goto 27
- 24: label L6
- 25: trace_abort($t6)
- 26: goto 34
- 27: label L5
- 28: assume WellFormed($t9)
- 29: assume Eq<u64>($t9, select A::S.x(global<A::S>($t1)))
- 30: $t9 := opaque end: A::read_at($t1)
- 31: assert Eq<u64>($t4, $t9)
- 32: label L1
- 33: return ()
- 34: label L2
- 35: abort($t6)
+ 17: assert CanModify<B::T>($t0)
+ 18: move_to<B::T>($t8, $t0) on_abort goto 32 with $t6
+ 19: $t9 := opaque begin: A::read_at($t1)
+ 20: assume Identical($t10, Not(exists<A::S>($t1)))
+ 21: if ($t10) goto 22 else goto 25
+ 22: label L6
+ 23: trace_abort($t6)
+ 24: goto 32
+ 25: label L5
+ 26: assume WellFormed($t9)
+ 27: assume Eq<u64>($t9, select A::S.x(global<A::S>($t1)))
+ 28: $t9 := opaque end: A::read_at($t1)
+ 29: assert Eq<u64>($t4, $t9)
+ 30: label L1
+ 31: return ()
+ 32: label L2
+ 33: abort($t6)
 }
 
 
@@ -342,49 +334,43 @@ public fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
   2: assume forall $rsc: ResourceDomain<A::S>(): WellFormed($rsc)
   3: assume Neq<address>($t0, $t1)
   4: assume CanModify<A::S>($t1)
-     # >> opaque call: $t4 := A::read_at($t1)
-  5: nop
-  6: $t4 := opaque begin: A::read_at($t1)
-  7: assume Identical($t5, Not(exists<A::S>($t1)))
-  8: if ($t5) goto 9 else goto 12
-  9: label L4
- 10: trace_abort($t6)
- 11: goto 42
- 12: label L3
- 13: assume WellFormed($t4)
- 14: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
- 15: $t4 := opaque end: A::read_at($t1)
-     # >> opaque call: A::mutate_at($t0)
- 16: nop
+  5: $t4 := opaque begin: A::read_at($t1)
+  6: assume Identical($t5, Not(exists<A::S>($t1)))
+  7: if ($t5) goto 8 else goto 11
+  8: label L4
+  9: trace_abort($t6)
+ 10: goto 39
+ 11: label L3
+ 12: assume WellFormed($t4)
+ 13: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
+ 14: $t4 := opaque end: A::read_at($t1)
      # VC: caller does not have permission to modify `A::S` at given address at tests/spec_instrumentation/modifies.move:79:9+19
- 17: assert CanModify<A::S>($t0)
- 18: opaque begin: A::mutate_at($t0)
- 19: assume Identical($t7, Not(exists<A::S>($t0)))
- 20: if ($t7) goto 21 else goto 24
- 21: label L6
- 22: trace_abort($t6)
- 23: goto 42
- 24: label L5
- 25: modifies global<A::S>($t0)
- 26: assume Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
- 27: opaque end: A::mutate_at($t0)
-     # >> opaque call: $t5 := A::read_at($t1)
- 28: nop
- 29: $t8 := opaque begin: A::read_at($t1)
- 30: assume Identical($t9, Not(exists<A::S>($t1)))
- 31: if ($t9) goto 32 else goto 35
- 32: label L8
- 33: trace_abort($t6)
- 34: goto 42
- 35: label L7
- 36: assume WellFormed($t8)
- 37: assume Eq<u64>($t8, select A::S.x(global<A::S>($t1)))
- 38: $t8 := opaque end: A::read_at($t1)
- 39: assert Eq<u64>($t4, $t8)
- 40: label L1
- 41: return ()
- 42: label L2
- 43: abort($t6)
+ 15: assert CanModify<A::S>($t0)
+ 16: opaque begin: A::mutate_at($t0)
+ 17: assume Identical($t7, Not(exists<A::S>($t0)))
+ 18: if ($t7) goto 19 else goto 22
+ 19: label L6
+ 20: trace_abort($t6)
+ 21: goto 39
+ 22: label L5
+ 23: modifies global<A::S>($t0)
+ 24: assume Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
+ 25: opaque end: A::mutate_at($t0)
+ 26: $t8 := opaque begin: A::read_at($t1)
+ 27: assume Identical($t9, Not(exists<A::S>($t1)))
+ 28: if ($t9) goto 29 else goto 32
+ 29: label L8
+ 30: trace_abort($t6)
+ 31: goto 39
+ 32: label L7
+ 33: assume WellFormed($t8)
+ 34: assume Eq<u64>($t8, select A::S.x(global<A::S>($t1)))
+ 35: $t8 := opaque end: A::read_at($t1)
+ 36: assert Eq<u64>($t4, $t8)
+ 37: label L1
+ 38: return ()
+ 39: label L2
+ 40: abort($t6)
 }
 
 
@@ -401,49 +387,43 @@ public fun B::mutate_S_test2_incorrect($t0|addr: address) {
   0: assume WellFormed($t0)
   1: assume forall $rsc: ResourceDomain<A::S>(): WellFormed($rsc)
   2: assume CanModify<A::S>($t0)
-     # >> opaque call: $t3 := A::read_at($t0)
-  3: nop
-  4: $t3 := opaque begin: A::read_at($t0)
-  5: assume Identical($t4, Not(exists<A::S>($t0)))
-  6: if ($t4) goto 7 else goto 10
-  7: label L4
-  8: trace_abort($t5)
-  9: goto 40
- 10: label L3
- 11: assume WellFormed($t3)
- 12: assume Eq<u64>($t3, select A::S.x(global<A::S>($t0)))
- 13: $t3 := opaque end: A::read_at($t0)
-     # >> opaque call: A::mutate_at($t0)
- 14: nop
+  3: $t3 := opaque begin: A::read_at($t0)
+  4: assume Identical($t4, Not(exists<A::S>($t0)))
+  5: if ($t4) goto 6 else goto 9
+  6: label L4
+  7: trace_abort($t5)
+  8: goto 37
+  9: label L3
+ 10: assume WellFormed($t3)
+ 11: assume Eq<u64>($t3, select A::S.x(global<A::S>($t0)))
+ 12: $t3 := opaque end: A::read_at($t0)
      # VC: caller does not have permission to modify `A::S` at given address at tests/spec_instrumentation/modifies.move:92:9+18
- 15: assert CanModify<A::S>($t0)
- 16: opaque begin: A::mutate_at($t0)
- 17: assume Identical($t6, Not(exists<A::S>($t0)))
- 18: if ($t6) goto 19 else goto 22
- 19: label L6
- 20: trace_abort($t5)
- 21: goto 40
- 22: label L5
- 23: modifies global<A::S>($t0)
- 24: assume Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
- 25: opaque end: A::mutate_at($t0)
-     # >> opaque call: $t4 := A::read_at($t0)
- 26: nop
- 27: $t7 := opaque begin: A::read_at($t0)
- 28: assume Identical($t8, Not(exists<A::S>($t0)))
- 29: if ($t8) goto 30 else goto 33
- 30: label L8
- 31: trace_abort($t5)
- 32: goto 40
- 33: label L7
- 34: assume WellFormed($t7)
- 35: assume Eq<u64>($t7, select A::S.x(global<A::S>($t0)))
- 36: $t7 := opaque end: A::read_at($t0)
- 37: assert Eq<u64>($t3, $t7)
- 38: label L1
- 39: return ()
- 40: label L2
- 41: abort($t5)
+ 13: assert CanModify<A::S>($t0)
+ 14: opaque begin: A::mutate_at($t0)
+ 15: assume Identical($t6, Not(exists<A::S>($t0)))
+ 16: if ($t6) goto 17 else goto 20
+ 17: label L6
+ 18: trace_abort($t5)
+ 19: goto 37
+ 20: label L5
+ 21: modifies global<A::S>($t0)
+ 22: assume Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
+ 23: opaque end: A::mutate_at($t0)
+ 24: $t7 := opaque begin: A::read_at($t0)
+ 25: assume Identical($t8, Not(exists<A::S>($t0)))
+ 26: if ($t8) goto 27 else goto 30
+ 27: label L8
+ 28: trace_abort($t5)
+ 29: goto 37
+ 30: label L7
+ 31: assume WellFormed($t7)
+ 32: assume Eq<u64>($t7, select A::S.x(global<A::S>($t0)))
+ 33: $t7 := opaque end: A::read_at($t0)
+ 34: assert Eq<u64>($t3, $t7)
+ 35: label L1
+ 36: return ()
+ 37: label L2
+ 38: abort($t5)
 }
 
 
@@ -465,43 +445,39 @@ public fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
   2: assume forall $rsc: ResourceDomain<A::S>(): WellFormed($rsc)
   3: assume forall $rsc: ResourceDomain<B::T>(): WellFormed($rsc)
   4: assume CanModify<B::T>($t1)
-     # >> opaque call: $t5 := A::read_at($t1)
-  5: nop
-  6: $t5 := opaque begin: A::read_at($t1)
-  7: assume Identical($t6, Not(exists<A::S>($t1)))
-  8: if ($t6) goto 9 else goto 12
-  9: label L4
- 10: trace_abort($t7)
- 11: goto 37
- 12: label L3
- 13: assume WellFormed($t5)
- 14: assume Eq<u64>($t5, select A::S.x(global<A::S>($t1)))
- 15: $t5 := opaque end: A::read_at($t1)
+  5: $t5 := opaque begin: A::read_at($t1)
+  6: assume Identical($t6, Not(exists<A::S>($t1)))
+  7: if ($t6) goto 8 else goto 11
+  8: label L4
+  9: trace_abort($t7)
+ 10: goto 35
+ 11: label L3
+ 12: assume WellFormed($t5)
+ 13: assume Eq<u64>($t5, select A::S.x(global<A::S>($t1)))
+ 14: $t5 := opaque end: A::read_at($t1)
      # VC: caller does not have permission to modify `B::T` at given address at tests/spec_instrumentation/modifies.move:38:17+17
- 16: assert CanModify<B::T>($t0)
- 17: $t8 := borrow_global<B::T>($t0) on_abort goto 37 with $t7
- 18: $t9 := 2
- 19: $t10 := borrow_field<B::T>.x($t8)
- 20: write_ref($t10, $t9)
- 21: write_back[Reference($t8).x]($t10)
- 22: write_back[B::T@]($t8)
-     # >> opaque call: $t9 := A::read_at($t1)
- 23: nop
- 24: $t11 := opaque begin: A::read_at($t1)
- 25: assume Identical($t12, Not(exists<A::S>($t1)))
- 26: if ($t12) goto 27 else goto 30
- 27: label L6
- 28: trace_abort($t7)
- 29: goto 37
- 30: label L5
- 31: assume WellFormed($t11)
- 32: assume Eq<u64>($t11, select A::S.x(global<A::S>($t1)))
- 33: $t11 := opaque end: A::read_at($t1)
- 34: assert Eq<u64>($t5, $t11)
- 35: label L1
- 36: return ()
- 37: label L2
- 38: abort($t7)
+ 15: assert CanModify<B::T>($t0)
+ 16: $t8 := borrow_global<B::T>($t0) on_abort goto 35 with $t7
+ 17: $t9 := 2
+ 18: $t10 := borrow_field<B::T>.x($t8)
+ 19: write_ref($t10, $t9)
+ 20: write_back[Reference($t8).x]($t10)
+ 21: write_back[B::T@]($t8)
+ 22: $t11 := opaque begin: A::read_at($t1)
+ 23: assume Identical($t12, Not(exists<A::S>($t1)))
+ 24: if ($t12) goto 25 else goto 28
+ 25: label L6
+ 26: trace_abort($t7)
+ 27: goto 35
+ 28: label L5
+ 29: assume WellFormed($t11)
+ 30: assume Eq<u64>($t11, select A::S.x(global<A::S>($t1)))
+ 31: $t11 := opaque end: A::read_at($t1)
+ 32: assert Eq<u64>($t5, $t11)
+ 33: label L1
+ 34: return ()
+ 35: label L2
+ 36: abort($t7)
 }
 
 
