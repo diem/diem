@@ -35,6 +35,8 @@ pub enum CliError {
     ConfigSaveError(String),
     #[error("Unable to find config {0}, have you run `diem init`?")]
     ConfigNotFoundError(String),
+    #[error("Error parsing user input: '{0}'")]
+    UserInputError(String),
 }
 
 impl CliError {
@@ -45,6 +47,7 @@ impl CliError {
             CliError::ConfigLoadError(_) => "ConfigLoadError",
             CliError::ConfigSaveError(_) => "ConfigSaveError",
             CliError::ConfigNotFoundError(_) => "ConfigNotFoundError",
+            CliError::UserInputError(_) => "UserInputError",
         }
     }
 }

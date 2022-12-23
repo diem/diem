@@ -11,7 +11,13 @@ use diem_types::transaction::authenticator::AuthenticationKey;
 
 use rand::{prelude::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
-use std::{env, error::Error, fs, fs::File};
+use std::{
+    env,
+    error::Error,
+    fs,
+    fs::File,
+    io::{self, Write},
+};
 
 use swiss_knife::helpers;
 
@@ -83,7 +89,7 @@ pub fn save_keypair(keypair: GenerateKeypairResponse) -> Result<String, Box<dyn 
 }
 
 /// Response struct for generating a new keypair
-//Moved from swiss knife
+/// Moved from swiss knife
 #[derive(Deserialize, Serialize)]
 pub struct GenerateKeypairResponse {
     pub private_key: String,
@@ -149,4 +155,16 @@ pub enum AccountStatus {
     /// Not able to check account status, probably because client is not able to talk to the
     /// validator.
     Unknown,
+}
+
+// For commands where user additional input might be required
+pub fn prompt_user(prompt: &'static str) -> Result<String, CliError> {
+    print!("{}:", prompt);
+    let _ = io::stdout().flush();
+    let stdin = io::stdin();
+    let mut buffer = String::new();
+    stdin
+        .read_line(&mut buffer)
+        .map_err(|err| CliError::UserInputError(err.to_string()))?;
+    Ok(buffer)
 }
