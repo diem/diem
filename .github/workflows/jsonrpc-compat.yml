@@ -11,7 +11,7 @@ jobs:
     name: Warn PR author about compatibility requirements
     steps:
       - name: checkout
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v3.2.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: comment
