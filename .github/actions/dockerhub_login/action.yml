@@ -48,8 +48,8 @@ runs:
         fi
         echo "DOCKERHUB_LOGGED_IN=${DOCKERHUB_LOGGED_IN}" >> $GITHUB_ENV
         echo "DOCKERHUB_CAN_SIGN=${DOCKERHUB_CAN_SIGN}" >> $GITHUB_ENV
-        echo "::set-output name=dockerhub_logged_in::$(echo $DOCKERHUB_LOGGED_IN)"
-        echo "::set-output name=dockerhub_can_sign::$(echo $DOCKERHUB_CAN_SIGN)"
+        echo "dockerhub_logged_in=$(echo $DOCKERHUB_LOGGED_IN)" >> $GITHUB_OUTPUT
+        echo "dockerhub_can_sign=$(echo $DOCKERHUB_CAN_SIGN)" >> $GITHUB_OUTPUT
       shell: bash
       env:
         DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ inputs.key_password }}

@@ -68,7 +68,7 @@ jobs:
             echo "LBT is NOT enabled for target branch. Will skip it."
             res=false
           fi
-          echo "::set-output name=need-lbt::$(echo $res)";
+          echo "need-lbt=$(echo $res)" >> $GITHUB_OUTPUT
       - id: need-base-images
         name: build extra images if it is needed by LBT
         if: ${{ github.event_name == 'push' && steps.need-land-blocking-test.outputs.need-lbt == 'true' }}
@@ -82,7 +82,7 @@ jobs:
             echo "LBT compatibility sutie is NOT enabled. Will use land_blocking suite."
             res=false
           fi
-          echo "::set-output name=need-extra::$(echo $res)";
+          echo "need-extra=$(echo $res)" >> $GITHUB_OUTPUT
       - id: need-compat-tests
         name: determine if compat tests should run
         run: |
@@ -94,7 +94,7 @@ jobs:
           else
             echo "compatibility suite is enabled."
           fi
-          echo "::set-output name=need-compat::$(echo $res)";
+          echo "need-compat=$(echo $res)" >> $GITHUB_OUTPUT
       - id: environment
         name: Which environment should we use for secrets.
         run: |
@@ -106,7 +106,7 @@ jobs:
           else
             echo "compatibility suite is enabled."
           fi
-          echo "::set-output name=need-compat::$(echo $res)";
+          echo "need-compat=$(echo $res)" >> $GITHUB_OUTPUT
       - id: any-changes-found
         name: determine if there are any files listed in the CHANGES_CHANGED_FILE_OUTPUTFILE.
         run: |
@@ -114,7 +114,7 @@ jobs:
           if [[ ! -f "$CHANGES_CHANGED_FILE_OUTPUTFILE" ]] || [[ "$(cat "$CHANGES_CHANGED_FILE_OUTPUTFILE" | wc -l)" == 0 ]]; then
             res=false;
           fi
-          echo "::set-output name=changes-found::$(echo $res)";
+          echo "changes-found=$(echo $res)" >> $GITHUB_OUTPUT
       - id: rust-changes
         name: find rust/cargo changes.
         uses: diem/actions/matches@faadd16607b77dfa2231a8f366883e01717b3225
@@ -243,7 +243,7 @@ jobs:
           #push to ACP ecr with standard names
           BRANCH="$CHANGES_TARGET_BRANCH"
           GIT_REV=$(git rev-parse --short=8 HEAD)
-          echo "::set-output name=head-tag::land_$GIT_REV";
+          echo "head-tag=land_$GIT_REV" >> $GITHUB_OUTPUT
           aws ecr get-login-password --region ${{ secrets.ENV_ACP_ECR_AWS_REGION }} | \
           docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
           docker/docker_republish.sh -t pre_${BRANCH}_${GIT_REV} -o land_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d -i "${{ matrix.target_images }}"
