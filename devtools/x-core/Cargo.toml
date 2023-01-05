@@ -9,10 +9,10 @@ license = "Apache-2.0"
 
 [dependencies]
 camino = { version = "1.0.3", features = ["serde1"] }
-determinator = "0.4.0"
-guppy = "0.9.0"
+determinator = "0.5.1"
+guppy = "0.10.1"
 indoc = "1.0.3"
-hakari = { version = "0.3.0", features = ["summaries"] }
+hakari = { version = "0.4.1", features = ["summaries"] }
 hex = "0.4.3"
 log = "0.4.14"
 toml = "0.5.8"

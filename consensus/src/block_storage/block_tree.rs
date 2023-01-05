@@ -4,7 +4,8 @@
 use crate::counters;
 use anyhow::bail;
 use consensus_types::{
-    executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
+    executed_block::ExecutedBlock, quorum_cert::QuorumCert,
+    timeout_2chain::TwoChainTimeoutCertificate, timeout_certificate::TimeoutCertificate,
 };
 use diem_crypto::HashValue;
 use diem_logger::prelude::*;
@@ -72,6 +73,8 @@ pub struct BlockTree {
     highest_quorum_cert: Arc<QuorumCert>,
     /// The highest timeout certificate (if any).
     highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
+    /// The highest 2-chain timeout certificate (if any).
+    highest_2chain_timeout_cert: Option<Arc<TwoChainTimeoutCertificate>>,
     /// The quorum certificate that has highest commit info.
     highest_ordered_cert: Arc<QuorumCert>,
     /// The quorum certificate that has highest commit decision info.
@@ -92,6 +95,7 @@ impl BlockTree {
         root_commit_ledger_info: LedgerInfoWithSignatures,
         max_pruned_blocks_in_mem: usize,
         highest_timeout_cert: Option<Arc<TimeoutCertificate>>,
+        highest_2chain_timeout_cert: Option<Arc<TwoChainTimeoutCertificate>>,
     ) -> Self {
         assert_eq!(
             root.id(),
@@ -125,6 +129,7 @@ impl BlockTree {
             id_to_quorum_cert,
             pruned_block_ids,
             max_pruned_blocks_in_mem,
+            highest_2chain_timeout_cert,
         }
     }
 
@@ -192,6 +197,15 @@ impl BlockTree {
 
     pub(super) fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>> {
         self.highest_timeout_cert.clone()
+    }
+
+    pub(super) fn highest_2chain_timeout_cert(&self) -> Option<Arc<TwoChainTimeoutCertificate>> {
+        self.highest_2chain_timeout_cert.clone()
+    }
+
+    /// Replace highest timeout cert with the given value.
+    pub(super) fn replace_2chain_timeout_cert(&mut self, tc: Arc<TwoChainTimeoutCertificate>) {
+        self.highest_2chain_timeout_cert.replace(tc);
     }
 
     /// Replace highest timeout cert with the given value.

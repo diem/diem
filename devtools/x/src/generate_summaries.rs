@@ -3,14 +3,12 @@
 
 use crate::context::XContext;
 use anyhow::Context;
+use camino::{Utf8Path, Utf8PathBuf};
 use guppy::graph::{
     cargo::CargoOptions,
     feature::{FeatureSet, StandardFeatures},
 };
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::fs;
 use structopt::{clap::arg_enum, StructOpt};
 
 arg_enum! {
@@ -25,7 +23,7 @@ arg_enum! {
 pub struct Args {
     #[structopt(name = "OUT_DIR")]
     /// Directory to output summaries to (default: target/summaries)
-    out_dir: Option<PathBuf>,
+    out_dir: Option<Utf8PathBuf>,
     #[structopt(name = "OUTPUT_FORMAT", default_value = "Toml")]
     /// Output in text, toml or json
     output_format: OutputFormat,
@@ -86,7 +84,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
 
     summary_count += 1;
 
-    println!("wrote {} summaries to {}", summary_count, out_dir.display());
+    println!("wrote {} summaries to {}", summary_count, out_dir);
 
     Ok(())
 }
@@ -95,7 +93,7 @@ fn write_summary(
     name: &str,
     initials: FeatureSet<'_>,
     cargo_opts: &CargoOptions<'_>,
-    out_dir: &Path,
+    out_dir: &Utf8Path,
     output_format: OutputFormat,
 ) -> crate::Result<()> {
     let build_set = initials.into_cargo_set(cargo_opts)?;
@@ -123,6 +121,5 @@ fn write_summary(
         }
     };
 
-    fs::write(&path, &out)
-        .with_context(|| format!("error while writing summary file {}", path.display()))
+    fs::write(&path, &out).with_context(|| format!("error while writing summary file {}", path))
 }

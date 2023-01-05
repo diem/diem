@@ -100,6 +100,9 @@ impl BlockStore {
         if let Some(tc) = sync_info.highest_timeout_certificate() {
             self.insert_timeout_certificate(Arc::new(tc.clone()))?;
         }
+        if let Some(tc) = sync_info.highest_2chain_timeout_cert() {
+            self.insert_2chain_timeout_certificate(Arc::new(tc.clone()))?;
+        }
         Ok(())
     }
 

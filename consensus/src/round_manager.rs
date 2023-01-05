@@ -31,6 +31,7 @@ use consensus_types::{
     proposal_msg::ProposalMsg,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
+    timeout_2chain::TwoChainTimeoutCertificate,
     timeout_certificate::TimeoutCertificate,
     vote::Vote,
     vote_msg::VoteMsg,
@@ -217,6 +218,7 @@ pub struct RoundManager {
     back_pressure: Arc<AtomicU64>,
     decoupled_execution: bool,
     back_pressure_limit: u64,
+    two_chain: bool,
 }
 
 impl RoundManager {
@@ -231,12 +233,16 @@ impl RoundManager {
         txn_manager: Arc<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
         sync_only: bool,
+        two_chain: bool,
     ) -> Self {
         // when decoupled execution is false,
         // the counter is still static.
         counters::OP_COUNTERS
             .gauge("sync_only")
             .set(sync_only as i64);
+        counters::OP_COUNTERS
+            .gauge("two_chain")
+            .set(two_chain as i64);
         Self {
             epoch_state,
             block_store,
@@ -251,6 +257,7 @@ impl RoundManager {
             back_pressure: Arc::new(AtomicU64::new(0)), // dummy value
             decoupled_execution: false,
             back_pressure_limit: 1, // arbitrary dummy value
+            two_chain,
         }
     }
 
@@ -267,6 +274,7 @@ impl RoundManager {
         sync_only: bool,
         back_pressure: Arc<AtomicU64>,
         back_pressure_limit: u64,
+        two_chain: bool,
     ) -> Self {
         Self {
             epoch_state,
@@ -282,6 +290,7 @@ impl RoundManager {
             back_pressure,
             decoupled_execution: true,
             back_pressure_limit,
+            two_chain,
         }
     }
 
@@ -558,13 +567,28 @@ impl RoundManager {
         };
 
         if !timeout_vote.is_timeout() {
-            let timeout = timeout_vote.timeout();
-            let signature = self
-                .safety_rules
-                .lock()
-                .sign_timeout(&timeout)
-                .context("[RoundManager] SafetyRules signs timeout")?;
-            timeout_vote.add_timeout_signature(signature);
+            if self.two_chain {
+                let timeout = timeout_vote.generate_2chain_timeout(
+                    self.block_store.highest_quorum_cert().as_ref().clone(),
+                );
+                let signature = self
+                    .safety_rules
+                    .lock()
+                    .sign_timeout_with_qc(
+                        &timeout,
+                        self.block_store.highest_2chain_timeout_cert().as_deref(),
+                    )
+                    .context("[RoundManager] SafetyRules signs 2-chain timeout")?;
+                timeout_vote.add_2chain_timeout(timeout, signature);
+            } else {
+                let timeout = timeout_vote.generate_timeout();
+                let signature = self
+                    .safety_rules
+                    .lock()
+                    .sign_timeout(&timeout)
+                    .context("[RoundManager] SafetyRules signs timeout")?;
+                timeout_vote.add_timeout_signature(signature);
+            }
         }
 
         self.round_state.record_vote(timeout_vote.clone());
@@ -682,16 +706,22 @@ impl RoundManager {
         );
 
         let maybe_signed_vote_proposal = executed_block.maybe_signed_vote_proposal();
-        let vote = self
-            .safety_rules
-            .lock()
-            .construct_and_sign_vote(&maybe_signed_vote_proposal)
-            .context(format!(
-                "[RoundManager] SafetyRules {}Rejected{} {}",
-                Fg(Red),
-                Fg(Reset),
-                executed_block.block()
-            ))?;
+        let vote_result = if self.two_chain {
+            self.safety_rules.lock().construct_and_sign_vote_two_chain(
+                &maybe_signed_vote_proposal,
+                self.block_store.highest_2chain_timeout_cert().as_deref(),
+            )
+        } else {
+            self.safety_rules
+                .lock()
+                .construct_and_sign_vote(&maybe_signed_vote_proposal)
+        };
+        let vote = vote_result.context(format!(
+            "[RoundManager] SafetyRules {}Rejected{} {}",
+            Fg(Red),
+            Fg(Reset),
+            executed_block.block()
+        ))?;
         observe_block(executed_block.block().timestamp_usecs(), BlockStage::VOTED);
 
         self.storage
@@ -775,6 +805,9 @@ impl RoundManager {
                 self.new_qc_aggregated(qc, vote.author()).await
             }
             VoteReceptionResult::NewTimeoutCertificate(tc) => self.new_tc_aggregated(tc).await,
+            VoteReceptionResult::New2ChainTimeoutCertificate(tc) => {
+                self.new_2chain_tc_aggregated(tc).await
+            }
             _ => Ok(()),
         }
     }
@@ -802,6 +835,18 @@ impl RoundManager {
             .block_store
             .insert_timeout_certificate(tc.clone())
             .context("[RoundManager] Failed to process a newly aggregated TC");
+        self.process_certificates().await?;
+        result
+    }
+
+    async fn new_2chain_tc_aggregated(
+        &mut self,
+        tc: Arc<TwoChainTimeoutCertificate>,
+    ) -> anyhow::Result<()> {
+        let result = self
+            .block_store
+            .insert_2chain_timeout_certificate(tc)
+            .context("[RoundManager] Failed to process a newly aggregated 2-chain TC");
         self.process_certificates().await?;
         result
     }

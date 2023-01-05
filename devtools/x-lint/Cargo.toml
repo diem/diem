@@ -9,8 +9,8 @@ license = "Apache-2.0"
 
 [dependencies]
 camino = "1.0.3"
-guppy = "0.9.0"
-hakari = "0.3.0"
+guppy = "0.10.1"
+hakari = "0.4.1"
 once_cell = "1.7.2"
 toml = "0.5.8"
 serde = { version = "1.0.124", features = ["derive"] }

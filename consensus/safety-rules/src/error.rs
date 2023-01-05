@@ -53,8 +53,8 @@ pub enum Error {
     InvalidOrderedLedgerInfo(String),
 }
 
-impl From<bcs::Error> for Error {
-    fn from(error: bcs::Error) -> Self {
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
         Self::SerializationError(format!("{}", error))
     }
 }

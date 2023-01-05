@@ -56,11 +56,13 @@ impl ConsensusDB {
     ) -> Result<(
         Option<Vec<u8>>,
         Option<Vec<u8>>,
+        Option<Vec<u8>>,
         Vec<Block>,
         Vec<QuorumCert>,
     )> {
         let last_vote = self.get_last_vote()?;
         let highest_timeout_certificate = self.get_highest_timeout_certificate()?;
+        let highest_2chain_timeout_certificate = self.get_highest_2chain_timeout_certificate()?;
         let consensus_blocks = self
             .get_blocks()?
             .into_iter()
@@ -74,6 +76,7 @@ impl ConsensusDB {
         Ok((
             last_vote,
             highest_timeout_certificate,
+            highest_2chain_timeout_certificate,
             consensus_blocks,
             consensus_qcs,
         ))
@@ -88,6 +91,13 @@ impl ConsensusDB {
             &SingleEntryKey::HighestTimeoutCertificate,
             &highest_timeout_certificate,
         )?;
+        self.commit(batch)?;
+        Ok(())
+    }
+
+    pub fn save_highest_2chain_timeout_certificate(&self, tc: Vec<u8>) -> Result<(), DbError> {
+        let mut batch = SchemaBatch::new();
+        batch.put::<SingleEntrySchema>(&SingleEntryKey::Highest2ChainTimeoutCert, &tc)?;
         self.commit(batch)?;
         Ok(())
     }
@@ -145,6 +155,13 @@ impl ConsensusDB {
             .get::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)?)
     }
 
+    /// Get latest timeout certificates (we only store the latest highest timeout certificates).
+    fn get_highest_2chain_timeout_certificate(&self) -> Result<Option<Vec<u8>>, DbError> {
+        Ok(self
+            .db
+            .get::<SingleEntrySchema>(&SingleEntryKey::Highest2ChainTimeoutCert)?)
+    }
+
     /// Delete the timeout certificates
     pub fn delete_highest_timeout_certificate(&self) -> Result<(), DbError> {
         let mut batch = SchemaBatch::new();
@@ -152,6 +169,11 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
+    pub fn delete_highest_2chain_timeout_certificate(&self) -> Result<(), DbError> {
+        let mut batch = SchemaBatch::new();
+        batch.delete::<SingleEntrySchema>(&SingleEntryKey::Highest2ChainTimeoutCert)?;
+        self.commit(batch)
+    }
     /// Get serialized latest vote (if available)
     fn get_last_vote(&self) -> Result<Option<Vec<u8>>, DbError> {
         Ok(self

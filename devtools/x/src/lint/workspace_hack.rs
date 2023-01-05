@@ -67,7 +67,7 @@ impl ProjectLinter for GenerateWorkspaceHack {
 /// Ensure the workspace-hack package is a dependency
 #[derive(Debug)]
 pub struct WorkspaceHackDep<'cfg> {
-    hakari_builder: HakariBuilder<'cfg, 'static>,
+    hakari_builder: HakariBuilder<'cfg>,
     hakari_id: &'cfg PackageId,
 }
 

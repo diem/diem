@@ -35,6 +35,8 @@ pub enum SingleEntryKey {
     HighestTimeoutCertificate = 0,
     // Used to store the last vote
     LastVoteMsg = 1,
+    // Two chain timeout cert
+    Highest2ChainTimeoutCert = 2,
 }
 
 impl KeyCodec<SingleEntrySchema> for SingleEntryKey {

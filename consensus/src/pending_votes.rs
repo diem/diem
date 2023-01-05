@@ -8,7 +8,8 @@
 //! Votes are automatically dropped when the structure goes out of scope.
 
 use consensus_types::{
-    common::Author, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
+    common::Author, quorum_cert::QuorumCert, timeout_2chain::TwoChainTimeoutCertificate,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use diem_crypto::{hash::CryptoHash, HashValue};
 use diem_logger::prelude::*;
@@ -37,6 +38,8 @@ pub enum VoteReceptionResult {
     NewQuorumCertificate(Arc<QuorumCert>),
     /// The vote completes a new TimeoutCertificate
     NewTimeoutCertificate(Arc<TimeoutCertificate>),
+    /// The vote completes a new TwoChainTimeoutCertificate
+    New2ChainTimeoutCertificate(Arc<TwoChainTimeoutCertificate>),
     /// There might be some issues adding a vote
     ErrorAddingVote(VerifyError),
     /// The vote is not for the current round.
@@ -52,6 +55,8 @@ pub struct PendingVotes {
     /// Tracks all the signatures of the votes for the given round. In case we succeed to
     /// aggregate 2f+1 signatures a TimeoutCertificate is formed.
     maybe_partial_tc: Option<TimeoutCertificate>,
+    /// Tracks all the signatures of the 2-chain timeout for the given round.
+    maybe_partial_2chain_tc: Option<TwoChainTimeoutCertificate>,
     /// Map of Author to vote. This is useful to discard multiple votes.
     author_to_vote: HashMap<Author, Vote>,
 }
@@ -62,6 +67,7 @@ impl PendingVotes {
         PendingVotes {
             li_digest_to_votes: HashMap::new(),
             maybe_partial_tc: None,
+            maybe_partial_2chain_tc: None,
             author_to_vote: HashMap::new(),
         }
     }
@@ -152,7 +158,7 @@ impl PendingVotes {
         if let Some(timeout_signature) = vote.timeout_signature() {
             // form timeout struct
             // TODO(mimoo): stronger: pass the (epoch, round) tuple as arguments of this function
-            let timeout = vote.timeout();
+            let timeout = vote.generate_timeout();
 
             // if no partial TC exist, create one
             let partial_tc = self
@@ -176,6 +182,30 @@ impl PendingVotes {
                 Err(error) => {
                     error!(
                         "MUST_FIX: timeout vote received could not be added: {}, vote: {}",
+                        error, vote
+                    );
+                    return VoteReceptionResult::ErrorAddingVote(error);
+                }
+            }
+        }
+
+        // 4.1 process 2-chain timeout vote
+
+        if let Some((timeout, signature)) = vote.two_chain_timeout() {
+            let partial_tc = self
+                .maybe_partial_2chain_tc
+                .get_or_insert_with(|| TwoChainTimeoutCertificate::new(timeout.clone()));
+            partial_tc.add(vote.author(), timeout.clone(), signature.clone());
+            match validator_verifier.check_voting_power(partial_tc.signers()) {
+                Ok(_) => {
+                    return VoteReceptionResult::New2ChainTimeoutCertificate(Arc::new(
+                        partial_tc.clone(),
+                    ))
+                }
+                Err(VerifyError::TooLittleVotingPower { .. }) => (),
+                Err(error) => {
+                    error!(
+                        "MUST_FIX: 2-chain timeout vote received could not be added: {}, vote: {}",
                         error, vote
                     );
                     return VoteReceptionResult::ErrorAddingVote(error);
@@ -232,7 +262,9 @@ impl fmt::Display for PendingVotes {
 #[cfg(test)]
 mod tests {
     use super::{PendingVotes, VoteReceptionResult};
-    use consensus_types::{vote::Vote, vote_data::VoteData};
+    use consensus_types::{
+        block::block_test_utils::certificate_for_genesis, vote::Vote, vote_data::VoteData,
+    };
     use diem_crypto::HashValue;
     use diem_types::{
         block_info::BlockInfo, ledger_info::LedgerInfo,
@@ -339,7 +371,7 @@ mod tests {
         );
 
         // submit the same vote but enhanced with a timeout -> VoteAdded
-        let timeout = vote1_author_0.timeout();
+        let timeout = vote1_author_0.generate_timeout();
         let signature = timeout.sign(&signers[0]);
         vote1_author_0.add_timeout_signature(signature);
 
@@ -358,12 +390,63 @@ mod tests {
         );
 
         // if that vote is now enhanced with a timeout signature -> NewTimeoutCertificate
-        let timeout = vote2_author_1.timeout();
+        let timeout = vote2_author_1.generate_timeout();
         let signature = timeout.sign(&signers[1]);
         vote2_author_1.add_timeout_signature(signature);
         match pending_votes.insert_vote(&vote2_author_1, &validator) {
             VoteReceptionResult::NewTimeoutCertificate(tc) => {
                 assert!(validator.check_voting_power(tc.signatures().keys()).is_ok());
+            }
+            _ => {
+                panic!("No TC formed.");
+            }
+        };
+    }
+
+    #[test]
+    fn test_2chain_tc_aggregation() {
+        ::diem_logger::Logger::init_for_testing();
+
+        // set up 4 validators
+        let (signers, validator) = random_validator_verifier(4, Some(2), false);
+        let mut pending_votes = PendingVotes::new();
+
+        // submit a new vote from validator[0] -> VoteAdded
+        let li1 = random_ledger_info();
+        let vote1 = random_vote_data();
+        let mut vote1_author_0 = Vote::new(vote1, signers[0].author(), li1, &signers[0]);
+
+        assert_eq!(
+            pending_votes.insert_vote(&vote1_author_0, &validator),
+            VoteReceptionResult::VoteAdded(1)
+        );
+
+        // submit the same vote but enhanced with a timeout -> VoteAdded
+        let timeout = vote1_author_0.generate_2chain_timeout(certificate_for_genesis());
+        let signature = timeout.sign(&signers[0]);
+        vote1_author_0.add_2chain_timeout(timeout, signature);
+
+        assert_eq!(
+            pending_votes.insert_vote(&vote1_author_0, &validator),
+            VoteReceptionResult::VoteAdded(1)
+        );
+
+        // another vote for a different block cannot form a TC if it doesn't have a timeout signature
+        let li2 = random_ledger_info();
+        let vote2 = random_vote_data();
+        let mut vote2_author_1 = Vote::new(vote2, signers[1].author(), li2, &signers[1]);
+        assert_eq!(
+            pending_votes.insert_vote(&vote2_author_1, &validator),
+            VoteReceptionResult::VoteAdded(1)
+        );
+
+        // if that vote is now enhanced with a timeout signature -> NewTimeoutCertificate
+        let timeout = vote2_author_1.generate_2chain_timeout(certificate_for_genesis());
+        let signature = timeout.sign(&signers[1]);
+        vote2_author_1.add_2chain_timeout(timeout, signature);
+        match pending_votes.insert_vote(&vote2_author_1, &validator) {
+            VoteReceptionResult::New2ChainTimeoutCertificate(tc) => {
+                assert!(validator.check_voting_power(tc.signers()).is_ok());
             }
             _ => {
                 panic!("No TC formed.");

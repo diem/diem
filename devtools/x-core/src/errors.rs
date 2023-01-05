@@ -1,17 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use camino::{Utf8Path, Utf8PathBuf};
 use guppy::TargetSpecError;
 use hex::FromHexError;
 use serde::{de, ser};
-use std::{
-    borrow::Cow,
-    error, fmt, io,
-    path::{Path, PathBuf},
-    process::ExitStatus,
-    result,
-    str::Utf8Error,
-};
+use std::{borrow::Cow, error, fmt, io, process::ExitStatus, result, str::Utf8Error};
 
 /// Type alias for the return type for `run` methods.
 pub type Result<T, E = SystemError> = result::Result<T, E>;
@@ -21,8 +15,8 @@ pub type Result<T, E = SystemError> = result::Result<T, E>;
 #[non_exhaustive]
 pub enum SystemError {
     CwdNotInProjectRoot {
-        current_dir: PathBuf,
-        project_root: &'static Path,
+        current_dir: Utf8PathBuf,
+        project_root: &'static Utf8Path,
     },
     Exec {
         cmd: &'static str,
@@ -146,8 +140,7 @@ impl fmt::Display for SystemError {
             } => write!(
                 f,
                 "current dir {} not in project root {}",
-                current_dir.display(),
-                project_root.display(),
+                current_dir, project_root,
             ),
             SystemError::Exec { cmd, status } => match status.code() {
                 Some(code) => write!(f, "'{}' failed with exit code {}", cmd, code),

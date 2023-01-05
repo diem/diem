@@ -25,19 +25,27 @@ fn test_put_get() {
 
     let tc = vec![0u8, 1, 2];
     db.save_highest_timeout_certificate(tc.clone()).unwrap();
+    db.save_highest_2chain_timeout_certificate(tc.clone())
+        .unwrap();
 
     let vote = vec![2u8, 1, 0];
     db.save_vote(vote.clone()).unwrap();
 
-    let (vote_1, tc_1, blocks_1, qc_1) = db.get_data().unwrap();
+    let (vote_1, tc_1, tc_2, blocks_1, qc_1) = db.get_data().unwrap();
     assert_eq!(blocks, blocks_1);
     assert_eq!(qcs, qc_1);
-    assert_eq!(Some(tc), tc_1);
+    assert_eq!(Some(tc.clone()), tc_1);
+    assert_eq!(Some(tc), tc_2);
     assert_eq!(Some(vote), vote_1);
 
     db.delete_highest_timeout_certificate().unwrap();
+    db.delete_highest_2chain_timeout_certificate().unwrap();
     db.delete_last_vote_msg().unwrap();
     assert!(db.get_highest_timeout_certificate().unwrap().is_none());
+    assert!(db
+        .get_highest_2chain_timeout_certificate()
+        .unwrap()
+        .is_none());
     assert!(db.get_last_vote().unwrap().is_none());
 }
 

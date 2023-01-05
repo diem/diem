@@ -4,7 +4,7 @@ version = "0.8.0"
 [system-tests]
 smoke-test = { path = "smoke-test" }
 jsonrpc-integration-tests = { path = "json-rpc/integration-tests" }
-compatibility-test = { path = "testsuite/testcases" }
+testcases = { path = "testsuite/testcases" }
 
 [cargo.sccache]
 bucket = "ci-artifacts.diem.com"

@@ -408,7 +408,7 @@ pub struct UnpublishedPackagesOnlyUsePathDependencies {
 impl UnpublishedPackagesOnlyUsePathDependencies {
     pub fn new() -> Self {
         Self {
-            no_version_req: VersionReq::parse(">=0.0.0").expect(">=0.0.0 should be a valid req"),
+            no_version_req: VersionReq::parse("*").expect("* should be a valid req"),
         }
     }
 }
@@ -435,9 +435,10 @@ impl PackageLinter for UnpublishedPackagesOnlyUsePathDependencies {
         for direct_dep in metadata.direct_links().filter(|p| p.to().in_workspace()) {
             if direct_dep.version_req() != &self.no_version_req {
                 let msg = format!(
-                    "unpublished package specifies a version of first-party dependency '{}'; \
+                    "unpublished package specifies a version of first-party dependency '{}' ({}); \
                     unpublished packages should only use path dependencies for first-party packages.",
                     direct_dep.dep_name(),
+                    direct_dep.version_req(),
                 );
                 out.write(LintLevel::Error, msg);
             }

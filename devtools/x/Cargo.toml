@@ -9,15 +9,15 @@ license = "Apache-2.0"
 
 [dependencies]
 camino = "1.0.3"
-cargo_metadata = "0.13.1"
-determinator = "0.4.0"
+cargo_metadata = "0.14.0"
+determinator = "0.5.1"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
 structopt = "0.3.21"
 anyhow = "1.0.38"
 colored-diff = "0.2.2"
-guppy = { version = "0.9.0", features = ["summaries"] }
-hakari = "0.3.0"
+guppy = { version = "0.10.1", features = ["summaries"] }
+hakari = "0.4.1"
 indoc = "1.0.3"
 toml = "0.5.8"
 env_logger = "0.8.3"
@@ -26,7 +26,7 @@ chrono = "0.4.19"
 globset = "0.4.6"
 regex = "1.5.5"
 rayon = "1.5.0"
-nextest-runner = { git = "https://github.com/diem/diem-devtools", rev = "1bdcf1b214119a6377fc0a8c3cf2de2ea5d8b27b" }
+nextest-runner = { git = "https://github.com/diem/diem-devtools", rev = "878ad31ea3268e7496e6e2406329fbd005685a9e" }
 indexmap = "1.6.2"
 x-core = { path = "../x-core" }
 x-lint = { path = "../x-lint" }

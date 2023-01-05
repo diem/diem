@@ -12,7 +12,7 @@ mod block_tree;
 pub mod tracing;
 
 pub use block_store::{sync_manager::BlockRetriever, BlockStore};
-use consensus_types::sync_info::SyncInfo;
+use consensus_types::{sync_info::SyncInfo, timeout_2chain::TwoChainTimeoutCertificate};
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 
 pub trait BlockReader: Send + Sync {
@@ -52,6 +52,9 @@ pub trait BlockReader: Send + Sync {
 
     /// Return the highest timeout certificate if available.
     fn highest_timeout_cert(&self) -> Option<Arc<TimeoutCertificate>>;
+
+    /// Return the highest timeout certificate if available.
+    fn highest_2chain_timeout_cert(&self) -> Option<Arc<TwoChainTimeoutCertificate>>;
 
     /// Return the highest commit decision ledger info.
     fn highest_ledger_info(&self) -> LedgerInfoWithSignatures;

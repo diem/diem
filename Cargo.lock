@@ -310,7 +310,7 @@ dependencies = [
  "executor-types",
  "futures",
  "hex",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "num_cpus",
  "once_cell",
  "pin-project",
@@ -516,7 +516,7 @@ dependencies = [
  "codespan-reporting",
  "diem-workspace-hack",
  "futures",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "log",
  "move-binary-format",
  "move-command-line-common",
@@ -597,7 +597,7 @@ dependencies = [
  "diem-workspace-hack",
  "im",
  "ir-to-bytecode",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "log",
  "move-binary-format",
  "move-command-line-common",
@@ -608,7 +608,7 @@ dependencies = [
  "num 0.4.0",
  "once_cell",
  "paste",
- "petgraph",
+ "petgraph 0.5.1",
  "read-write-set-types",
  "serde",
  "serde_json",
@@ -624,7 +624,7 @@ dependencies = [
  "codespan-reporting",
  "datatest-stable",
  "diem-workspace-hack",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "move-binary-format",
  "move-core-types",
  "move-model",
@@ -687,7 +687,7 @@ dependencies = [
  "mirai-annotations",
  "move-binary-format",
  "move-core-types",
- "petgraph",
+ "petgraph 0.5.1",
 ]
 
 [[package]]
@@ -699,7 +699,7 @@ dependencies = [
  "invalid-mutations",
  "move-binary-format",
  "move-core-types",
- "petgraph",
+ "petgraph 0.5.1",
  "proptest",
 ]
 
@@ -746,9 +746,9 @@ checksum = "4964518bd3b4a8190e832886cdc0da9794f12e8e6c1613a9e90ff331c4c8724b"
 
 [[package]]
 name = "camino"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4648c6d00a709aa069a236adcaae4f605a6241c72bf5bee79331a4b625921a9"
+checksum = "52d74260d9bf6944e2208aa46841b4b8f0d7ffc0849a06837b2f510337f86b2b"
 dependencies = [
  "serde",
 ]
@@ -764,14 +764,13 @@ dependencies = [
 
 [[package]]
 name = "cargo_metadata"
-version = "0.13.1"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "081e3f0755c1f380c2d010481b6fa2e02973586d5f2b24eebb7a2a1d98b143d8"
+checksum = "c297bd3135f558552f99a0daa180876984ea2c4ffa7470314540dff8c654109a"
 dependencies = [
  "camino",
  "cargo-platform",
- "semver 0.11.0",
- "semver-parser 0.10.2",
+ "semver 1.0.4",
  "serde",
  "serde_json",
 ]
@@ -811,11 +810,12 @@ dependencies = [
 
 [[package]]
 name = "cfg-expr"
-version = "0.7.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b81b9640fc656040fbf0d3f2bafacadcf17d55f2b0dc89589c1b80b0658fd5a"
+checksum = "edae0b9625d1fce32f7d64b71784d9b1bf8469ec1a9c417e44aaf16a9cbd7571"
 dependencies = [
  "smallvec",
+ "target-lexicon",
 ]
 
 [[package]]
@@ -984,7 +984,7 @@ dependencies = [
  "futures",
  "generate-key",
  "hex",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "k8s-openapi",
  "kube",
  "language-e2e-tests",
@@ -1103,7 +1103,8 @@ dependencies = [
  "fail",
  "fallible",
  "futures",
- "itertools 0.10.0",
+ "itertools 0.10.1",
+ "mempool-notifications",
  "mirai-annotations",
  "network",
  "num-derive",
@@ -1153,7 +1154,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "executor-types",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "mirai-annotations",
  "proptest",
  "serde",
@@ -1280,7 +1281,7 @@ dependencies = [
  "clap",
  "criterion-plot",
  "csv",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "lazy_static",
  "num-traits",
  "oorandom",
@@ -1511,16 +1512,16 @@ dependencies = [
 
 [[package]]
 name = "determinator"
-version = "0.4.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7109a871b855b23d2b08d8e0cef5c005b9946b5bd4c77cc24e040a7b65717fb9"
+checksum = "01c7a29d129d3fbb89359441ede454f5d22b60e7b3bf571c4fae492a8e80eb01"
 dependencies = [
  "camino",
  "globset",
  "guppy",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "once_cell",
- "petgraph",
+ "petgraph 0.6.0",
  "rayon",
  "serde",
  "toml",
@@ -1925,7 +1926,7 @@ dependencies = [
  "diem-metrics",
  "diem-types",
  "diem-workspace-hack",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "mirai-annotations",
  "num-derive",
  "num-traits",
@@ -2141,7 +2142,7 @@ dependencies = [
  "enum_dispatch",
  "fail",
  "futures",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "mempool-notifications",
  "mirai-annotations",
  "netcore",
@@ -2270,7 +2271,7 @@ dependencies = [
  "fallible",
  "futures",
  "hex",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "netcore",
  "network",
  "rand 0.8.3",
@@ -2352,7 +2353,7 @@ dependencies = [
  "diem-infallible",
  "diem-types",
  "diem-workspace-hack",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "proptest",
  "rand 0.8.3",
  "rayon",
@@ -2375,7 +2376,7 @@ dependencies = [
  "diemdb",
  "diemdb-benchmark",
  "executor-types",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "rand 0.8.3",
  "rayon",
  "storage-interface",
@@ -2607,7 +2608,7 @@ dependencies = [
  "diem-crypto-derive",
  "diem-workspace-hack",
  "hex",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "mirai-annotations",
  "move-core-types",
  "once_cell",
@@ -2736,14 +2737,14 @@ dependencies = [
  "getrandom 0.2.2",
  "hyper",
  "indexmap",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "itoa 0.4.7",
  "libc",
  "log",
  "memchr",
  "num-integer",
  "num-traits",
- "petgraph",
+ "petgraph 0.5.1",
  "plotters",
  "proc-macro2 0.4.30",
  "prost",
@@ -2822,7 +2823,7 @@ dependencies = [
  "diem-temppath",
  "diem-types",
  "diem-workspace-hack",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "move-core-types",
  "num-derive",
  "num-traits",
@@ -2850,7 +2851,7 @@ dependencies = [
  "diem-workspace-hack",
  "diemdb",
  "indicatif",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "rand 0.8.3",
  "storage-interface",
  "structopt 0.3.21",
@@ -2879,11 +2880,11 @@ checksum = "524cbf6897b527295dff137cec09ecf3a05f4fddffd7dfcd1585403449e74198"
 
 [[package]]
 name = "diffus"
-version = "0.9.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d3b0f382a0651ab91518390f16df755c6e2ca11f52a8e06b301fd3f7dfb576c"
+checksum = "3c0ff24a73b51d9009c40897faf87d31b77345c90ffbf4dc3a1d2957032c5653"
 dependencies = [
- "itertools 0.8.2",
+ "itertools 0.10.1",
 ]
 
 [[package]]
@@ -2987,7 +2988,7 @@ dependencies = [
  "codespan-reporting",
  "datatest-stable",
  "diem-workspace-hack",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "log",
  "move-model",
  "move-prover",
@@ -3189,7 +3190,7 @@ dependencies = [
  "executor-test-helpers",
  "executor-types",
  "fail",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "move-core-types",
  "once_cell",
  "proptest",
@@ -3217,7 +3218,7 @@ dependencies = [
  "diemdb",
  "executor",
  "executor-types",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "rand 0.8.3",
  "rayon",
  "storage-client",
@@ -3309,6 +3310,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37ab347416e802de484e4d03c7316c48f1ecb56574dfd4a46a80f173ce1de04d"
 
 [[package]]
+name = "fixedbitset"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "398ea4fabe40b9b0d885340a2a991a44c8a645624075ad966d21f88688e2b69e"
+
+[[package]]
 name = "flate2"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3360,7 +3367,7 @@ dependencies = [
  "hyper",
  "hyper-proxy",
  "hyper-tls",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "k8s-openapi",
  "kube",
  "rand 0.8.3",
@@ -3389,7 +3396,7 @@ dependencies = [
  "diem-sdk",
  "diem-workspace-hack",
  "forge",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "rand_core 0.6.2",
  "structopt 0.3.21",
  "testcases",
@@ -3448,7 +3455,7 @@ dependencies = [
  "diem-workspace-hack",
  "difference",
  "hex",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "language-e2e-tests",
  "mirai-annotations",
  "move-binary-format",
@@ -3713,9 +3720,9 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
 name = "globset"
-version = "0.4.6"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c152169ef1e421390738366d2f796655fec62621dabbd0fd476f905934061e4a"
+checksum = "10463d9ff00a2a068db14231982f5132edebad0d7660cd956a1c30292dbcbfbd"
 dependencies = [
  "aho-corasick",
  "bstr",
@@ -3747,22 +3754,22 @@ dependencies = [
 
 [[package]]
 name = "guppy"
-version = "0.9.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fa0124762cfff525d695e75a173dc65dda372227a9daf949a1e24235e1b8632"
+checksum = "76990cf4b694ac4c3f648f88e122af5c4f7b7fd873515d44d215da38b680848e"
 dependencies = [
  "camino",
  "cargo_metadata",
- "fixedbitset",
+ "fixedbitset 0.4.0",
  "guppy-summaries",
  "indexmap",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "nested",
  "once_cell",
  "pathdiff",
- "petgraph",
+ "petgraph 0.6.0",
  "rayon",
- "semver 0.11.0",
+ "semver 1.0.4",
  "serde",
  "serde_json",
  "supercow",
@@ -3771,14 +3778,14 @@ dependencies = [
 
 [[package]]
 name = "guppy-summaries"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c526b51262ef5ed4de421ee6679bf0927a20310d5cc048abe89464b710a2a299"
+checksum = "583f29423fca0575942fab3366a99793ccbdc59868e0b46c2f1d3322b8e77499"
 dependencies = [
  "camino",
  "cfg-if 1.0.0",
  "diffus",
- "semver 0.11.0",
+ "semver 1.0.4",
  "serde",
  "toml",
 ]
@@ -3804,9 +3811,9 @@ dependencies = [
 
 [[package]]
 name = "hakari"
-version = "0.3.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13e34ed149a6cc2125b0f4813211f658afcc49afdc7b276330f42d5256c3d9d8"
+checksum = "5950b99f6b3e00fe6d6379e818ec422c39a4b87fea97ae205bd0d0c44d346691"
 dependencies = [
  "atomicwrites",
  "camino",
@@ -4260,15 +4267,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f56a2d0bc861f9165be4eb3442afd3c236d8a98afd426f65d92324ae1091a484"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
@@ -4278,9 +4276,9 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37d572918e350e82412fe766d24b15e6682fb2ed2bbe018280caa810397cb319"
+checksum = "69ddb889f9d0d08a67338271fa9b62996bc788c7796a5c18cf057420aaed5eaf"
 dependencies = [
  "either",
 ]
@@ -4761,7 +4759,7 @@ dependencies = [
  "diem-workspace-hack",
  "move-binary-format",
  "move-core-types",
- "petgraph",
+ "petgraph 0.5.1",
 ]
 
 [[package]]
@@ -4860,7 +4858,7 @@ dependencies = [
  "move-core-types",
  "move-ir-types",
  "once_cell",
- "petgraph",
+ "petgraph 0.5.1",
  "serde",
  "structopt 0.3.21",
 ]
@@ -4911,7 +4909,7 @@ dependencies = [
  "move-stdlib",
  "move-symbol-pool",
  "once_cell",
- "petgraph",
+ "petgraph 0.5.1",
  "regex",
  "structopt 0.3.21",
  "tempfile",
@@ -4947,7 +4945,7 @@ dependencies = [
  "diem-workspace-hack",
  "disassembler",
  "internment",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "log",
  "move-binary-format",
  "move-command-line-common",
@@ -5005,7 +5003,7 @@ dependencies = [
  "move-core-types",
  "move-ir-types",
  "move-lang",
- "petgraph",
+ "petgraph 0.5.1",
  "serde",
  "serde_json",
  "sha2",
@@ -5035,7 +5033,7 @@ dependencies = [
  "errmapgen",
  "futures",
  "hex",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "log",
  "move-binary-format",
  "move-command-line-common",
@@ -5418,7 +5416,7 @@ dependencies = [
 [[package]]
 name = "nextest-runner"
 version = "0.1.0"
-source = "git+https://github.com/diem/diem-devtools?rev=1bdcf1b214119a6377fc0a8c3cf2de2ea5d8b27b#1bdcf1b214119a6377fc0a8c3cf2de2ea5d8b27b"
+source = "git+https://github.com/diem/diem-devtools?rev=878ad31ea3268e7496e6e2406329fbd005685a9e#878ad31ea3268e7496e6e2406329fbd005685a9e"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -5924,7 +5922,17 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "467d164a6de56270bd7c4d070df81d07beace25012d5103ced4e9ff08d6afdb7"
 dependencies = [
- "fixedbitset",
+ "fixedbitset 0.2.0",
+ "indexmap",
+]
+
+[[package]]
+name = "petgraph"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a13a2fa9d0b63e5f22328828741e523766fff0ee9e779316902290dff3f824f"
+dependencies = [
+ "fixedbitset 0.4.0",
  "indexmap",
 ]
 
@@ -6183,10 +6191,10 @@ checksum = "355f634b43cdd80724ee7848f95770e7e70eefa6dcf14fea676216573b8fd603"
 dependencies = [
  "bytes",
  "heck",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "log",
  "multimap",
- "petgraph",
+ "petgraph 0.5.1",
  "prost",
  "prost-types",
  "tempfile",
@@ -6200,7 +6208,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "600d2f334aa05acb02a755e217ef1ab6dea4d51b58b7846588b747edec04efba"
 dependencies = [
  "anyhow",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "proc-macro2 1.0.28",
  "quote 1.0.9",
  "syn 1.0.74",
@@ -6228,7 +6236,7 @@ dependencies = [
  "datatest-stable",
  "diem-workspace-hack",
  "hex",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "log",
  "move-model",
  "move-prover",
@@ -6254,7 +6262,7 @@ dependencies = [
  "datatest-stable",
  "diem-workspace-hack",
  "hex",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "log",
  "move-model",
  "move-prover",
@@ -6299,7 +6307,7 @@ checksum = "3ac73b1112776fc109b2e61909bc46c7e1bf0d7f690ffb1676553acce16d5cda"
 [[package]]
 name = "quick-junit"
 version = "0.1.0"
-source = "git+https://github.com/diem/diem-devtools?rev=1bdcf1b214119a6377fc0a8c3cf2de2ea5d8b27b#1bdcf1b214119a6377fc0a8c3cf2de2ea5d8b27b"
+source = "git+https://github.com/diem/diem-devtools?rev=878ad31ea3268e7496e6e2406329fbd005685a9e#878ad31ea3268e7496e6e2406329fbd005685a9e"
 dependencies = [
  "chrono",
  "indexmap",
@@ -6450,9 +6458,9 @@ dependencies = [
 
 [[package]]
 name = "rayon"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b0d8e0819fadc20c74ea8373106ead0600e3a67ef1fe8da56e39b9ae7275674"
+checksum = "c06aca804d41dbc8ba42dfd964f0d01334eceb64314b9ecf7c5fad5188a06d90"
 dependencies = [
  "autocfg",
  "crossbeam-deque",
@@ -6462,9 +6470,9 @@ dependencies = [
 
 [[package]]
 name = "rayon-core"
-version = "1.9.0"
+version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ab346ac5921dc62ffa9f89b7a773907511cdfa5490c572ae9be1be33e8afa4a"
+checksum = "d78120e2c850279833f1dd3582f730c4ab53ed95aeaaaa862a2a5c71b1656d8e"
 dependencies = [
  "crossbeam-channel",
  "crossbeam-deque",
@@ -6939,7 +6947,6 @@ checksum = "ef703b7cb59335eae2eb93ceb664c0eb7ea6bf567079d843e09420219668e072"
 name = "safety-rules"
 version = "0.1.0"
 dependencies = [
- "bcs",
  "consensus-types",
  "crash-handler",
  "criterion",
@@ -6961,6 +6968,7 @@ dependencies = [
  "rand 0.8.3",
  "rand_core 0.6.2",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
 ]
@@ -7093,6 +7101,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f301af10236f6df4160f7c3f04eec6dbc70ace82d23326abad5edee88801c6b6"
 dependencies = [
  "semver-parser 0.10.2",
+]
+
+[[package]]
+name = "semver"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "568a8e6258aa33c13358f81fd834adb854c6f7c9468520910a9b1e8fac068012"
+dependencies = [
  "serde",
 ]
 
@@ -7113,9 +7129,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.127"
+version = "1.0.130"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f03b9878abf6d14e6779d3f24f07b2cfa90352cfec4acc5aab8f1ac7f146fae8"
+checksum = "f12d06de37cf59146fbdecab66aa99f9fe4f78722e3607577a5375d66bd0c913"
 dependencies = [
  "serde_derive",
 ]
@@ -7189,9 +7205,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.127"
+version = "1.0.130"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a024926d3432516606328597e0f224a51355a493b49fdd67e9209187cbe55ecc"
+checksum = "d7bc1a1ab1961464eae040d96713baa5a724a8152c1222492465b54322ec508b"
 dependencies = [
  "proc-macro2 1.0.28",
  "quote 1.0.9",
@@ -7200,9 +7216,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.64"
+version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
+checksum = "a7f9e390c27c3c0ce8bc5d725f6e4d30a29d26659494aa4b17535f7522c5c950"
 dependencies = [
  "indexmap",
  "itoa 0.4.7",
@@ -7514,8 +7530,6 @@ dependencies = [
  "proptest",
  "rand 0.8.3",
  "regex",
- "rust_decimal",
- "rusty-fork",
  "serde_yaml",
  "tokio",
  "walkdir",
@@ -7612,7 +7626,7 @@ dependencies = [
  "executor-types",
  "fail",
  "futures",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "mempool-notifications",
  "memsocket",
  "netcore",
@@ -7724,7 +7738,7 @@ dependencies = [
  "diem-state-view",
  "diem-types",
  "diem-workspace-hack",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "move-core-types",
  "parking_lot 0.11.1",
  "serde",
@@ -7747,7 +7761,7 @@ dependencies = [
  "diem-workspace-hack",
  "diemdb",
  "futures",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "proptest",
  "rand 0.8.3",
  "storage-client",
@@ -7887,13 +7901,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
-name = "target-spec"
-version = "0.7.0"
+name = "target-lexicon"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac395241acf0f3d224dd2b07b334994adf6f37c904d1826867332ab8c6ddedbf"
+checksum = "d9bffcddbc2458fa3e6058414599e3c838a022abae82e5c67b4f7f80298d5bff"
+
+[[package]]
+name = "target-spec"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9bd377a4ea7e1381b6c8eef4b6f71eff0de1cc8a8dc21b49442623ae243a95e"
 dependencies = [
  "cfg-expr",
  "serde",
+ "target-lexicon",
 ]
 
 [[package]]
@@ -7993,7 +8014,7 @@ dependencies = [
  "diem-workspace-hack",
  "getrandom 0.2.2",
  "hex",
- "itertools 0.10.0",
+ "itertools 0.10.1",
  "mirai-annotations",
  "module-generation",
  "move-binary-format",
@@ -8533,9 +8554,9 @@ dependencies = [
 
 [[package]]
 name = "twox-hash"
-version = "1.6.0"
+version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
+checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
  "cfg-if 0.1.10",
  "static_assertions",

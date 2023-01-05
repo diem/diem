@@ -3,7 +3,11 @@
 
 use crate::persistent_liveness_storage::PersistentLivenessStorage;
 use consensus_types::{
-    block_data::BlockData, timeout::Timeout, vote::Vote, vote_proposal::MaybeSignedVoteProposal,
+    block_data::BlockData,
+    timeout::Timeout,
+    timeout_2chain::{TwoChainTimeout, TwoChainTimeoutCertificate},
+    vote::Vote,
+    vote_proposal::MaybeSignedVoteProposal,
 };
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_metrics::monitor;
@@ -80,6 +84,32 @@ impl TSafetyRules for MetricsSafetyRules {
 
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         self.retry(|inner| monitor!("safety_rules", inner.sign_timeout(timeout)))
+    }
+
+    fn sign_timeout_with_qc(
+        &mut self,
+        timeout: &TwoChainTimeout,
+        timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Ed25519Signature, Error> {
+        self.retry(|inner| {
+            monitor!(
+                "safety_rules",
+                inner.sign_timeout_with_qc(timeout, timeout_cert)
+            )
+        })
+    }
+
+    fn construct_and_sign_vote_two_chain(
+        &mut self,
+        vote_proposal: &MaybeSignedVoteProposal,
+        timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Vote, Error> {
+        self.retry(|inner| {
+            monitor!(
+                "safety_rules",
+                inner.construct_and_sign_vote_two_chain(vote_proposal, timeout_cert)
+            )
+        })
     }
 
     fn sign_commit_vote(

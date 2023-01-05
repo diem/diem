@@ -44,20 +44,16 @@ pub trait TSafetyRules {
     /// Sign the timeout together with highest qc for 2-chain protocol.
     fn sign_timeout_with_qc(
         &mut self,
-        _timeout: &TwoChainTimeout,
-        _timeout_cert: Option<&TwoChainTimeoutCertificate>,
-    ) -> Result<Ed25519Signature, Error> {
-        unimplemented!();
-    }
+        timeout: &TwoChainTimeout,
+        timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Ed25519Signature, Error>;
 
     /// Sign the vote with 2-chain protocol.
     fn construct_and_sign_vote_two_chain(
         &mut self,
-        _vote_proposal: &MaybeSignedVoteProposal,
-        _timeout_cert: Option<&TwoChainTimeoutCertificate>,
-    ) -> Result<Vote, Error> {
-        unimplemented!();
-    }
+        vote_proposal: &MaybeSignedVoteProposal,
+        timeout_cert: Option<&TwoChainTimeoutCertificate>,
+    ) -> Result<Vote, Error>;
 
     /// As the holder of the private key, SafetyRules also signs a commit vote.
     /// This returns the signature for the commit vote.

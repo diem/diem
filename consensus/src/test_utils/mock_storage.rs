@@ -9,7 +9,8 @@ use crate::{
 };
 use anyhow::Result;
 use consensus_types::{
-    block::Block, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
+    block::Block, quorum_cert::QuorumCert, timeout_2chain::TwoChainTimeoutCertificate,
+    timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use diem_crypto::HashValue;
 use diem_infallible::Mutex;
@@ -33,6 +34,7 @@ pub struct MockSharedStorage {
 
     // Liveness state
     pub highest_timeout_certificate: Mutex<Option<TimeoutCertificate>>,
+    pub highest_2chain_timeout_certificate: Mutex<Option<TwoChainTimeoutCertificate>>,
     pub validator_set: ValidatorSet,
 }
 
@@ -44,6 +46,7 @@ impl MockSharedStorage {
             lis: Mutex::new(HashMap::new()),
             last_vote: Mutex::new(None),
             highest_timeout_certificate: Mutex::new(None),
+            highest_2chain_timeout_certificate: Mutex::new(None),
             validator_set,
         }
     }
@@ -128,6 +131,10 @@ impl MockStorage {
             quorum_certs,
             self.shared_storage
                 .highest_timeout_certificate
+                .lock()
+                .clone(),
+            self.shared_storage
+                .highest_2chain_timeout_certificate
                 .lock()
                 .clone(),
         )
@@ -215,6 +222,17 @@ impl PersistentLivenessStorage for MockStorage {
         Ok(())
     }
 
+    fn save_highest_2chain_timeout_cert(
+        &self,
+        highest_timeout_certificate: &TwoChainTimeoutCertificate,
+    ) -> Result<()> {
+        self.shared_storage
+            .highest_2chain_timeout_certificate
+            .lock()
+            .replace(highest_timeout_certificate.clone());
+        Ok(())
+    }
+
     fn retrieve_epoch_change_proof(&self, version: u64) -> Result<EpochChangeProof> {
         let lis = self
             .shared_storage
@@ -276,6 +294,7 @@ impl PersistentLivenessStorage for EmptyStorage {
             RootMetadata::new_empty(),
             vec![],
             None,
+            None,
         ) {
             Ok(recovery_data) => LivenessStorageData::RecoveryData(recovery_data),
             Err(e) => {
@@ -286,6 +305,10 @@ impl PersistentLivenessStorage for EmptyStorage {
     }
 
     fn save_highest_timeout_cert(&self, _: TimeoutCertificate) -> Result<()> {
+        Ok(())
+    }
+
+    fn save_highest_2chain_timeout_cert(&self, _: &TwoChainTimeoutCertificate) -> Result<()> {
         Ok(())
     }
 

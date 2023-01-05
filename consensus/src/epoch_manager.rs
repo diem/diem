@@ -288,7 +288,6 @@ impl EpochManager {
     }
 
     // TODO: prepare_decoupled_execution
-
     async fn start_round_manager(&mut self, recovery_data: RecoveryData, epoch_state: EpochState) {
         // Release the previous RoundManager, especially the SafetyRule client
         self.processor = None;
@@ -363,6 +362,7 @@ impl EpochManager {
                 self.txn_manager.clone(),
                 self.storage.clone(),
                 self.config.sync_only,
+                false,
             )
         };
 
