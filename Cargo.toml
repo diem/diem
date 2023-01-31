@@ -236,7 +236,7 @@ default-members = [
 ]
 
 [profile.release]
-debug = true
+debug = false
 
 [profile.bench]
 debug = true

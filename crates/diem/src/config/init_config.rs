@@ -4,7 +4,7 @@
 use crate::common::{
     config::{Config, ConfigPath},
     types::{CliError, Command},
-    utils::prompt_user,
+    utils::{create_new_default_account, prompt_user},
 };
 use async_trait::async_trait;
 use clap::Parser;
@@ -77,6 +77,19 @@ impl Command<String> for InitConfig {
                 config.faucet_endpoint = prompt_faucet_endpoint;
             }
         }
-        config_path.save(config)
+        if let Err(_err) = config_path.save(config) {
+            panic!("Error saving config: {}", _err)
+        };
+        if prompt_user("Would you like to create a new account? (Y/n)")?
+            .trim()
+            .to_ascii_lowercase()
+            == *"y"
+        {
+            println!("Creating new account on testnet...");
+            if let Err(_err) = create_new_default_account().await {
+                panic!("Error saving config: {}", _err)
+            };
+        }
+        Ok("Config successful".to_string())
     }
 }

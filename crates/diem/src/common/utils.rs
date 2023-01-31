@@ -1,13 +1,16 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use crate::common::types::CliError;
+use crate::{
+    client_proxy::{retrieve_waypoint, ClientProxy},
+    common::{config::ConfigPath, types::CliError},
+};
 use anyhow::Result;
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
     Uniform, ValidCryptoMaterialStringExt,
 };
-use diem_types::transaction::authenticator::AuthenticationKey;
+use diem_types::{chain_id::ChainId, transaction::authenticator::AuthenticationKey};
 
 use rand::{prelude::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
@@ -17,6 +20,7 @@ use std::{
     fs,
     fs::File,
     io::{self, Write},
+    str::{self, FromStr},
 };
 
 use swiss_knife::helpers;
@@ -90,7 +94,7 @@ pub fn save_keypair(keypair: GenerateKeypairResponse) -> Result<String, Box<dyn 
 
 /// Response struct for generating a new keypair
 /// Moved from swiss knife
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct GenerateKeypairResponse {
     pub private_key: String,
     pub public_key: String,
@@ -167,4 +171,69 @@ pub fn prompt_user(prompt: &'static str) -> Result<String, CliError> {
         .read_line(&mut buffer)
         .map_err(|err| CliError::UserInputError(err.to_string()))?;
     Ok(buffer)
+}
+
+pub async fn mint_new_account(
+    account: String,
+    amount: u64,
+    currency: String,
+) -> Result<String, CliError> {
+    let config_path = ConfigPath::default();
+    let config = config_path.load().unwrap();
+
+    let chain_str = String::from(&config.chain);
+    let chain_id = ChainId::from_str(&chain_str).unwrap();
+    let rpc = &config.rpc_endpoint;
+    let faucet_url = config.faucet_endpoint.clone();
+    let waypoint = retrieve_waypoint(&config.waypoint_url).await.unwrap();
+
+    // Diem root account/Faucet, TreasuryCompliance and DD use the same keypair for now
+    let diem_root_account_file = "".to_string();
+    let treasury_compliance_account_file = diem_root_account_file.clone();
+    let dd_account_file = diem_root_account_file.clone();
+
+    let mut client_proxy = ClientProxy::new(
+        chain_id,
+        rpc,
+        &diem_root_account_file,
+        &treasury_compliance_account_file,
+        &dd_account_file,
+        Some(faucet_url),
+        waypoint,
+        false,
+    )
+    .await
+    .expect("Failed to construct client.");
+
+    match client_proxy
+        .mint_coins(account.clone(), amount, currency.clone())
+        .await
+    {
+        Ok(_) => {}
+        Err(e) => {
+            panic!("Error minting coins: {}", e)
+        }
+    };
+
+    let amount = amount.to_string();
+    let currency = currency;
+    let account = account;
+    let result = format!("Successfully minted {amount} {currency} to {account}");
+    Ok(result)
+}
+
+// essentially runs account create and mint with default values
+pub async fn create_new_default_account() -> Result<String, CliError> {
+    // generate key pair locally first
+    println!("Generating key pair locally");
+    let keypair = generate_key_pair(None);
+    if let Err(_err) = save_keypair(keypair.clone()) {
+        panic!("Error saving keypair: {}", _err)
+    };
+
+    // create new account on network
+    match mint_new_account(keypair.diem_auth_key, 1000, "XUS".to_string()).await {
+        Ok(res) => Ok(res),
+        Err(err) => panic!("Error saving keypair {}", err),
+    }
 }
