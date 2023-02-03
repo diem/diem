@@ -32,6 +32,7 @@ use std::{
     fmt::Debug,
     io::Write,
     path::Path,
+    result::Result::Ok,
 };
 use structopt::*;
 use tempfile::NamedTempFile;
