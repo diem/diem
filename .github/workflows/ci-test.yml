@@ -499,8 +499,8 @@ jobs:
           key: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: run unit tests
         run: |
-          # $pre_command && cargo nextest --nextest-profile ci --jobs ${max_threads} --test-threads ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
-          $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --tries ${nextest_tries} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
+          # $pre_command && TRYBUILD=overwrite cargo nextest --nextest-profile ci --jobs ${max_threads} --test-threads ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
+          $pre_command && mkdir -p target/junit-reports && TRYBUILD=overwrite cargo nextest --jobs ${max_threads} --tries ${nextest_tries} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: run jsonrpc integration tests
@@ -718,8 +718,8 @@ jobs:
           key: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: run crypto unit tests
         run: |
-          $pre_command && cd crates/diem-crypto && cargo test --features='u64' --no-default-features
-          $pre_command && cd crates/diem-crypto && cargo test --features='u32' --no-default-features
+          $pre_command && cd crates/diem-crypto && TRYBUILD=overwrite cargo test --features='u64' --no-default-features
+          $pre_command && cd crates/diem-crypto && TRYBUILD=overwrite cargo test --features='u32' --no-default-features
       - uses: ./.github/actions/build-teardown
       - name: Early terminate workflow
         if: ${{ failure() }}

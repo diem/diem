@@ -1,0 +1,14 @@
+error[E0038]: the trait `diem_crypto::PublicKey` cannot be made into an object
+ --> src/unit_tests/compilation/cross_test_trait_obj_pub.rs:7:24
+  |
+7 |     let mut l: Vec<Box<dyn PublicKey>> = vec![];
+  |                        ^^^^^^^^^^^^^ `diem_crypto::PublicKey` cannot be made into an object
+  |
+note: for a trait to be "object safe" it needs to allow building a vtable to allow the call to be resolvable dynamically; for more information visit <https://doc.rust-lang.org/reference/items/traits.html#object-safety>
+ --> src/traits.rs
+  |
+  |     for<'a> From<&'a <Self as PublicKey>::PrivateKeyMaterial> {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait cannot be made into an object because it uses `Self` as a type parameter
+ --> /rustc/fc594f15669680fa70d255faec3ca3fb507c3405/library/core/src/cmp.rs:285:15
+  |
+  = note: the trait cannot be made into an object because it uses `Self` as a type parameter
