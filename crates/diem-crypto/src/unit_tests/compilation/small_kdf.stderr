@@ -1,0 +1,25 @@
+error[E0599]: the function or associated item `extract` exists for struct `diem_crypto::hkdf::Hkdf<Ripemd160>`, but its trait bounds were not satisfied
+ --> src/unit_tests/compilation/small_kdf.rs:6:67
+  |
+6 |     let ripemd = diem_crypto::hkdf::Hkdf::<ripemd160::Ripemd160>::extract(None, &[]);
+  |                                                                   ^^^^^^^ function or associated item cannot be called on `diem_crypto::hkdf::Hkdf<Ripemd160>` due to unsatisfied trait bounds
+  |
+ ::: $CARGO/typenum-1.16.0/src/uint.rs
+  |
+  | pub struct UInt<U, B> {
+  | --------------------- doesn't satisfy `<_ as IsGreaterOrEqual<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>>>::Output = B1`
+  |
+  = note: the following trait bounds were not satisfied:
+          `<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B1>, B0>, B0> as IsGreaterOrEqual<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>>>::Output = B1`
+
+error[E0271]: type mismatch resolving `<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B1>, B0>, B0> as IsGreaterOrEqual<UInt<UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>, B0>>>::Output == B1`
+ --> src/unit_tests/compilation/small_kdf.rs:6:18
+  |
+6 |     let ripemd = diem_crypto::hkdf::Hkdf::<ripemd160::Ripemd160>::extract(None, &[]);
+  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected struct `B1`, found struct `B0`
+  |
+note: required by a bound in `diem_crypto::hkdf::Hkdf`
+ --> src/hkdf.rs
+  |
+  |     D::OutputSize: IsGreaterOrEqual<DMinimumSize, Output = True>,
+  |                                                   ^^^^^^^^^^^^^ required by this bound in `diem_crypto::hkdf::Hkdf`
