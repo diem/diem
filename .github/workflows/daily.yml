@@ -33,8 +33,9 @@ jobs:
         # List of ignored RUSTSEC
         # 1. RUSTSEC-2021-0073 - Not impacted.
         # 2. RUSTSEC-2021-0072 - Not impacted.
+        # 3. RUSTSEC-2020-0071 - Not impacted.
         run: |
-          cargo audit --color never --ignore RUSTSEC-2021-0073 --ignore RUSTSEC-2021-0072 > $AUDIT_SUMMARY_FILE
+          cargo audit --color never --ignore RUSTSEC-2021-0073 --ignore RUSTSEC-2021-0072 --ignore RUSTSEC-2020-0071 > $AUDIT_SUMMARY_FILE
       - name: set issue body content
         if: ${{ failure() }}
         env:
