@@ -10,29 +10,33 @@
 [![grcov](https://img.shields.io/badge/Coverage-grcov-green)](https://ci-artifacts.diem.com/coverage/unit-coverage/latest/index.html)
 [![test history](https://img.shields.io/badge/Test-History-green)](https://ci-artifacts.diem.com/testhistory/diem/diem/auto/ci-test.yml/index.html)
 
-Diem Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.
+Diem Core implements a decentralized, programmable distributed ledger which provides a financial infrastructure that can empower billions of people.
 
 ## Note to Developers
 * Diem Core is a prototype.
 * The APIs are constantly evolving and designed to demonstrate types of functionality. Expect substantial changes before the release.
 * We’ve launched a testnet that is a live demonstration of an early prototype of the Diem Blockchain software.
 
-## Getting Started
+
+## Quick Links
 
 ### Learn About Diem
-* [Welcome](https://developers.diem.com/docs/welcome-to-diem)
-* [Diem Protocol: Key Concepts](https://developers.diem.com/docs/core/diem-protocol)
-* [Life of a Transaction](https://developers.diem.com/docs/core/life-of-a-transaction)
+* [Diem Protocol: Key Concepts](https://developers.diem.com/docs/basics/basics-txns-states/)
+* [Life of a Transaction](https://developers.diem.com/docs/transactions/basics-life-of-txn/)
+* [JSON-RPC API Specification](json-rpc/json-rpc-spec.md)
 * [JSON-RPC SPEC](json-rpc/json-rpc-spec.md)
 
-### Try Diem Core
-* [My First Transaction](https://developers.diem.com/docs/core/my-first-transaction)
-* [Getting Started With Move](https://developers.diem.com/docs/move/move-introduction)
+### Getting Started - Try Diem Core
+* [My First Transaction](https://developers.diem.com/docs/tutorials/tutorial-my-first-transaction/)
+* [Getting Started With Move](https://diem.github.io/move/introduction.html)
 
 ### Technical Papers
 * [The Diem Blockchain](https://developers.diem.com/docs/technical-papers/the-diem-blockchain-paper)
 * [Move: A Language With Programmable Resources](https://developers.diem.com/docs/technical-papers/move-paper)
 * [State Machine Replication in the Diem Blockchain](https://developers.diem.com/docs/technical-papers/state-machine-replication-paper)
+
+### Governance
+* [Diem Improvement Proposals](https://dip.diem.com/all-dips)
 
 ### Blog
 * [Diem: The Path Forward](https://developers.diem.com/blog/2019/06/18/the-path-forward/)
