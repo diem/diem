@@ -125,7 +125,7 @@ jobs:
       - name: Run cluster test diag on devnet
         run: |
           echo ${DEVNET_MINT_TEST_KEY} | base64 -d > /tmp/mint_test.key
-          RUST_BACKTRACE=full cargo run -p cluster-test -- --diag --swarm --mint-file=/tmp/mint_test.key --peers=dev.testnet.diem.com:80:80 --chain-id=DEVNET > ${MESSAGE_PAYLOAD_FILE}
+          RUST_BACKTRACE=full cargo run -p cluster-test -- --diag --swarm --mint-file=/tmp/mint_test.key --peers=dev.testnet.diem.com:80:80 --chain-id=TESTNET > ${MESSAGE_PAYLOAD_FILE}
       - name: Run cluster test to submit random txn to devnet
         run: |
           RUST_BACKTRACE=full cargo run -p cluster-test -- --emit-tx --swarm --mint-file=/tmp/mint_test.key --peers=dev.testnet.diem.com:80:80 --chain-id=DEVNET --accounts-per-client=2 --workers-per-ac=2 --duration=30 >> ${MESSAGE_PAYLOAD_FILE}
