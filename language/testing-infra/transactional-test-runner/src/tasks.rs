@@ -13,7 +13,7 @@ use move_core_types::{
     transaction_argument::TransactionArgument,
 };
 use move_lang::shared::AddressBytes;
-use std::{fmt::Debug, path::Path, str::FromStr};
+use std::{fmt::Debug, path::Path, result::Result::Ok, str::FromStr};
 use structopt::*;
 use tempfile::NamedTempFile;
 
