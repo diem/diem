@@ -25,7 +25,7 @@ jobs:
       rust-changes: ${{ steps.rust-changes.outputs.changes-found }}
       base-image-changes: ${{ steps.base-image-changes.outputs.changes-found }}
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v4.1.1
         with:
           # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
           # On `push` this value will be empty and will "do-the-right-thing"
@@ -61,7 +61,7 @@ jobs:
   #    name: Sccache
   #  if: ${{ needs.prepare.outputs.rust-changes == 'true' }}
   #  steps:
-  #    - uses: actions/checkout@v2.3.4
+  #    - uses: actions/checkout@v4.1.1
   #      with:
           # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
           # On `push` this value will be empty and will "do-the-right-thing"
@@ -93,7 +93,7 @@ jobs:
         - "${{github.workspace}}:/opt/git/diem"
     if: ${{ needs.prepare.outputs.rust-changes == 'true' }}
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v4.1.1
         with:
           # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
           # On `push` this value will be empty and will "do-the-right-thing"
@@ -127,7 +127,7 @@ jobs:
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v4.1.1
         with:
           # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
           # On `push` this value will be empty and will "do-the-right-thing"
@@ -167,7 +167,7 @@ jobs:
       - name: docker prune
         run: |
           docker system prune -f
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v4.1.1
         with:
           # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
           # On `push` this value will be empty and will "do-the-right-thing"
@@ -193,7 +193,7 @@ jobs:
   #  # The pre-release suite run time varies 1~1.5 hr.
   #  timeout-minutes: 120
   #  steps:
-  #    - uses: actions/checkout@v2.4.0
+  #    - uses: actions/checkout@v4.1.1
   #      with:
   #        fetch-depth: 0 #get all the history!!!
   #    - name: set_env
@@ -274,7 +274,7 @@ jobs:
       - name: docker prune
         run: |
           docker system prune -f
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v4.1.1
         with:
           fetch-depth: 0 #get all the history!!!
       #- name: setup_aws_ecr_login
@@ -364,7 +364,7 @@ jobs:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v4.1.1
       - uses: ./.github/actions/build-setup
       - uses: actions/cache@v2.1.6
         with:

@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion != 'skipped' }}
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v4.1.1
       - name: Download artifacts
         uses: diem/actions/get-artifacts@faadd16607b77dfa2231a8f366883e01717b3225
         with:
