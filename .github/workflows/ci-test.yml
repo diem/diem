@@ -973,7 +973,7 @@ jobs:
           restore-keys: "crates-${{ runner.os }}"
       # Installs node and yarn
       - name: Use Node.js 14
-        uses: actions/setup-node@v2.4.1
+        uses: actions/setup-node@v4.0.0
         with:
           node-version: '14'
       # Install git
