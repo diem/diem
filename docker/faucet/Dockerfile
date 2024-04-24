@@ -1,4 +1,4 @@
-FROM debian:buster-20210721@sha256:cc58a29c333ee594f7624d968123429b26916face46169304f07580644dde6b2 AS debian-base
+FROM debian:buster-20240423@sha256:bce46a1c39574f98c845df4a5acc6c70c211df5a6182e428c1155c33317d4920 AS debian-base
 
 FROM debian-base AS toolchain
 
