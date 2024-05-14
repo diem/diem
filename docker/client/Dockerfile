@@ -1,4 +1,4 @@
-FROM debian:buster-20210721@sha256:cc58a29c333ee594f7624d968123429b26916face46169304f07580644dde6b2 AS toolchain
+FROM debian:buster-20240513@sha256:6e7bd55a5705914837aad8db01b349f4617510c11e47ccae8e87f6f14e489626 AS toolchain
 
 # To use http/https proxy while building, use:
 # docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
@@ -20,7 +20,7 @@ COPY . /diem
 RUN IMAGE_TARGETS="test" ./docker/build-common.sh
 
 ### Pre-Production Image ###
-FROM debian:buster-20210721@sha256:cc58a29c333ee594f7624d968123429b26916face46169304f07580644dde6b2 AS pre-prod
+FROM debian:buster-20240513@sha256:6e7bd55a5705914837aad8db01b349f4617510c11e47ccae8e87f6f14e489626 AS pre-prod
 
 RUN apt-get update && apt-get install -y libssl1.1 ca-certificates && apt-get clean && rm -r /var/lib/apt/lists/*
 
