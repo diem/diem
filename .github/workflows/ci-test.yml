@@ -531,7 +531,7 @@ jobs:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: upload unit test results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-results
           path: target/junit-reports/unit-test.xml
@@ -562,7 +562,7 @@ jobs:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: upload codegen test results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v7
         with:
           name: codegen-unit-test-results
           path: target/junit-reports/codegen-unit-test.xml
