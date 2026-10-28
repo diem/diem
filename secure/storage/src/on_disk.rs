@@ -8,9 +8,9 @@ use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::{
     collections::HashMap,
-    fs::{self, File},
-    io::{Read, Write},
-    path::PathBuf,
+    fs::{self, File, OpenOptions},
+    io::{self, Read, Write},
+    path::{Path, PathBuf},
 };
 
 /// OnDiskStorage represents a key value store that is persisted to the local filesystem and is
@@ -33,7 +33,7 @@ impl OnDiskStorage {
 
     fn new_with_time_service(file_path: PathBuf, time_service: TimeService) -> Self {
         if !file_path.exists() {
-            File::create(&file_path).expect("Unable to create storage");
+            create_owner_only(&file_path).expect("Unable to create storage");
         }
 
         // The parent will be one when only a filename is supplied. Therefore use the current
@@ -62,11 +62,23 @@ impl OnDiskStorage {
 
     fn write(&self, data: &HashMap<String, Value>) -> Result<(), Error> {
         let contents = serde_json::to_vec(data)?;
-        let mut file = File::create(self.temp_path.path())?;
+        let mut file = create_owner_only(self.temp_path.path())?;
         file.write_all(&contents)?;
         fs::rename(&self.temp_path, &self.file_path)?;
         Ok(())
     }
+}
+
+/// The storage file holds key material, so it should only be readable by its owner.
+fn create_owner_only(path: &Path) -> io::Result<File> {
+    let mut opts = OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    opts.open(path)
 }
 
 impl KVStorage for OnDiskStorage {
