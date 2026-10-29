@@ -111,12 +111,22 @@ pub struct OnDiskStorageConfig {
 }
 
 /// Tokens can either be directly within this config or stored somewhere on disk.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Token {
     FromConfig(String),
     /// This is an absolute path and not relative to data_dir
     FromDisk(PathBuf),
+}
+
+// Configs are logged with Debug, so never print the token itself.
+impl std::fmt::Debug for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Token::FromConfig(_) => write!(f, "FromConfig(<elided secret>)"),
+            Token::FromDisk(path) => f.debug_tuple("FromDisk").field(path).finish(),
+        }
+    }
 }
 
 impl Token {
@@ -318,6 +328,15 @@ vault:
         assert_eq!(de_from_disk, from_disk);
         // Just assert that it can be serialized, not about to do string comparison
         serde_yaml::to_string(&from_disk).unwrap();
+    }
+
+    #[test]
+    fn test_token_debug_elides_secret() {
+        let token = Token::FromConfig("s.secret-token".to_string());
+        assert!(!format!("{:?}", token).contains("s.secret-token"));
+
+        let token = Token::FromDisk(PathBuf::from("/token"));
+        assert_eq!(format!("{:?}", token), "FromDisk(\"/token\")");
     }
 
     #[test]
