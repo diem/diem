@@ -72,7 +72,7 @@ pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
     let logger = Some(logger.build());
 
     // Let's now log some important information, since the logger is set up
-    info!(config = config, "Loaded DiemNode config");
+    info!(config = ?config, "Loaded DiemNode config");
 
     if fail::has_failpoints() {
         warn!("Failpoints is enabled");
@@ -227,7 +227,7 @@ async fn periodic_state_dump(node_config: NodeConfig, db: DbReaderWriter) {
     loop {
         futures::select! {
             _ = config_interval.select_next_some() => {
-                info!(config = node_config, args = args, "config and command line arguments");
+                info!(config = ?node_config, args = args, "config and command line arguments");
             }
             _ = version_interval.select_next_some() => {
                 let chain_id = fetch_chain_id(&db);

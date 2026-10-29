@@ -54,7 +54,7 @@ fn main() {
 fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Result<(), Error> {
     info!(
         LogSchema::new(LogEntry::Initialized).event(LogEvent::Pending),
-        key_manager_config = key_manager_config
+        key_manager_config = ?key_manager_config,
     );
 
     let json_rpc_endpoint = key_manager_config.json_rpc_endpoint;
