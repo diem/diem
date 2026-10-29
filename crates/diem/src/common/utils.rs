@@ -18,7 +18,7 @@ use std::{
     env,
     error::Error,
     fs,
-    fs::File,
+    fs::OpenOptions,
     io::{self, Write},
     str::{self, FromStr},
 };
@@ -78,7 +78,15 @@ pub fn save_keypair(keypair: GenerateKeypairResponse) -> Result<String, Box<dyn 
     }
     let file_path = format!("{}/{}-keypair.json", &folder, &keypair.diem_account_address);
 
-    let file = match File::create(&file_path) {
+    let mut opts = OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    // The keypair file holds the private key, so it should only be readable by its owner.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    let file = match opts.open(&file_path) {
         Ok(file) => file,
         Err(err) => return Err(err.into()),
     };

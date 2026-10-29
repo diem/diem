@@ -6,7 +6,7 @@
 use diem_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use rand::{rngs::OsRng, Rng, SeedableRng};
 use std::{
-    fs::{self, File},
+    fs::{self, OpenOptions},
     io::Write,
     path::Path,
 };
@@ -29,8 +29,17 @@ pub fn save_key<P: AsRef<Path>>(key: Ed25519PrivateKey, output_file: P) -> Ed255
     }
 
     let encoded = bcs::to_bytes(&key).expect("Unable to serialize keys");
-    let mut file =
-        File::create(output_file_path).expect("Unable to create/truncate file at specified path");
+    let mut opts = OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    // The key file should only be readable by its owner.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    let mut file = opts
+        .open(output_file_path)
+        .expect("Unable to create/truncate file at specified path");
     file.write_all(&encoded)
         .expect("Unable to write key to file at specified path");
     key
@@ -54,5 +63,16 @@ mod test {
         let out_key = generate_and_save_key(path.path());
         let in_key = load_key(path.path());
         assert_eq!(out_key, in_key);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn verify_saved_key_is_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let path = TempPath::new();
+        generate_and_save_key(path.path());
+        let mode = fs::metadata(path.path()).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600);
     }
 }

@@ -16,7 +16,7 @@ use rand::SeedableRng;
 use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},
-    fs::{read, File},
+    fs::{read, OpenOptions},
     io::Write,
     path::{Path, PathBuf},
     str::FromStr,
@@ -347,7 +347,17 @@ fn save_to_yaml<T: Serialize>(path: &Path, input_name: &str, item: &T) -> Result
 }
 
 fn write_file(path: &Path, input_name: &str, contents: &[u8]) -> Result<(), Error> {
-    let mut file = File::create(path).map_err(|e| Error::IO(input_name.to_string(), e))?;
+    let mut opts = OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    // Key files should only be readable by their owner.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    let mut file = opts
+        .open(path)
+        .map_err(|e| Error::IO(input_name.to_string(), e))?;
     file.write_all(contents)
         .map_err(|e| Error::IO(input_name.to_string(), e))?;
     Ok(())
