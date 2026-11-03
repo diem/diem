@@ -452,3 +452,26 @@ fn test_multi_ed25519_signature_verification() {
         .verify(message(), &multi_public_key_2of3)
         .is_err());
 }
+
+// Bitmap bits past the last public key must be rejected, not used to index the key list.
+#[test]
+fn test_multi_ed25519_signature_bitmap_out_of_range() {
+    let priv_keys_3 = generate_keys(3);
+    let multi_private_key_1of3 = MultiEd25519PrivateKey::new(priv_keys_3.clone(), 1).unwrap();
+    let multi_public_key_1of3 = MultiEd25519PublicKey::from(&multi_private_key_1of3);
+
+    let sig_with_1st_key = priv_keys_3[0].sign(message());
+
+    // A single signature claiming index 3 (one past the last key) or 31.
+    for &index in &[3u8, 31] {
+        let multi_sig =
+            MultiEd25519Signature::new(vec![(sig_with_1st_key.clone(), index)]).unwrap();
+        assert!(multi_sig.verify(message(), &multi_public_key_1of3).is_err());
+    }
+
+    // A valid signature at index 0 followed by one at index 3.
+    let multi_sig =
+        MultiEd25519Signature::new(vec![(sig_with_1st_key.clone(), 0), (sig_with_1st_key, 3)])
+            .unwrap();
+    assert!(multi_sig.verify(message(), &multi_public_key_1of3).is_err());
+}

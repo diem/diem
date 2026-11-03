@@ -504,7 +504,7 @@ impl Signature for MultiEd25519Signature {
         // Public keys should be validated to be safe against small subgroup attacks, etc.
         precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         match bitmap_last_set_bit(self.bitmap) {
-            Some(last_bit) if last_bit as usize <= public_key.length() => (),
+            Some(last_bit) if (last_bit as usize) < public_key.public_keys.len() => (),
             _ => {
                 return Err(anyhow!(
                     "{}",
